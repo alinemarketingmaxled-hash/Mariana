@@ -1,0 +1,15 @@
+{
+  "name": "Minha Mesada",
+  "short_name": "Mesada",
+  "description": "Controle da mesada: o filho preenche as tarefas do dia e o responsável valida.",
+  "lang": "pt-BR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eceafb",
+  "theme_color": "#eceafb",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
