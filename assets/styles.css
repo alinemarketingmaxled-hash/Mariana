@@ -98,26 +98,16 @@ ul{margin:0;padding:0;list-style:none}
 .b3{width:40vmax;height:40vmax;left:12vmax;bottom:-18vmax;background:radial-gradient(circle at 50% 50%,#ffc9e9,#c9a6ff 55%,transparent 72%);opacity:.7}
 :root[data-theme="dark"] .aurora{opacity:.28}
 
-/* ---------- moldura do app ---------- */
+/* ---------- estrutura da página ---------- */
 .app-root{
   position:relative;z-index:1;
-  width:min(100%,460px);
+  width:min(100%,520px);
   min-height:100dvh;
   margin:0 auto;
   display:flex;flex-direction:column;
 }
-@media (min-width:900px){
-  body{padding:26px 0}
-  .app-root{
-    min-height:min(880px,calc(100dvh - 52px));
-    height:min(880px,calc(100dvh - 52px));
-    border-radius:44px;
-    overflow:hidden;
-    box-shadow:26px 26px 60px rgba(60,50,120,.28), -18px -18px 50px rgba(255,255,255,.55);
-    border:1px solid rgba(255,255,255,.55);
-    background:linear-gradient(160deg,rgba(255,255,255,.5),rgba(255,255,255,.15));
-    backdrop-filter:blur(6px);
-  }
+@media (min-width:1000px){
+  .app-root{width:100%;max-width:1320px;padding:0 34px}
 }
 
 /* ---------- tipografia ---------- */
@@ -185,6 +175,7 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 /* ---------- tela de login ---------- */
 .auth{
   flex:1;display:flex;flex-direction:column;justify-content:center;
+  width:100%;max-width:460px;margin:0 auto;
   padding:32px 26px calc(30px + var(--safe-b));gap:22px;
 }
 .brand{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
@@ -277,11 +268,9 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 .who .t2{font-size:11.5px;color:var(--muted)}
 
 .scroll{
-  flex:1;overflow-y:auto;overflow-x:hidden;
+  flex:1;
   padding:6px 20px calc(122px + var(--safe-b));
-  scrollbar-width:none;
 }
-.scroll::-webkit-scrollbar{display:none}
 
 .section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:22px 2px 12px}
 .section-title h3{font-size:15px;letter-spacing:-.2px}
@@ -416,8 +405,8 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 
 /* ---------- aprovação (pai) ---------- */
 .appr{padding:14px 15px;border-radius:20px;background:var(--surface);box-shadow:var(--neu-out-sm);display:flex;flex-direction:column;gap:12px}
-.appr .acts{display:flex;gap:9px}
-.appr .acts .btn{flex:1}
+.appr .acts{display:flex;gap:9px;flex-wrap:wrap}
+.appr .acts .btn{flex:1 1 30%;min-width:104px}
 .note{font-size:12px;color:var(--ink-2);background:var(--accent-soft);padding:9px 12px;border-radius:13px;line-height:1.5}
 
 /* ---------- fotos ---------- */
@@ -461,9 +450,9 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 
 /* ---------- barra inferior ---------- */
 .tabbar{
-  position:absolute;left:50%;transform:translateX(-50%);
+  position:fixed;left:50%;transform:translateX(-50%);
   bottom:calc(16px + var(--safe-b));
-  width:min(calc(100% - 34px),426px);
+  width:min(calc(100% - 34px),486px);
   height:66px;border-radius:26px;
   background:linear-gradient(150deg,var(--panel-2),var(--panel));
   box-shadow:0 20px 38px rgba(34,28,70,.42), inset 0 1px 0 rgba(255,255,255,.08);
@@ -483,6 +472,58 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
   transition:transform .2s var(--ease)
 }
 .fab:active{transform:scale(.93)}
+
+/* ---------- layout de site (telas largas) ---------- */
+.fab-label{display:none}
+@media (min-width:1000px){
+  .shell{
+    display:grid;
+    grid-template-columns:252px minmax(0,1fr);
+    grid-template-areas:"nav top" "nav main";
+    grid-template-rows:auto 1fr;
+    column-gap:36px;align-items:start;
+  }
+  .topbar{grid-area:top;padding:30px 0 16px}
+  .scroll{grid-area:main;padding:0 0 70px}
+  .tabbar{
+    grid-area:nav;position:sticky;top:30px;margin-top:30px;
+    left:auto;bottom:auto;transform:none;
+    width:auto;height:auto;flex-direction:column;align-items:stretch;
+    padding:16px;border-radius:30px;gap:5px;
+  }
+  .tab{
+    flex:none;height:48px;flex-direction:row;justify-content:flex-start;
+    gap:13px;padding:0 15px;font-size:12px;border-radius:16px
+  }
+  .fab{
+    order:-1;width:100%;height:50px;margin:0 0 10px;border-radius:18px;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    font-size:12.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase
+  }
+  .fab .ico{width:19px;height:19px}
+  .fab-label{display:inline}
+  .scroll .list{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));
+    gap:14px;align-items:start
+  }
+  .grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+  .hero{padding:26px}
+  .hero .value{font-size:32px}
+  .section-title{margin-top:30px}
+  .days{gap:11px}
+  .day{width:64px}
+  .chart{height:150px}
+  .chart .cb i{max-width:40px}
+  .scroll .list > .list-action{grid-column:1 / -1}
+}
+@media (min-width:1360px){
+  .scroll .list{grid-template-columns:repeat(auto-fill,minmax(370px,1fr))}
+}
+
+/* ---------- fotos de perfil e capas ---------- */
+.avatar.photo,.em.photo{padding:0;overflow:hidden;background:var(--surface-2)}
+.avatar.photo img,.em.photo img{width:100%;height:100%;object-fit:cover;display:block}
+.em.photo{display:grid;place-items:center}
 
 /* ---------- sheet / modal ---------- */
 .sheet-root{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center}

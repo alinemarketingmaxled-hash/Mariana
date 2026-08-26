@@ -44,10 +44,6 @@ const AuthScreen = (() => {
             Entrar ${isChild ? 'como filho(a)' : 'como responsável'} ${Icons.svg('arrow')}
           </button>
 
-          <p class="auth-hint">
-            Acesso de teste. Responsável: <b>pai</b> / <b>1234</b><br />
-            Filha: <b>mariana</b> / <b>1234</b>
-          </p>
         </form>
 
         <div class="row" style="justify-content:center;gap:10px">

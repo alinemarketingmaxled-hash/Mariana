@@ -239,10 +239,13 @@ const Store = (() => {
     if (data.id) {
       const u = userById(data.id);
       if (!u) return { ok: false, error: 'Filho(a) não encontrado(a).' };
+      const photo = String(data.photos || '').split(',').filter(Boolean)[0] || '';
+      if (u.photo && u.photo !== photo) Photos.remove(u.photo);
       Object.assign(u, {
         name: data.name.trim(),
         username,
         color: data.color || u.color || 'g1',
+        photo,
         goalName: data.goalName || '',
         goalAmount: Number(data.goalAmount) || 0,
       });
@@ -257,6 +260,7 @@ const Store = (() => {
     const u = {
       id: uid('u'), role: 'child', name: data.name.trim(), username,
       pass: hash(data.password), color: data.color || 'g1',
+      photo: String(data.photos || '').split(',').filter(Boolean)[0] || '',
       goalName: data.goalName || '', goalAmount: Number(data.goalAmount) || 0,
     };
     state.users.push(u);
@@ -264,10 +268,24 @@ const Store = (() => {
     return { ok: true, user: u };
   }
 
+  /** troca a foto de perfil de qualquer usuário (filho ou responsável) */
+  function setUserPhoto(userId, photoId) {
+    const u = userById(userId);
+    if (!u) return { ok: false, error: 'Usuário não encontrado.' };
+    const next = photoId || '';
+    if (u.photo && u.photo !== next) Photos.remove(u.photo);
+    u.photo = next;
+    save();
+    return { ok: true, user: u };
+  }
+
   function removeChild(id) {
     const trash = [];
+    const kid = userById(id);
+    if (kid && kid.photo) trash.push(kid.photo);
     state.entries.forEach((e) => { if (e.childId === id && e.photos) trash.push(...e.photos); });
     state.diary.forEach((d) => { if (d.childId === id && d.photos) trash.push(...d.photos); });
+    state.payouts.forEach((p) => { if (p.childId === id && p.photos) trash.push(...p.photos); });
     if (trash.length) Photos.removeMany(trash);
     state.users = state.users.filter((u) => u.id !== id);
     state.entries = state.entries.filter((e) => e.childId !== id);
@@ -285,15 +303,19 @@ const Store = (() => {
     if (data.id) {
       const c = categoryById(data.id);
       if (!c) return { ok: false, error: 'Categoria não encontrada.' };
+      const photo = String(data.photos || '').split(',').filter(Boolean)[0] || '';
+      if (c.photo && c.photo !== photo) Photos.remove(c.photo);
       c.name = data.name.trim();
       c.icon = data.icon || c.icon;
       c.grad = data.grad || c.grad;
+      c.photo = photo;
       save();
       return { ok: true, category: c };
     }
     const c = {
       id: uid('c'), name: data.name.trim(), icon: data.icon || 'star',
       grad: data.grad || 'g1', items: [],
+      photo: String(data.photos || '').split(',').filter(Boolean)[0] || '',
     };
     state.categories.push(c);
     save();
@@ -301,7 +323,9 @@ const Store = (() => {
   }
 
   function removeCategory(id) {
-    state.categories = state.categories.filter((c) => c.id !== id);
+    const c = categoryById(id);
+    if (c && c.photo) Photos.remove(c.photo);
+    state.categories = state.categories.filter((c2) => c2.id !== id);
     save();
   }
 
@@ -379,6 +403,61 @@ const Store = (() => {
     if (!e) return;
     e.note = String(note || '').slice(0, 240);
     if (photos) e.photos = photos.filter(Boolean).slice(0, 8);
+    save();
+  }
+
+  /** o responsável corrige valor, descrição, observação ou fotos de um lançamento */
+  function adjustEntry(entryId, data) {
+    const e = state.entries.find((x) => x.id === entryId);
+    if (!e) return { ok: false, error: 'Lançamento não encontrado.' };
+    const name = String(data.name || '').trim();
+    if (!name) return { ok: false, error: 'Informe a descrição.' };
+    const value = Math.abs(Number(String(data.value).replace(',', '.'))) || 0;
+    const photos = String(data.photos || '').split(',').filter(Boolean).slice(0, 8);
+    const gone = (e.photos || []).filter((id) => !photos.includes(id));
+    if (gone.length) Photos.removeMany(gone);
+    Object.assign(e, {
+      name: name.slice(0, 90),
+      value,
+      kind: data.kind === 'penalty' ? 'penalty' : 'earn',
+      reviewNote: String(data.reviewNote || e.reviewNote || '').slice(0, 240),
+      photos,
+    });
+    save();
+    return { ok: true, entry: e };
+  }
+
+  /** lançamento avulso criado pelo responsável (bônus ou desconto), já validado */
+  function addManualEntry(childId, data, parentId) {
+    const name = String(data.name || '').trim();
+    if (!name) return { ok: false, error: 'Informe a descrição.' };
+    const value = Math.abs(Number(String(data.value).replace(',', '.'))) || 0;
+    if (!value) return { ok: false, error: 'Informe um valor maior que zero.' };
+    const cat = categoryById(data.catId) || null;
+    const entry = {
+      id: uid('e'), childId, date: data.date || today(),
+      catId: cat ? cat.id : null, itemId: null,
+      name: name.slice(0, 90), value,
+      kind: data.kind === 'penalty' ? 'penalty' : 'earn',
+      icon: cat ? cat.icon : (data.kind === 'penalty' ? 'close' : 'star'),
+      grad: cat ? cat.grad : 'g4',
+      catName: cat ? cat.name : 'Ajuste do responsável',
+      note: String(data.note || '').slice(0, 240),
+      photos: String(data.photos || '').split(',').filter(Boolean).slice(0, 8),
+      status: 'approved', reviewNote: '', reviewedBy: parentId || null,
+      reviewedAt: new Date().toISOString(), manual: true,
+      createdAt: new Date().toISOString(),
+    };
+    state.entries.push(entry);
+    save();
+    return { ok: true, entry };
+  }
+
+  function removeEntry(entryId) {
+    const e = state.entries.find((x) => x.id === entryId);
+    if (!e) return;
+    if (e.photos && e.photos.length) Photos.removeMany(e.photos);
+    state.entries = state.entries.filter((x) => x.id !== entryId);
     save();
   }
 
@@ -527,17 +606,41 @@ const Store = (() => {
     return earned - paid;
   }
 
-  function addPayout(childId, amount, note, date) {
-    const val = Math.abs(Number(String(amount).replace(',', '.'))) || 0;
-    if (!val) return { ok: false, error: 'Informe um valor maior que zero.' };
-    state.payouts.push({
-      id: uid('p'), childId, amount: val,
-      note: String(note || '').slice(0, 120),
-      date: date || today(), createdAt: new Date().toISOString(),
-    });
+  /** cria ou edita um pagamento; aceita foto do comprovante */
+  function savePayout(childId, data) {
+    const amount = Math.abs(Number(String(data.amount).replace(',', '.'))) || 0;
+    if (!amount) return { ok: false, error: 'Informe um valor maior que zero.' };
+    const photos = String(data.photos || '').split(',').filter(Boolean).slice(0, 4);
+    const fields = {
+      amount,
+      note: String(data.note || '').slice(0, 120),
+      date: data.date || today(),
+      photos,
+    };
+    if (data.id) {
+      const p = state.payouts.find((x) => x.id === data.id);
+      if (!p) return { ok: false, error: 'Pagamento não encontrado.' };
+      const gone = (p.photos || []).filter((id) => !photos.includes(id));
+      if (gone.length) Photos.removeMany(gone);
+      Object.assign(p, fields);
+      save();
+      return { ok: true, payout: p };
+    }
+    const payout = Object.assign({ id: uid('p'), childId, createdAt: new Date().toISOString() }, fields);
+    state.payouts.push(payout);
     save();
-    return { ok: true };
+    return { ok: true, payout };
   }
+
+  function removePayout(id) {
+    const p = state.payouts.find((x) => x.id === id);
+    if (!p) return;
+    if (p.photos && p.photos.length) Photos.removeMany(p.photos);
+    state.payouts = state.payouts.filter((x) => x.id !== id);
+    save();
+  }
+
+  const payoutById = (id) => state.payouts.find((p) => p.id === id) || null;
 
   const payoutsOf = (childId) =>
     state.payouts.filter((p) => p.childId === childId).sort((a, b) => b.date.localeCompare(a.date));
@@ -573,16 +676,16 @@ const Store = (() => {
     // sessão
     login, logout, currentUser, changePassword,
     // usuários
-    children, userById, saveChild, removeChild,
+    children, userById, saveChild, removeChild, setUserPhoto,
     // categorias
     categories, categoryById, saveCategory, removeCategory, saveItem, removeItem,
     // lançamentos
     entriesOf, entryFor, toggleEntry, setEntryNote, review, reviewMany,
-    pendingEntries, historyOf, dayStatus, signed,
+    pendingEntries, historyOf, dayStatus, signed, adjustEntry, addManualEntry, removeEntry,
     // diário
     saveDiary, removeDiary, diaryOf, diaryById, pendingDiary, reviewDiary, diaryKind, DIARY_KINDS,
     // dinheiro
-    totals, balance, addPayout, payoutsOf,
+    totals, balance, savePayout, removePayout, payoutById, payoutsOf,
     // tema
     setTheme, theme,
     // helpers

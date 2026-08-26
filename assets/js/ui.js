@@ -139,6 +139,34 @@ const UI = (() => {
     <input name="${esc(name)}" type="${opts.type || 'text'}" value="${esc(opts.value || '')}"
       placeholder="${esc(opts.placeholder || '')}" ${opts.attrs || ''} />`;
 
+  /** avatar do usuário: foto quando existir, senão a inicial sobre a cor */
+  const avatar = (user, cls = '', style = '') => {
+    if (!user) return `<div class="avatar ${cls}" style="${style}"></div>`;
+    if (user.photo) {
+      return `<div class="avatar photo ${cls}" style="${style}">
+        <img data-photo="${esc(user.photo)}" alt="${esc(user.name)}" /></div>`;
+    }
+    const initial = String(user.name || '?').trim().charAt(0).toUpperCase();
+    return `<div class="avatar ${user.color || 'g1'} ${cls}" style="${style}">${esc(initial)}</div>`;
+  };
+
+  /** símbolo da categoria: foto de capa quando existir, senão o ícone */
+  const catVisual = (cat, style = '') => {
+    if (!cat) return '';
+    if (cat.photo) {
+      return `<span class="em photo" style="${style}"><img data-photo="${esc(cat.photo)}" alt="" /></span>`;
+    }
+    return `<span class="em ${cat.grad || 'g1'}" style="${style}">${Icons.svg(cat.icon)}</span>`;
+  };
+
+  /** símbolo de um lançamento já registrado (guarda ícone e cor no momento do registro) */
+  const entryVisual = (entry, style = '') => {
+    if (entry && entry.coverPhoto) {
+      return `<span class="em photo" style="${style}"><img data-photo="${esc(entry.coverPhoto)}" alt="" /></span>`;
+    }
+    return `<span class="em ${(entry && entry.grad) || 'g1'}" style="${style}">${Icons.svg(entry && entry.icon)}</span>`;
+  };
+
   /** tira de fotos somente leitura; toca para abrir em tela cheia */
   const photoStrip = (ids, cls = '') => {
     const list = (ids || []).filter(Boolean);
@@ -285,7 +313,7 @@ const UI = (() => {
   return {
     esc, toast, openSheet, closeSheet, confirm,
     iconPicker, gradPicker, bindPickers, bindSwitches,
-    photoField, bindPhotos, photoStrip, bindPhotoViewers,
+    photoField, bindPhotos, photoStrip, bindPhotoViewers, avatar, catVisual, entryVisual,
     field, input, empty, statusChip, formData,
     GRADS,
   };

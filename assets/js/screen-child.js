@@ -20,7 +20,7 @@ const ChildScreen = (() => {
     return `
       <header class="topbar">
         <div class="who">
-          <div class="avatar ${user.color || 'g1'}">${UI.esc(user.name.trim().charAt(0).toUpperCase())}</div>
+          ${UI.avatar(user)}
           <div>
             <div class="t1">${greet()}, ${UI.esc(user.name.split(' ')[0])}</div>
             <div class="t2">${Store.labelMonth(Store.monthOf(Store.today()))}</div>
@@ -105,7 +105,7 @@ const ChildScreen = (() => {
           return `
             <button class="tile" data-cat="${c.id}">
               ${pin}
-              <span class="em ${c.grad}">${Icons.svg(c.icon)}</span>
+              ${UI.catVisual(c)}
               <span class="nm">${UI.esc(c.name)}</span>
               <span class="sub">${c.items.length} ${c.items.length === 1 ? 'ação' : 'ações'}</span>
             </button>`;
@@ -161,7 +161,7 @@ const ChildScreen = (() => {
     const sign = e.kind === 'penalty' ? '-' : '+';
     return `
       <div class="task">
-        <span class="em ${e.grad || 'g1'}">${Icons.svg(e.icon)}</span>
+        ${UI.entryVisual(e)}
         <div class="grow">
           <div class="nm">${UI.esc(e.name)}</div>
           <div class="mt">
@@ -175,7 +175,8 @@ const ChildScreen = (() => {
         <div class="col" style="align-items:flex-end;gap:6px">
           <span class="val ${e.kind === 'penalty' ? 'pen' : 'earn'}">${sign}${Store.money(e.value).replace('R$ ', '')}</span>
           ${e.status === 'pending'
-            ? `<button class="btn btn-soft btn-sm" data-note="${e.id}" aria-label="Comentar">${Icons.svg('chat')}</button>` : ''}
+            ? `<button class="btn btn-soft btn-sm" data-note="${e.id}" aria-label="Comentar e enviar foto">
+                 ${Icons.svg('camera')}</button>` : ''}
         </div>
       </div>`;
   }
@@ -372,12 +373,15 @@ const ChildScreen = (() => {
     const t = Store.totals(user.id, Store.monthOf(Store.today()));
     const bal = Store.balance(user.id);
     return `
-      <section class="card mt8" style="display:flex;align-items:center;gap:14px">
-        <div class="avatar ${user.color || 'g1'}" style="width:58px;height:58px;font-size:24px">${UI.esc(user.name.trim().charAt(0).toUpperCase())}</div>
+      <section class="card mt8" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        ${UI.avatar(user, '', 'width:64px;height:64px;font-size:26px')}
         <div class="grow">
           <div class="bold" style="font-size:17px">${UI.esc(user.name)}</div>
           <div class="small muted">@${UI.esc(user.username)}</div>
         </div>
+        <button class="btn btn-soft btn-sm" data-photo-profile>
+          ${Icons.svg('camera')} ${user.photo ? 'Trocar foto' : 'Colocar foto'}
+        </button>
       </section>
 
       <div class="stat-row mt16">
@@ -403,6 +407,9 @@ const ChildScreen = (() => {
 
       <div class="section-title"><h3>Conta</h3></div>
       <div class="list">
+        <button class="mini-row" data-photo-profile>
+          ${Icons.svg('camera')}<span class="grow bold small" style="text-align:left">Foto do perfil</span>${Icons.svg('chevron', 'ico-sm dim')}
+        </button>
         <button class="mini-row" data-change-pass>
           ${Icons.svg('lock')}<span class="grow bold small" style="text-align:left">Trocar minha senha</span>${Icons.svg('chevron', 'ico-sm dim')}
         </button>
@@ -573,7 +580,8 @@ const ChildScreen = (() => {
           <button class="tab" data-tab="home" aria-pressed="${tab === 'home'}">${Icons.svg('home')}Hoje</button>
           <button class="tab" data-tab="diario" aria-pressed="${tab === 'diario'}">${Icons.svg('book')}Diário</button>
           <button class="fab" data-fab aria-label="${tab === 'diario' ? 'Novo registro' : 'Resumo do dia'}">
-            ${Icons.svg(tab === 'diario' ? 'plus' : 'check')}</button>
+            ${Icons.svg(tab === 'diario' ? 'plus' : 'check')}
+            <span class="fab-label">${tab === 'diario' ? 'Novo registro' : 'Resumo do dia'}</span></button>
           <button class="tab" data-tab="extrato" aria-pressed="${tab === 'extrato'}">${Icons.svg('chart')}Extrato</button>
           <button class="tab" data-menu>${Icons.svg('menu')}Menu</button>
         </nav>
@@ -633,6 +641,8 @@ const ChildScreen = (() => {
     if (logoutBtn) logoutBtn.addEventListener('click', () => App.logout());
     const passBtn = root.querySelector('[data-change-pass]');
     if (passBtn) passBtn.addEventListener('click', () => App.openChangePassword(user));
+    root.querySelectorAll('[data-photo-profile]').forEach((b) =>
+      b.addEventListener('click', () => App.openProfilePhoto(user)));
   }
 
   return { render, reset() { tab = 'home'; date = Store.today(); filter = 'all'; diaryFilter = 'all'; } };

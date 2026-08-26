@@ -11,7 +11,7 @@ const ParentScreen = (() => {
     return `
       <header class="topbar">
         <div class="who">
-          <div class="avatar ${user.color || 'g4'}">${UI.esc(user.name.trim().charAt(0).toUpperCase())}</div>
+          ${UI.avatar(user)}
           <div>
             <div class="t1">${UI.esc(user.name)}</div>
             <div class="t2">Painel do responsável</div>
@@ -71,7 +71,7 @@ const ParentScreen = (() => {
           </div>
           <div class="list">
             ${list.map(approvalCard).join('')}
-            <button class="btn btn-soft btn-sm" data-approve-all="${k}">${Icons.svg('check')}
+            <button class="btn btn-soft btn-sm list-action" data-approve-all="${k}">${Icons.svg('check')}
               ${list.length === 1 ? 'Validar este item' : `Validar os ${list.length} itens deste dia`}</button>
           </div>`;
       }).join('') : UI.empty('check', 'Nada pendente por aqui. Tudo validado.')}
@@ -123,7 +123,7 @@ const ParentScreen = (() => {
     return `
       <article class="appr">
         <div class="row">
-          <span class="em ${e.grad || 'g1'}" style="width:42px;height:42px;border-radius:15px;display:grid;place-items:center">${Icons.svg(e.icon)}</span>
+          ${UI.entryVisual(e, 'width:42px;height:42px;border-radius:15px;display:grid;place-items:center')}
           <div class="grow">
             <div class="nm bold" style="font-size:14px">${UI.esc(e.name)}</div>
             <div class="mt small muted">${UI.esc(e.catName || '')} • ${kid ? UI.esc(kid.name.split(' ')[0]) : ''}</div>
@@ -136,6 +136,7 @@ const ParentScreen = (() => {
         ${UI.photoStrip(e.photos)}
         <div class="acts">
           <button class="btn btn-ghost btn-sm" data-reject="${e.id}">${Icons.svg('close')} Recusar</button>
+          <button class="btn btn-ghost btn-sm" data-adjust="${e.id}">${Icons.svg('pencil')} Ajustar</button>
           <button class="btn btn-primary btn-sm" data-approve="${e.id}">${Icons.svg('check')} Validar</button>
         </div>
       </article>`;
@@ -155,7 +156,7 @@ const ParentScreen = (() => {
           const t = Store.totals(k.id, Store.monthOf(Store.today()));
           return `
             <button class="kid-card" data-kid="${k.id}">
-              <span class="avatar ${k.color || 'g1'}">${UI.esc(k.name.trim().charAt(0).toUpperCase())}</span>
+              ${UI.avatar(k, '', 'width:50px;height:50px;font-size:21px')}
               <div class="grow">
                 <div class="bold" style="font-size:15px">${UI.esc(k.name)}</div>
                 <div class="small muted">@${UI.esc(k.username)} • ${t.pendingCount} aguardando • ${Store.diaryOf(k.id).length} no diário</div>
@@ -189,7 +190,7 @@ const ParentScreen = (() => {
         <section class="card mt16">
           <div class="between">
             <div class="row">
-              <span class="em ${c.grad}" style="width:44px;height:44px;border-radius:16px;display:grid;place-items:center">${Icons.svg(c.icon)}</span>
+              ${UI.catVisual(c, 'width:44px;height:44px;border-radius:16px;display:grid;place-items:center')}
               <div>
                 <div class="bold" style="font-size:15px">${UI.esc(c.name)}</div>
                 <div class="tiny muted">${c.items.length} ${c.items.length === 1 ? 'ação' : 'ações'}</div>
@@ -210,7 +211,7 @@ const ParentScreen = (() => {
                 </div>
                 <button class="icon-btn sm" data-edit-item="${c.id}:${it.id}" aria-label="Editar ação">${Icons.svg('pencil')}</button>
               </div>`).join('')}
-            <button class="btn btn-soft btn-sm" data-new-item="${c.id}">+ nova ação em ${UI.esc(c.name)}</button>
+            <button class="btn btn-soft btn-sm list-action" data-new-item="${c.id}">+ nova ação em ${UI.esc(c.name)}</button>
           </div>
         </section>`).join('')
       : UI.empty('folder', 'Crie a primeira categoria para começar.')}`;
@@ -250,7 +251,8 @@ const ParentScreen = (() => {
           </div>
           <div class="row mt12" style="gap:9px">
             <button class="btn btn-ghost btn-sm grow" data-diary="${k.id}">${Icons.svg('book')} Diário</button>
-            <button class="btn btn-primary btn-sm grow" data-pay="${k.id}">${Icons.svg('banknote')} Pagar mesada</button>
+            <button class="btn btn-ghost btn-sm grow" data-manual="${k.id}">${Icons.svg('coins')} Ajuste</button>
+            <button class="btn btn-primary btn-sm grow" data-pay="${k.id}">${Icons.svg('banknote')} Pagamentos</button>
           </div>
         </section>`;
     }).join('');
@@ -280,8 +282,151 @@ const ParentScreen = (() => {
     });
   }
 
+  /** o responsável corrige valor, descrição e fotos de um lançamento */
+  function openAdjust(entryId) {
+    const e = Store.get().entries.find((x) => x.id === entryId);
+    if (!e) return;
+    let picker = null;
+    UI.openSheet({
+      title: 'Ajustar lançamento',
+      subtitle: `${e.catName || ''} • ${Store.labelDate(e.date)}`,
+      body: `
+        <form id="adjust-form">
+          ${UI.field('Descrição', UI.input('name', { value: e.name }))}
+          ${UI.field('Valor (R$)', UI.input('value', { type: 'number', value: e.value, attrs: 'min="0" step="0.01"' }))}
+          <div class="field">
+            <label>Tipo</label>
+            <div class="seg-mini">
+              <button type="button" data-kind="earn" aria-pressed="${e.kind !== 'penalty'}">+ Ganha</button>
+              <button type="button" data-kind="penalty" aria-pressed="${e.kind === 'penalty'}">- Desconta</button>
+            </div>
+            <input type="hidden" name="kind" value="${e.kind === 'penalty' ? 'penalty' : 'earn'}" />
+          </div>
+          ${UI.field('Observação para o(a) filho(a)', `
+            <textarea name="reviewNote" rows="2" placeholder="ex.: combinamos metade hoje">${UI.esc(e.reviewNote || '')}</textarea>`)}
+          ${UI.photoField('Fotos do lançamento', e.photos || [])}
+        </form>`,
+      actions: `
+        <button class="btn btn-ghost" data-del>${Icons.svg('trash')} Excluir</button>
+        <button class="btn btn-primary" data-save>Salvar ajuste</button>`,
+      onMount(sheet) {
+        picker = UI.bindPhotos(sheet);
+        const kindInput = sheet.querySelector('input[name="kind"]');
+        sheet.querySelectorAll('[data-kind]').forEach((b) => b.addEventListener('click', () => {
+          sheet.querySelectorAll('[data-kind]').forEach((x) => x.setAttribute('aria-pressed', 'false'));
+          b.setAttribute('aria-pressed', 'true');
+          kindInput.value = b.getAttribute('data-kind');
+        }));
+        sheet.querySelector('[data-del]').addEventListener('click', async () => {
+          const ok = await UI.confirm({
+            title: 'Excluir este lançamento?',
+            text: 'Ele sai do extrato e do saldo. As fotos anexadas também são apagadas.',
+            okLabel: 'Excluir', danger: true,
+          });
+          if (ok) {
+            Store.removeEntry(entryId);
+            picker.commit();
+            UI.closeSheet();
+            UI.toast('Lançamento excluído');
+            App.render();
+          }
+        });
+        sheet.querySelector('[data-save]').addEventListener('click', () => {
+          const data = UI.formData(sheet.querySelector('#adjust-form'));
+          const res = Store.adjustEntry(entryId, data);
+          if (!res.ok) return UI.toast(res.error, 'bad');
+          picker.commit();
+          UI.closeSheet();
+          UI.toast('Lançamento ajustado', 'ok');
+          App.render();
+        });
+      },
+      onClose() { if (picker) picker.discard(); },
+    });
+  }
+
+  /** bônus ou desconto avulso, lançado direto pelo responsável */
+  function openManualEntry(kid, parentId) {
+    let picker = null;
+    UI.openSheet({
+      title: 'Lançamento avulso',
+      subtitle: `${kid.name}. Entra no saldo já validado.`,
+      body: `
+        <form id="manual-form">
+          ${UI.field('Descrição', UI.input('name', { placeholder: 'ex.: ajudou na mudança' }))}
+          ${UI.field('Valor (R$)', UI.input('value', { type: 'number', attrs: 'min="0" step="0.01"', placeholder: '10,00' }))}
+          <div class="field">
+            <label>Tipo</label>
+            <div class="seg-mini">
+              <button type="button" data-kind="earn" aria-pressed="true">+ Ganha</button>
+              <button type="button" data-kind="penalty" aria-pressed="false">- Desconta</button>
+            </div>
+            <input type="hidden" name="kind" value="earn" />
+          </div>
+          ${UI.field('Data', UI.input('date', { type: 'date', value: Store.today() }))}
+          ${UI.field('Observação (opcional)', `<textarea name="note" rows="2" placeholder="por que esse valor"></textarea>`)}
+          ${UI.photoField('Fotos (opcional)', [])}
+        </form>`,
+      actions: `
+        <button class="btn btn-ghost" data-cancel>Cancelar</button>
+        <button class="btn btn-primary" data-ok>Lançar</button>`,
+      onMount(sheet) {
+        picker = UI.bindPhotos(sheet);
+        const kindInput = sheet.querySelector('input[name="kind"]');
+        sheet.querySelectorAll('[data-kind]').forEach((b) => b.addEventListener('click', () => {
+          sheet.querySelectorAll('[data-kind]').forEach((x) => x.setAttribute('aria-pressed', 'false'));
+          b.setAttribute('aria-pressed', 'true');
+          kindInput.value = b.getAttribute('data-kind');
+        }));
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-ok]').addEventListener('click', () => {
+          const data = UI.formData(sheet.querySelector('#manual-form'));
+          const res = Store.addManualEntry(kid.id, data, parentId);
+          if (!res.ok) return UI.toast(res.error, 'bad');
+          picker.commit();
+          UI.closeSheet();
+          UI.toast('Lançamento registrado', 'ok');
+          App.render();
+        });
+      },
+      onClose() { if (picker) picker.discard(); },
+    });
+  }
+
+  /** lista de pagamentos de um filho, com edição, exclusão e comprovante */
+  function openPayouts(kid) {
+    const list = Store.payoutsOf(kid.id);
+    UI.openSheet({
+      title: `Pagamentos de ${kid.name}`,
+      subtitle: `${list.length} ${list.length === 1 ? 'pagamento' : 'pagamentos'} • saldo atual ${Store.money(Store.balance(kid.id))}`,
+      body: `
+        <button class="btn btn-primary btn-block" data-new-pay>${Icons.svg('plus')} Registrar pagamento</button>
+        ${list.length ? `<div class="list">${list.map((p) => `
+          <article class="diary">
+            <div class="row">
+              <span class="em g3" style="width:38px;height:38px;border-radius:13px;display:grid;place-items:center">
+                ${Icons.svg('banknote')}
+              </span>
+              <div class="grow">
+                <div class="bold small">${Store.money(p.amount)}</div>
+                <div class="tiny muted">${Store.labelDate(p.date)}${p.note ? ' • ' + UI.esc(p.note) : ''}</div>
+              </div>
+              <button class="icon-btn sm" data-edit-pay="${p.id}" aria-label="Editar pagamento">${Icons.svg('pencil')}</button>
+            </div>
+            ${UI.photoStrip(p.photos, 'small-thumbs')}
+          </article>`).join('')}</div>`
+        : UI.empty('banknote', 'Nenhum pagamento registrado ainda.')}`,
+      onMount(sheet) {
+        sheet.querySelector('[data-new-pay]').addEventListener('click', () => openPayForm(kid, null));
+        sheet.querySelectorAll('[data-edit-pay]').forEach((b) => b.addEventListener('click', () =>
+          openPayForm(kid, Store.payoutById(b.getAttribute('data-edit-pay')))));
+      },
+    });
+  }
+
   function openChildForm(kid) {
     const editing = !!kid;
+    let picker = null;
     UI.openSheet({
       title: editing ? 'Editar filho(a)' : 'Novo filho(a)',
       subtitle: editing ? kid.name : 'Crie o acesso que ele(a) vai usar para entrar',
@@ -291,6 +436,7 @@ const ParentScreen = (() => {
           ${UI.field('Usuário (login)', UI.input('username', { value: editing ? kid.username : '', placeholder: 'ex.: mariana' }))}
           ${UI.field(editing ? 'Nova senha (deixe vazio para manter)' : 'Senha', UI.input('password', { type: 'password', placeholder: '••••' }))}
           ${UI.gradPicker('color', editing ? (kid.color || 'g1') : 'g1', 'Cor do perfil')}
+          ${UI.photoField('Foto do perfil (opcional)', editing && kid.photo ? [kid.photo] : [])}
           ${UI.field('Meta (opcional)', UI.input('goalName', { value: editing ? (kid.goalName || '') : '', placeholder: 'ex.: Patins novos' }))}
           ${UI.field('Valor da meta (R$)', UI.input('goalAmount', { type: 'number', value: editing ? (kid.goalAmount || '') : '', attrs: 'min="0" step="0.01"', placeholder: '150' }))}
           ${editing ? `<input type="hidden" name="id" value="${UI.esc(kid.id)}" />` : ''}
@@ -300,16 +446,19 @@ const ParentScreen = (() => {
         <button class="btn btn-primary" data-save>${editing ? 'Salvar' : 'Criar acesso'}</button>`,
       onMount(sheet) {
         UI.bindPickers(sheet);
+        picker = UI.bindPhotos(sheet);
         sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
         sheet.querySelector('[data-save]').addEventListener('click', () => {
           const data = UI.formData(sheet.querySelector('#kid-form'));
           const res = Store.saveChild(data);
           if (!res.ok) return UI.toast(res.error, 'bad');
+          picker.commit();
           UI.closeSheet();
           UI.toast(editing ? 'Dados atualizados' : `Acesso de ${res.user.name} criado`, 'ok');
           App.render();
         });
       },
+      onClose() { if (picker) picker.discard(); },
     });
   }
 
@@ -326,7 +475,9 @@ const ParentScreen = (() => {
           <div class="stat"><div class="k">aguardando</div><div class="v">${t.pendingCount}</div></div>
         </div>
         <div class="list">
-          <button class="mini-row" data-a="pay">${Icons.svg('banknote')}<span class="grow bold small" style="text-align:left">Registrar pagamento</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-a="pay">${Icons.svg('banknote')}<span class="grow bold small" style="text-align:left">Pagamentos e comprovantes</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-a="manual">${Icons.svg('coins')}<span class="grow bold small" style="text-align:left">Lançamento avulso (bônus ou desconto)</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-a="photo">${Icons.svg('camera')}<span class="grow bold small" style="text-align:left">Foto do perfil</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-a="diary">${Icons.svg('book')}<span class="grow bold small" style="text-align:left">Ver diário de livros e lições</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-a="history">${Icons.svg('chart')}<span class="grow bold small" style="text-align:left">Ver histórico</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-a="edit">${Icons.svg('pencil')}<span class="grow bold small" style="text-align:left">Editar dados e meta</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
@@ -336,7 +487,9 @@ const ParentScreen = (() => {
         sheet.querySelectorAll('[data-a]').forEach((b) => b.addEventListener('click', async () => {
           const a = b.getAttribute('data-a');
           UI.closeSheet();
-          if (a === 'pay') return openPayForm(kid);
+          if (a === 'pay') return openPayouts(kid);
+          if (a === 'manual') return openManualEntry(kid, Store.currentUser() && Store.currentUser().id);
+          if (a === 'photo') return App.openProfilePhoto(kid);
           if (a === 'history') return openHistory(kid);
           if (a === 'diary') return openDiary(kid);
           if (a === 'edit') return openChildForm(kid);
@@ -353,32 +506,63 @@ const ParentScreen = (() => {
     });
   }
 
-  function openPayForm(kid) {
+  function openPayForm(kid, payout) {
+    const editing = !!payout;
     const bal = Store.balance(kid.id);
+    let picker = null;
     UI.openSheet({
-      title: 'Registrar pagamento',
+      title: editing ? 'Editar pagamento' : 'Registrar pagamento',
       subtitle: `${kid.name}. Saldo atual ${Store.money(bal)}.`,
       body: `
         <form id="pay-form">
-          ${UI.field('Valor pago (R$)', UI.input('amount', { type: 'number', value: bal > 0 ? bal.toFixed(2) : '', attrs: 'min="0" step="0.01"', placeholder: '0,00' }))}
-          ${UI.field('Observação', UI.input('note', { placeholder: 'ex.: mesada de agosto (PIX)' }))}
-          ${UI.field('Data', UI.input('date', { type: 'date', value: Store.today() }))}
+          ${UI.field('Valor pago (R$)', UI.input('amount', {
+            type: 'number',
+            value: editing ? payout.amount : (bal > 0 ? bal.toFixed(2) : ''),
+            attrs: 'min="0" step="0.01"', placeholder: '0,00',
+          }))}
+          ${UI.field('Observação', UI.input('note', {
+            value: editing ? (payout.note || '') : '', placeholder: 'ex.: mesada de agosto (PIX)',
+          }))}
+          ${UI.field('Data', UI.input('date', { type: 'date', value: editing ? payout.date : Store.today() }))}
+          ${UI.photoField('Comprovante (opcional)', editing ? payout.photos : [])}
+          ${editing ? `<input type="hidden" name="id" value="${UI.esc(payout.id)}" />` : ''}
         </form>
         <div class="note">O valor pago é descontado do saldo disponível e fica registrado no extrato.</div>`,
       actions: `
-        <button class="btn btn-ghost" data-cancel>Cancelar</button>
-        <button class="btn btn-primary" data-ok>Registrar</button>`,
+        ${editing
+          ? '<button class="btn btn-ghost" data-del>Excluir</button>'
+          : '<button class="btn btn-ghost" data-cancel>Cancelar</button>'}
+        <button class="btn btn-primary" data-ok>${editing ? 'Salvar' : 'Registrar'}</button>`,
       onMount(sheet) {
-        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        picker = UI.bindPhotos(sheet);
+        const cancel = sheet.querySelector('[data-cancel]');
+        if (cancel) cancel.addEventListener('click', UI.closeSheet);
+        const del = sheet.querySelector('[data-del]');
+        if (del) del.addEventListener('click', async () => {
+          const ok = await UI.confirm({
+            title: 'Excluir este pagamento?',
+            text: 'O valor volta para o saldo disponível do(a) filho(a).',
+            okLabel: 'Excluir', danger: true,
+          });
+          if (ok) {
+            Store.removePayout(payout.id);
+            picker.commit();
+            UI.closeSheet();
+            UI.toast('Pagamento excluído');
+            App.render();
+          }
+        });
         sheet.querySelector('[data-ok]').addEventListener('click', () => {
           const data = UI.formData(sheet.querySelector('#pay-form'));
-          const res = Store.addPayout(kid.id, data.amount, data.note, data.date);
+          const res = Store.savePayout(kid.id, data);
           if (!res.ok) return UI.toast(res.error, 'bad');
+          picker.commit();
           UI.closeSheet();
-          UI.toast('Pagamento registrado', 'ok');
+          UI.toast(editing ? 'Pagamento atualizado' : 'Pagamento registrado', 'ok');
           App.render();
         });
       },
+      onClose() { if (picker) picker.discard(); },
     });
   }
 
@@ -396,7 +580,7 @@ const ParentScreen = (() => {
         <div class="list">
           ${byDate[d].map((e) => `
             <div class="mini-row">
-              <span class="em ${e.grad || 'g1'}" style="width:34px;height:34px;border-radius:12px;display:grid;place-items:center">${Icons.svg(e.icon)}</span>
+              ${UI.entryVisual(e, 'width:34px;height:34px;border-radius:12px;display:grid;place-items:center')}
               <div class="grow">
                 <div class="small bold">${UI.esc(e.name)}</div>
                 <div class="tiny muted">${UI.statusChip(e.status)}</div>
@@ -438,6 +622,7 @@ const ParentScreen = (() => {
 
   function openCatForm(cat) {
     const editing = !!cat;
+    let picker = null;
     UI.openSheet({
       title: editing ? 'Editar categoria' : 'Nova categoria',
       body: `
@@ -445,6 +630,7 @@ const ParentScreen = (() => {
           ${UI.field('Nome', UI.input('name', { value: editing ? cat.name : '', placeholder: 'ex.: Estudos' }))}
           ${UI.iconPicker('icon', editing ? cat.icon : 'star')}
           ${UI.gradPicker('grad', editing ? cat.grad : 'g1')}
+          ${UI.photoField('Foto de capa (opcional)', editing && cat.photo ? [cat.photo] : [])}
           ${editing ? `<input type="hidden" name="id" value="${UI.esc(cat.id)}" />` : ''}
         </form>`,
       actions: `
@@ -452,16 +638,19 @@ const ParentScreen = (() => {
         <button class="btn btn-primary" data-save>Salvar</button>`,
       onMount(sheet) {
         UI.bindPickers(sheet);
+        picker = UI.bindPhotos(sheet);
         sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
         sheet.querySelector('[data-save]').addEventListener('click', () => {
           const data = UI.formData(sheet.querySelector('#cat-form'));
           const res = Store.saveCategory(data);
           if (!res.ok) return UI.toast(res.error, 'bad');
+          picker.commit();
           UI.closeSheet();
           UI.toast('Categoria salva', 'ok');
           App.render();
         });
       },
+      onClose() { if (picker) picker.discard(); },
     });
   }
 
@@ -534,6 +723,7 @@ const ParentScreen = (() => {
           <button class="mini-row" data-q="child">${Icons.svg('users')}<span class="grow bold small" style="text-align:left">Cadastrar filho(a)</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-q="cat">${Icons.svg('folder')}<span class="grow bold small" style="text-align:left">Criar categoria</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-q="pay">${Icons.svg('banknote')}<span class="grow bold small" style="text-align:left">Registrar pagamento</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-q="manual">${Icons.svg('coins')}<span class="grow bold small" style="text-align:left">Lançamento avulso (bônus ou desconto)</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-q="approve">${Icons.svg('check')}<span class="grow bold small" style="text-align:left">Validar tudo que está pendente</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
         </div>`,
       onMount(sheet) {
@@ -542,10 +732,18 @@ const ParentScreen = (() => {
           UI.closeSheet();
           if (q === 'child') return openChildForm(null);
           if (q === 'cat') return openCatForm(null);
+          if (q === 'manual') {
+            const kids = Store.children();
+            if (!kids.length) return UI.toast('Cadastre um filho(a) primeiro', 'bad');
+            if (kids.length === 1) return openManualEntry(kids[0], user.id);
+            tab = 'filhos';
+            App.render();
+            return UI.toast('Escolha o filho(a) para o lançamento');
+          }
           if (q === 'pay') {
             const kids = Store.children();
             if (!kids.length) return UI.toast('Cadastre um filho(a) primeiro', 'bad');
-            if (kids.length === 1) return openPayForm(kids[0]);
+            if (kids.length === 1) return openPayouts(kids[0]);
             tab = 'filhos';
             App.render();
             return UI.toast('Escolha o filho(a) para registrar o pagamento');
@@ -579,6 +777,7 @@ const ParentScreen = (() => {
       body: `
         <div class="list">
           <button class="mini-row" data-m="theme">${Icons.svg(Store.theme() === 'dark' ? 'sun' : 'moon')}<span class="grow bold small" style="text-align:left">Trocar tema</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-m="photo">${Icons.svg('camera')}<span class="grow bold small" style="text-align:left">Minha foto de perfil</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="pass">${Icons.svg('lock')}<span class="grow bold small" style="text-align:left">Trocar minha senha</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="reset">${Icons.svg('refresh')}<span class="grow bold small" style="text-align:left">Restaurar dados de exemplo</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="logout">${Icons.svg('logout')}<span class="grow bold small" style="text-align:left">Sair</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
@@ -590,6 +789,7 @@ const ParentScreen = (() => {
           if (m === 'logout') return App.logout();
           if (m === 'theme') { App.toggleTheme(); return App.render(); }
           if (m === 'pass') return App.openChangePassword(user);
+          if (m === 'photo') return App.openProfilePhoto(user);
           if (m === 'reset') {
             const ok = await UI.confirm({
               title: 'Restaurar dados de exemplo?',
@@ -615,7 +815,8 @@ const ParentScreen = (() => {
         <nav class="tabbar">
           <button class="tab" data-tab="validar" aria-pressed="${tab === 'validar'}">${Icons.svg('check')}Validar</button>
           <button class="tab" data-tab="filhos" aria-pressed="${tab === 'filhos'}">${Icons.svg('users')}Filhos</button>
-          <button class="fab" data-fab aria-label="Ações rápidas">${Icons.svg('plus')}</button>
+          <button class="fab" data-fab aria-label="Ações rápidas">
+            ${Icons.svg('plus')}<span class="fab-label">Ações rápidas</span></button>
           <button class="tab" data-tab="categorias" aria-pressed="${tab === 'categorias'}">${Icons.svg('folder')}Ações</button>
           <button class="tab" data-tab="relatorio" aria-pressed="${tab === 'relatorio'}">${Icons.svg('trending')}Relatório</button>
         </nav>
@@ -663,8 +864,14 @@ const ParentScreen = (() => {
     }));
     root.querySelectorAll('[data-pay]').forEach((b) => b.addEventListener('click', () => {
       const kid = Store.userById(b.getAttribute('data-pay'));
-      if (kid) openPayForm(kid);
+      if (kid) openPayouts(kid);
     }));
+    root.querySelectorAll('[data-manual]').forEach((b) => b.addEventListener('click', () => {
+      const kid = Store.userById(b.getAttribute('data-manual'));
+      if (kid) openManualEntry(kid, user.id);
+    }));
+    root.querySelectorAll('[data-adjust]').forEach((b) =>
+      b.addEventListener('click', () => openAdjust(b.getAttribute('data-adjust'))));
     root.querySelectorAll('[data-history]').forEach((b) => b.addEventListener('click', () => {
       const kid = Store.userById(b.getAttribute('data-history'));
       if (kid) openHistory(kid);

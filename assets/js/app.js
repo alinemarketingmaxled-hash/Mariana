@@ -63,6 +63,35 @@ const App = (() => {
     });
   }
 
+  /** troca a foto de perfil de quem está logado (ou de um filho, pelo responsável) */
+  function openProfilePhoto(user) {
+    let picker = null;
+    UI.openSheet({
+      title: 'Foto do perfil',
+      subtitle: user.name,
+      body: `
+        <form id="profile-photo-form">
+          ${UI.photoField('Escolha ou tire uma foto', user.photo ? [user.photo] : [])}
+        </form>
+        <div class="note">A foto aparece no topo do app e nas listas. Fica salva só neste aparelho.</div>`,
+      actions: `
+        <button class="btn btn-ghost" data-cancel>Cancelar</button>
+        <button class="btn btn-primary" data-ok>Salvar</button>`,
+      onMount(sheet) {
+        picker = UI.bindPhotos(sheet);
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-ok]').addEventListener('click', () => {
+          Store.setUserPhoto(user.id, picker.ids()[0] || '');
+          picker.commit();
+          UI.closeSheet();
+          UI.toast('Foto atualizada', 'ok');
+          render();
+        });
+      },
+      onClose() { if (picker) picker.discard(); },
+    });
+  }
+
   function start() {
     applyTheme();
     render();
@@ -76,7 +105,7 @@ const App = (() => {
     });
   }
 
-  return { start, render, logout, toggleTheme, openChangePassword, applyTheme };
+  return { start, render, logout, toggleTheme, openChangePassword, openProfilePhoto, applyTheme };
 })();
 
 document.addEventListener('DOMContentLoaded', App.start);
