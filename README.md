@@ -25,6 +25,18 @@ Publicando em qualquer hospedagem estática (GitHub Pages, Vercel, Netlify), o a
 adicionado à tela inicial do celular: ele tem `manifest.json` e service worker, então abre
 em tela cheia e funciona offline.
 
+## Deploy no Vercel
+
+O site é estático: basta apontar um projeto do Vercel para este repositório, sem build.
+O `vercel.json` na raiz cuida das URLs limpas e do cache (o `index.html` e o `sw.js` são
+revalidados a cada visita, as fontes ficam em cache longo).
+
+A pasta `deploy/` existe só enquanto o projeto do Vercel **não** estiver conectado ao GitHub.
+Nesse caso o deploy é feito enviando os três arquivos dela; o `build.mjs` baixa o código
+deste repositório e o publica. Depois de conectar o repositório em *Settings > Git* no
+painel do Vercel, cada push passa a gerar um deploy sozinho e a pasta `deploy/` deixa de
+ser usada.
+
 ## Acessos de teste
 
 | Perfil | Usuário | Senha |
