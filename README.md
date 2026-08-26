@@ -9,7 +9,8 @@ com tipografia grotesca pesada (Archivo, hospedada no próprio projeto) e ícone
 Feito em **HTML + CSS + JavaScript puro**, sem instalação, sem servidor e sem banco de dados.
 
 O layout é de site: no celular a navegação fica na barra de baixo, em telas largas vira um
-menu lateral fixo e o conteúdo se espalha em colunas.
+menu lateral fixo com marca, perfil e ação principal, e cada página tem cabeçalho próprio
+(título, descrição e ação) com o conteúdo em duas colunas.
 
 ---
 
@@ -69,7 +70,17 @@ quantos filhos quiser, cada um com o próprio login e senha.
 - **Foto do perfil**: em *Perfil* dá para colocar ou trocar a própria foto.
 - **Resumo do dia** (botão central): mostra quantas tarefas obrigatórias faltam e envia para validação.
 - **Extrato**: histórico completo, com filtro por situação e os pagamentos recebidos.
-- **Perfil**: meta, estatísticas, troca de senha e tema.
+- **Agenda**: calendário do mês com provas, trabalhos, aulas, eventos e lembretes. O filho e o
+  responsável marcam compromissos na mesma agenda, com data, horário, local, detalhes e fotos;
+  dá para concluir, editar e excluir, e os próximos aparecem na coluna lateral de todas as telas.
+- **Carteira**: além do extrato, o filho registra **o que comprou** (lanche, brinquedo, jogo,
+  presente, roupa ou outro) com valor, data, observação e foto. O app mostra quanto recebeu,
+  quanto gastou e quanto sobrou.
+- **Perfil**: meta, estatísticas, foto, troca de senha e tema.
+
+Cada ação do filho responde com uma animação: tarefa marcada solta estrelas, registro de livro
+solta livrinhos, gasto mostra o dinheiro indo embora e o valor sobe na tela. Quem prefere menos
+movimento é atendido automaticamente pela preferência de *reduzir animações* do sistema.
 
 Depois que o responsável valida ou recusa, o item fica **travado**: a criança não consegue mais alterar.
 
@@ -86,6 +97,10 @@ Depois que o responsável valida ou recusa, o item fica **travado**: a criança 
   fora das categorias, com data, observação e fotos).
 - **Pagamentos**: lista de tudo o que já foi pago, com **foto do comprovante**; cada pagamento
   pode ser editado ou excluído (o valor volta para o saldo).
+- **Gastos do filho**: o responsável vê tudo o que a criança comprou, com fotos, e acompanha
+  quanto ainda sobra na carteira dela.
+- **Agenda da família**: mesma agenda do filho, com filtro por criança; o responsável marca
+  provas, reuniões e eventos que aparecem na tela da criança.
 - **Ações**: cria categorias e subcategorias com valor em R$, escolhe ícone, cor e até uma
   **foto de capa**, marca quais são **obrigatórias todo dia** e cadastra **descontos**
   (valores que saem da mesada). Qualquer valor pode ser alterado depois.
@@ -94,7 +109,8 @@ Depois que o responsável valida ou recusa, o item fica **travado**: a criança 
 ### Como o saldo é calculado
 
 ```
-saldo = (ações validadas que somam) − (descontos validados) − (pagamentos já feitos)
+a receber      = (ações validadas que somam) - (descontos validados) - (pagamentos já feitos)
+na carteira    = (pagamentos recebidos) - (gastos anotados pelo filho)
 ```
 
 Lançamentos pendentes aparecem separados, em “aguardando”, e não entram no saldo.
@@ -113,6 +129,8 @@ assets/
   js/
     icons.js          # biblioteca de ícones vetoriais (sem emoji)
     photos.js         # câmera/galeria, compressão e IndexedDB das fotos
+    effects.js        # animações de resposta (moedas, livros, estrelas)
+    agenda.js         # calendário compartilhado de provas, trabalhos e eventos
     store.js          # dados, regras de negócio e localStorage
     ui.js             # toast, bottom-sheet, formulários
     screen-auth.js    # login (filho(a) / responsável)

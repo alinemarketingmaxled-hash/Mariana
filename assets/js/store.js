@@ -118,6 +118,8 @@ const Store = (() => {
       entries: [],
       payouts: [],
       diary: [],
+      events: [],
+      purchases: [],
     };
   }
 
@@ -160,6 +162,8 @@ const Store = (() => {
         if (parsed && Array.isArray(parsed.users)) {
           const st = parsed.version === 2 ? parsed : migrate(parsed);
           if (!Array.isArray(st.diary)) st.diary = [];
+          if (!Array.isArray(st.events)) st.events = [];
+          if (!Array.isArray(st.purchases)) st.purchases = [];
           return st;
         }
       }
@@ -286,11 +290,15 @@ const Store = (() => {
     state.entries.forEach((e) => { if (e.childId === id && e.photos) trash.push(...e.photos); });
     state.diary.forEach((d) => { if (d.childId === id && d.photos) trash.push(...d.photos); });
     state.payouts.forEach((p) => { if (p.childId === id && p.photos) trash.push(...p.photos); });
+    state.events.forEach((e) => { if (e.childId === id && e.photos) trash.push(...e.photos); });
+    state.purchases.forEach((p) => { if (p.childId === id && p.photos) trash.push(...p.photos); });
     if (trash.length) Photos.removeMany(trash);
     state.users = state.users.filter((u) => u.id !== id);
     state.entries = state.entries.filter((e) => e.childId !== id);
     state.payouts = state.payouts.filter((p) => p.childId !== id);
     state.diary = state.diary.filter((d) => d.childId !== id);
+    state.events = state.events.filter((e) => e.childId !== id);
+    state.purchases = state.purchases.filter((p) => p.childId !== id);
     save();
   }
 
@@ -572,6 +580,176 @@ const Store = (() => {
     return { ok: true, record: d };
   }
 
+  /* ---------- gastos do filho (o que ele comprou) ---------- */
+  const PURCHASE_KINDS = [
+    { id: 'lanche', label: 'Lanche', icon: 'apple', grad: 'g2' },
+    { id: 'brinquedo', label: 'Brinquedo', icon: 'puzzle', grad: 'g4' },
+    { id: 'jogo', label: 'Jogo', icon: 'ball', grad: 'g6' },
+    { id: 'presente', label: 'Presente', icon: 'star', grad: 'g5' },
+    { id: 'roupa', label: 'Roupa', icon: 'backpack', grad: 'g3' },
+    { id: 'outro', label: 'Outro', icon: 'coins', grad: 'g7' },
+  ];
+
+  const purchaseKind = (id) => PURCHASE_KINDS.find((k) => k.id === id) || PURCHASE_KINDS[5];
+
+  function savePurchase(childId, data) {
+    const title = String(data.title || '').trim();
+    if (!title) return { ok: false, error: 'Escreva o que você comprou.' };
+    const value = Math.abs(Number(String(data.value).replace(',', '.'))) || 0;
+    if (!value) return { ok: false, error: 'Informe quanto custou.' };
+
+    const photos = String(data.photos || '').split(',').filter(Boolean).slice(0, 4);
+    const fields = {
+      kind: purchaseKind(data.kind).id,
+      title: title.slice(0, 90),
+      value,
+      date: data.date || today(),
+      note: String(data.note || '').trim().slice(0, 240),
+      photos,
+    };
+
+    if (data.id) {
+      const pc = state.purchases.find((x) => x.id === data.id);
+      if (!pc) return { ok: false, error: 'Gasto não encontrado.' };
+      const gone = (pc.photos || []).filter((id) => !photos.includes(id));
+      if (gone.length) Photos.removeMany(gone);
+      Object.assign(pc, fields);
+      save();
+      return { ok: true, purchase: pc };
+    }
+
+    const purchase = Object.assign({
+      id: uid('gc'), childId, createdAt: new Date().toISOString(),
+    }, fields);
+    state.purchases.push(purchase);
+    save();
+    return { ok: true, purchase };
+  }
+
+  function removePurchase(id) {
+    const pc = state.purchases.find((x) => x.id === id);
+    if (!pc) return;
+    if (pc.photos && pc.photos.length) Photos.removeMany(pc.photos);
+    state.purchases = state.purchases.filter((x) => x.id !== id);
+    save();
+  }
+
+  const purchaseById = (id) => state.purchases.find((p) => p.id === id) || null;
+
+  const purchasesOf = (childId, ym) =>
+    state.purchases
+      .filter((p) => p.childId === childId && (!ym || monthOf(p.date) === ym))
+      .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+
+  /** dinheiro que já foi entregue e ainda não foi gasto */
+  function cash(childId) {
+    const received = state.payouts
+      .filter((p) => p.childId === childId)
+      .reduce((sum, p) => sum + p.amount, 0);
+    const spent = state.purchases
+      .filter((p) => p.childId === childId)
+      .reduce((sum, p) => sum + p.value, 0);
+    return { received, spent, left: received - spent };
+  }
+
+  /* ---------- agenda: provas, trabalhos e eventos ---------- */
+  const EVENT_KINDS = [
+    { id: 'prova', label: 'Prova', icon: 'brain', grad: 'g5' },
+    { id: 'trabalho', label: 'Trabalho', icon: 'pencil', grad: 'g1' },
+    { id: 'evento', label: 'Evento', icon: 'star', grad: 'g2' },
+    { id: 'aula', label: 'Aula', icon: 'book', grad: 'g6' },
+    { id: 'lembrete', label: 'Lembrete', icon: 'bell', grad: 'g7' },
+  ];
+
+  const eventKind = (id) => EVENT_KINDS.find((k) => k.id === id) || EVENT_KINDS[2];
+
+  function saveEvent(data, author) {
+    const title = String(data.title || '').trim();
+    if (!title) return { ok: false, error: 'Escreva o nome do compromisso.' };
+    if (!data.date) return { ok: false, error: 'Informe a data.' };
+    if (!data.childId) return { ok: false, error: 'Escolha de quem é o compromisso.' };
+
+    const photos = String(data.photos || '').split(',').filter(Boolean).slice(0, 4);
+    const fields = {
+      childId: data.childId,
+      kind: eventKind(data.kind).id,
+      title: title.slice(0, 90),
+      date: data.date,
+      time: data.time || '',
+      place: String(data.place || '').trim().slice(0, 60),
+      notes: String(data.notes || '').trim().slice(0, 600),
+      photos,
+    };
+
+    if (data.id) {
+      const ev = state.events.find((x) => x.id === data.id);
+      if (!ev) return { ok: false, error: 'Compromisso não encontrado.' };
+      const gone = (ev.photos || []).filter((id) => !photos.includes(id));
+      if (gone.length) Photos.removeMany(gone);
+      Object.assign(ev, fields);
+      save();
+      return { ok: true, event: ev };
+    }
+
+    const ev = Object.assign({
+      id: uid('ev'),
+      done: false,
+      createdBy: (author && author.id) || null,
+      createdByName: (author && author.name) || '',
+      createdByRole: (author && author.role) || 'parent',
+      createdAt: new Date().toISOString(),
+    }, fields);
+    state.events.push(ev);
+    save();
+    return { ok: true, event: ev };
+  }
+
+  function removeEvent(id) {
+    const ev = state.events.find((x) => x.id === id);
+    if (!ev) return;
+    if (ev.photos && ev.photos.length) Photos.removeMany(ev.photos);
+    state.events = state.events.filter((x) => x.id !== id);
+    save();
+  }
+
+  function toggleEventDone(id) {
+    const ev = state.events.find((x) => x.id === id);
+    if (!ev) return;
+    ev.done = !ev.done;
+    save();
+    return ev;
+  }
+
+  const eventById = (id) => state.events.find((e) => e.id === id) || null;
+
+  const byWhen = (a, b) => (a.date + (a.time || '99:99')).localeCompare(b.date + (b.time || '99:99'));
+
+  /** compromissos de um filho (ou de todos, quando childId é vazio) */
+  const eventsOf = (childId, filter) =>
+    state.events
+      .filter((e) => (!childId || e.childId === childId))
+      .filter((e) => (!filter || filter === 'all' || e.kind === filter))
+      .sort(byWhen);
+
+  const eventsOfMonth = (childId, ym) =>
+    eventsOf(childId).filter((e) => monthOf(e.date) === ym);
+
+  const eventsOfDay = (childId, date) =>
+    eventsOf(childId).filter((e) => e.date === date);
+
+  /** o que vem pela frente, incluindo o que passou e continua em aberto */
+  function upcomingEvents(childId, days = 21) {
+    const from = today();
+    const to = addDays(from, days);
+    return eventsOf(childId)
+      .filter((e) => (e.date >= from && e.date <= to) || (e.date < from && !e.done))
+      .sort(byWhen);
+  }
+
+  /** quantos dias faltam (negativo quando já passou) */
+  const daysUntil = (iso) =>
+    Math.round((fromISO(iso) - fromISO(today())) / 86400000);
+
   /* ---------- dinheiro ---------- */
   const signed = (e) => (e.kind === 'penalty' ? -e.value : e.value);
 
@@ -684,6 +862,11 @@ const Store = (() => {
     pendingEntries, historyOf, dayStatus, signed, adjustEntry, addManualEntry, removeEntry,
     // diário
     saveDiary, removeDiary, diaryOf, diaryById, pendingDiary, reviewDiary, diaryKind, DIARY_KINDS,
+    // gastos
+    savePurchase, removePurchase, purchaseById, purchasesOf, cash, purchaseKind, PURCHASE_KINDS,
+    // agenda
+    saveEvent, removeEvent, toggleEventDone, eventById, eventsOf, eventsOfMonth,
+    eventsOfDay, upcomingEvents, daysUntil, eventKind, EVENT_KINDS,
     // dinheiro
     totals, balance, savePayout, removePayout, payoutById, payoutsOf,
     // tema

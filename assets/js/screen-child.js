@@ -14,25 +14,6 @@ const ChildScreen = (() => {
     return 'Boa noite';
   };
 
-  /* ---------- topo ---------- */
-  function topbar(user) {
-    const pend = Store.pendingEntries(user.id).length;
-    return `
-      <header class="topbar">
-        <div class="who">
-          ${UI.avatar(user)}
-          <div>
-            <div class="t1">${greet()}, ${UI.esc(user.name.split(' ')[0])}</div>
-            <div class="t2">${Store.labelMonth(Store.monthOf(Store.today()))}</div>
-          </div>
-        </div>
-        <div class="row" style="gap:9px">
-          <button class="icon-btn badge" data-count="${pend}" data-go="extrato" aria-label="Lançamentos aguardando">${Icons.svg('clock')}</button>
-          <button class="icon-btn" data-menu aria-label="Menu">${Icons.svg('menu')}</button>
-        </div>
-      </header>`;
-  }
-
   /* ---------- aba: hoje ---------- */
   function heroCard(user) {
     const bal = Store.balance(user.id);
@@ -181,6 +162,129 @@ const ChildScreen = (() => {
       </div>`;
   }
 
+  /* ---------- gastos: o que o filho comprou ---------- */
+  function purchaseRow(pc) {
+    const kind = Store.purchaseKind(pc.kind);
+    return `
+      <button class="spend-row" data-purchase-edit="${pc.id}">
+        <span class="em ${kind.grad}" style="width:40px;height:40px;border-radius:14px;display:grid;place-items:center">
+          ${Icons.svg(kind.icon)}
+        </span>
+        <span class="grow">
+          <span class="nm block">${UI.esc(pc.title)}</span>
+          <span class="tiny muted block">${UI.esc(kind.label)} • ${UI.esc(Store.labelDate(pc.date))}${pc.note ? ' • ' + UI.esc(pc.note) : ''}</span>
+        </span>
+        <span class="val pen">-${Store.money(pc.value).replace('R$ ', '')}</span>
+      </button>`;
+  }
+
+  function carteiraCard(user) {
+    const c = Store.cash(user.id);
+    return `
+      <section class="card">
+        <div class="between">
+          <div class="row">
+            <span class="em g3" style="width:42px;height:42px;border-radius:15px;display:grid;place-items:center">
+              ${Icons.svg('wallet')}
+            </span>
+            <div>
+              <div class="tiny muted">Dinheiro na carteira</div>
+              <div class="bold" style="font-size:19px;color:${c.left < 0 ? 'var(--bad)' : 'var(--ink)'}" data-cash>
+                ${Store.money(c.left)}
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" data-new-purchase>${Icons.svg('coins')} Registrar gasto</button>
+        </div>
+        <div class="stat-row mt12">
+          <div class="stat"><div class="k">recebido</div><div class="v">${Store.money(c.received)}</div></div>
+          <div class="stat"><div class="k">gastei</div><div class="v">${Store.money(c.spent)}</div></div>
+          <div class="stat"><div class="k">sobrou</div><div class="v">${Store.money(c.left)}</div></div>
+        </div>
+        ${c.left < 0 ? `<div class="note mt12">
+          Você anotou mais gastos do que recebeu pelo app. Peça para o responsável registrar os
+          pagamentos que já foram feitos.
+        </div>` : ''}
+      </section>`;
+  }
+
+  function openPurchaseForm(user, purchase) {
+    const editing = !!purchase;
+    const kind = editing ? purchase.kind : 'lanche';
+    let picker = null;
+    UI.openSheet({
+      title: editing ? 'Editar gasto' : 'O que você comprou?',
+      subtitle: 'Anote o que comprou com o seu dinheiro',
+      body: `
+        <form id="purchase-form">
+          <div class="field">
+            <label>Tipo</label>
+            <div class="seg-mini wrap">
+              ${Store.PURCHASE_KINDS.map((k) => `
+                <button type="button" data-kind="${k.id}" aria-pressed="${kind === k.id}">${UI.esc(k.label)}</button>`).join('')}
+            </div>
+            <input type="hidden" name="kind" value="${UI.esc(kind)}" />
+          </div>
+          ${UI.field('O que foi', UI.input('title', {
+            value: editing ? purchase.title : '', placeholder: 'ex.: lanche na cantina',
+          }))}
+          ${UI.field('Quanto custou (R$)', UI.input('value', {
+            type: 'number', value: editing ? purchase.value : '', attrs: 'min="0" step="0.01"', placeholder: '5,00',
+          }))}
+          ${UI.field('Data', UI.input('date', { type: 'date', value: editing ? purchase.date : Store.today() }))}
+          ${UI.field('Observação (opcional)', UI.input('note', {
+            value: editing ? (purchase.note || '') : '', placeholder: 'onde comprou, com quem',
+          }))}
+          ${UI.photoField('Foto do que comprou (opcional)', editing ? purchase.photos : [])}
+          ${editing ? `<input type="hidden" name="id" value="${UI.esc(purchase.id)}" />` : ''}
+        </form>`,
+      actions: `
+        ${editing
+          ? '<button class="btn btn-ghost" data-del>Excluir</button>'
+          : '<button class="btn btn-ghost" data-cancel>Cancelar</button>'}
+        <button class="btn btn-primary" data-ok>${editing ? 'Salvar' : 'Registrar gasto'}</button>`,
+      onMount(sheet) {
+        picker = UI.bindPhotos(sheet);
+        const kindInput = sheet.querySelector('input[name="kind"]');
+        sheet.querySelectorAll('[data-kind]').forEach((b) => b.addEventListener('click', () => {
+          sheet.querySelectorAll('[data-kind]').forEach((x) => x.setAttribute('aria-pressed', 'false'));
+          b.setAttribute('aria-pressed', 'true');
+          kindInput.value = b.getAttribute('data-kind');
+        }));
+        const cancel = sheet.querySelector('[data-cancel]');
+        if (cancel) cancel.addEventListener('click', UI.closeSheet);
+        const del = sheet.querySelector('[data-del]');
+        if (del) del.addEventListener('click', async () => {
+          const ok = await UI.confirm({
+            title: 'Apagar este gasto?',
+            text: 'O valor volta para a sua carteira.',
+            okLabel: 'Apagar', danger: true,
+          });
+          if (ok) {
+            Store.removePurchase(purchase.id);
+            picker.commit();
+            UI.closeSheet();
+            UI.toast('Gasto apagado');
+            App.render();
+          }
+        });
+        sheet.querySelector('[data-ok]').addEventListener('click', () => {
+          const data = UI.formData(sheet.querySelector('#purchase-form'));
+          const res = Store.savePurchase(user.id, data);
+          if (!res.ok) return UI.toast(res.error, 'bad');
+          picker.commit();
+          UI.closeSheet();
+          UI.toast(editing ? 'Gasto atualizado' : 'Gasto registrado', 'ok');
+          App.render();
+          Effects.burst('spend');
+          Effects.floatValue(`-${Store.money(res.purchase.value)}`, document.querySelector('[data-cash]'), 'spend');
+          Effects.pulse('[data-cash]');
+        });
+      },
+      onClose() { if (picker) picker.discard(); },
+    });
+  }
+
   /* ---------- aba: extrato ---------- */
   function extratoView(user) {
     const all = Store.historyOf(user.id, 90);
@@ -196,6 +300,19 @@ const ChildScreen = (() => {
         ${[['all', 'Tudo'], ['pending', 'Aguardando'], ['approved', 'Validado'], ['rejected', 'Recusado']]
           .map(([k, l]) => `<button data-filter="${k}" aria-pressed="${filter === k}">${l}</button>`).join('')}
       </div>
+
+      ${carteiraCard(user)}
+
+      <div class="section-title">
+        <h3>Meus gastos</h3>
+        <button class="link" data-new-purchase>+ registrar</button>
+      </div>
+      ${(() => {
+        const gastos = Store.purchasesOf(user.id);
+        return gastos.length
+          ? `<div class="list">${gastos.map(purchaseRow).join('')}</div>`
+          : UI.empty('coins', 'Você ainda não anotou nenhum gasto. Registre o que comprar com a sua mesada.');
+      })()}
 
       ${payouts.length ? `
         <div class="section-title"><h3>Pagamentos recebidos</h3></div>
@@ -362,6 +479,7 @@ const ChildScreen = (() => {
           UI.closeSheet();
           UI.toast(editing ? 'Registro atualizado' : 'Registro enviado para o responsável', 'ok');
           App.render();
+          Effects.burst(res.record.kind === 'livro' ? 'book' : 'task');
         });
       },
       onClose() { if (picker) picker.discard(); },
@@ -463,6 +581,19 @@ const ChildScreen = (() => {
           const res = Store.toggleEntry(user.id, date, cat.id, btn.getAttribute('data-item'));
           if (!res.ok) return UI.toast(res.error, 'bad');
           UI.toast(res.added ? 'Marcado. Aguardando validação.' : 'Desmarcado');
+          if (res.added) {
+            const item = cat.items.find((i) => i.id === btn.getAttribute('data-item'));
+            const cena = item && item.kind === 'penalty' ? 'spend'
+              : /livro|ler|lição|licao|estud/i.test(cat.name + ' ' + (item ? item.name : '')) ? 'book'
+              : 'task';
+            Effects.burst(cena, btn);
+            if (item) {
+              Effects.floatValue(
+                `${item.kind === 'penalty' ? '-' : '+'}${Store.money(item.value)}`,
+                btn, item.kind === 'penalty' ? 'spend' : 'good'
+              );
+            }
+          }
           App.render();                                  // atualiza a tela ao fundo
           sheet.querySelector('.sheet-body').innerHTML = body();
           bindItems(sheet);
@@ -509,6 +640,7 @@ const ChildScreen = (() => {
           UI.closeSheet();
           UI.toast('Comentário salvo', 'ok');
           App.render();
+          if (picker.ids().length) Effects.burst('photo');
         });
       },
       onClose() { if (picker) picker.discard(); },
@@ -537,6 +669,7 @@ const ChildScreen = (() => {
           UI.closeSheet();
           UI.toast(list.length ? 'Enviado. O responsável já pode validar.' : 'Marque alguma tarefa primeiro.',
             list.length ? 'ok' : '');
+          if (list.length) Effects.burst(st.complete ? 'goal' : 'task');
         });
       },
     });
@@ -549,6 +682,7 @@ const ChildScreen = (() => {
       body: `
         <div class="list">
           <button class="mini-row" data-m="perfil">${Icons.svg('user')}<span class="grow bold small" style="text-align:left">Meu perfil</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-m="agenda">${Icons.svg('calendar')}<span class="grow bold small" style="text-align:left">Agenda</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="diario">${Icons.svg('book')}<span class="grow bold small" style="text-align:left">Diário de livros e lições</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="extrato">${Icons.svg('chart')}<span class="grow bold small" style="text-align:left">Extrato completo</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="theme">${Icons.svg(Store.theme() === 'dark' ? 'sun' : 'moon')}<span class="grow bold small" style="text-align:left">Trocar tema</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
@@ -567,58 +701,130 @@ const ChildScreen = (() => {
     });
   }
 
+  /* ---------- painéis da coluna lateral ---------- */
+  function metaPanel(user) {
+    const bal = Store.balance(user.id);
+    const goal = Number(user.goalAmount) || 0;
+    if (!goal) return '';
+    const pct = Math.max(0, Math.min(100, (bal / goal) * 100));
+    return UI.panel('Minha meta', 'target', `
+      <div class="between">
+        <span class="bold small">${UI.esc(user.goalName || 'Meta')}</span>
+        <span class="bold small">${Store.money(goal)}</span>
+      </div>
+      <div class="bar mt12" style="background:var(--surface-2)"><i style="width:${pct}%"></i></div>
+      <p class="tiny muted mt8">Faltam ${Store.money(Math.max(0, goal - bal))} para chegar lá.</p>`);
+  }
+
+  function resumoPanel(user) {
+    const t = Store.totals(user.id, Store.monthOf(Store.today()));
+    const st = Store.dayStatus(user.id, date);
+    return UI.panel('Resumo do mês', 'chart', `
+      <div class="panel-list">
+        <div class="up-row"><span class="grow small">Validado</span><span class="bold small">${Store.money(t.approved)}</span></div>
+        <div class="up-row"><span class="grow small">Aguardando</span><span class="bold small">${Store.money(t.pending)}</span></div>
+        <div class="up-row"><span class="grow small">Descontos</span><span class="bold small">${Store.money(-t.penalties)}</span></div>
+        <div class="up-row"><span class="grow small">Tarefas de hoje</span><span class="bold small">${st.filled}/${st.required}</span></div>
+      </div>`);
+  }
+
   /* ---------- render ---------- */
+  const PAGES = {
+    home: { title: 'Hoje', subtitle: 'Marque o que você fez e envie para validação' },
+    diario: { title: 'Diário', subtitle: 'Livros, lições e atividades do dia' },
+    agenda: { title: 'Agenda', subtitle: 'Provas, trabalhos e eventos' },
+    extrato: { title: 'Carteira', subtitle: 'O que entrou, o que você gastou e o que sobrou' },
+    perfil: { title: 'Perfil', subtitle: 'Sua conta e sua meta' },
+  };
+
   function render(root, user) {
-    const views = { home: homeView, diario: diarioView, extrato: extratoView, perfil: perfilView };
-    const view = (views[tab] || homeView)(user);
+    const page = PAGES[tab] || PAGES.home;
+    const pending = Store.pendingEntries(user.id).length;
+    const proximos = Store.upcomingEvents(user.id).filter((e) => !e.done).length;
 
-    root.innerHTML = `
-      <div class="shell">
-        ${topbar(user)}
-        <div class="scroll">${view}</div>
-        <nav class="tabbar">
-          <button class="tab" data-tab="home" aria-pressed="${tab === 'home'}">${Icons.svg('home')}Hoje</button>
-          <button class="tab" data-tab="diario" aria-pressed="${tab === 'diario'}">${Icons.svg('book')}Diário</button>
-          <button class="fab" data-fab aria-label="${tab === 'diario' ? 'Novo registro' : 'Resumo do dia'}">
-            ${Icons.svg(tab === 'diario' ? 'plus' : 'check')}
-            <span class="fab-label">${tab === 'diario' ? 'Novo registro' : 'Resumo do dia'}</span></button>
-          <button class="tab" data-tab="extrato" aria-pressed="${tab === 'extrato'}">${Icons.svg('chart')}Extrato</button>
-          <button class="tab" data-menu>${Icons.svg('menu')}Menu</button>
-        </nav>
-      </div>`;
+    const main = tab === 'home' ? homeView(user)
+      : tab === 'diario' ? diarioView(user)
+      : tab === 'agenda' ? Agenda.view(user, user.id, false)
+      : tab === 'extrato' ? extratoView(user)
+      : perfilView(user);
 
-    root.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
-      tab = b.getAttribute('data-tab');
-      render(root, user);
-    }));
+    const aside = tab === 'agenda' ? ''
+      : `${metaPanel(user)}${Agenda.upcoming(user.id, false)}${tab === 'home' ? resumoPanel(user) : ''}`;
+
+    const actions = tab === 'agenda'
+      ? `<button class="btn btn-primary btn-sm" data-new-event>${Icons.svg('plus')} Compromisso</button>`
+      : tab === 'diario'
+        ? `<button class="btn btn-primary btn-sm" data-diary-new>${Icons.svg('plus')} Registro</button>`
+        : tab === 'extrato'
+          ? `<button class="btn btn-primary btn-sm" data-new-purchase>${Icons.svg('coins')} Gasto</button>`
+          : '';
+
+    root.innerHTML = UI.shell({
+      user,
+      roleLabel: 'Filho(a)',
+      tab,
+      title: page.title,
+      subtitle: page.subtitle,
+      actions,
+      main,
+      aside,
+      fab: tab === 'diario' ? { icon: 'plus', label: 'Novo registro' }
+        : tab === 'agenda' ? { icon: 'plus', label: 'Novo compromisso' }
+        : tab === 'extrato' ? { icon: 'coins', label: 'Registrar gasto' }
+        : { icon: 'check', label: 'Resumo do dia' },
+      nav: [
+        { id: 'home', label: 'Hoje', icon: 'home' },
+        { id: 'diario', label: 'Diário', icon: 'book' },
+        { id: 'agenda', label: 'Agenda', icon: 'calendar', count: proximos },
+        { id: 'extrato', label: 'Carteira', icon: 'wallet', count: pending },
+        { id: 'perfil', label: 'Perfil', icon: 'user' },
+      ],
+    });
+
+    const rerender = () => render(root, user);
+
+    UI.bindShell(root, {
+      onTab(id) { tab = id; rerender(); },
+      onMenu() { openMenu(user); },
+      onFab() {
+        if (tab === 'diario') return openDiaryForm(user, null);
+        if (tab === 'agenda') return Agenda.openForm(user, null, { date: Agenda.selectedDate(), childId: user.id });
+        if (tab === 'extrato') return openPurchaseForm(user, null);
+        return openDaySummary(user);
+      },
+    });
+    Agenda.bind(root, user, rerender);
+
     root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
       tab = b.getAttribute('data-go');
-      render(root, user);
+      rerender();
     }));
-    root.querySelectorAll('[data-menu]').forEach((b) => b.addEventListener('click', () => openMenu(user)));
-    const selectedDay = root.querySelector(`[data-day="${date}"]`);
-    if (selectedDay) selectedDay.scrollIntoView({ inline: 'center', block: 'nearest' });
+    root.querySelectorAll('[data-goto-agenda]').forEach((b) => b.addEventListener('click', () => {
+      tab = 'agenda';
+      rerender();
+    }));
 
-    root.querySelectorAll('[data-day]').forEach((b) => b.addEventListener('click', () => {
+    const selectedDay = root.querySelector(`.days [data-day="${date}"]`);
+    if (selectedDay) selectedDay.scrollIntoView({ inline: 'center', block: 'nearest' });
+    root.querySelectorAll('.days [data-day]').forEach((b) => b.addEventListener('click', () => {
       date = b.getAttribute('data-day');
-      render(root, user);
+      rerender();
     }));
+
     root.querySelectorAll('[data-cat]').forEach((b) =>
       b.addEventListener('click', () => openCategory(user, b.getAttribute('data-cat'))));
     root.querySelectorAll('[data-note]').forEach((b) =>
       b.addEventListener('click', () => openNote(b.getAttribute('data-note'))));
     root.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => {
       filter = b.getAttribute('data-filter');
-      render(root, user);
+      rerender();
     }));
-    const fab = root.querySelector('[data-fab]');
-    if (fab) fab.addEventListener('click', () => (tab === 'diario' ? openDiaryForm(user, null) : openDaySummary(user)));
 
-    const diaryNew = root.querySelector('[data-diary-new]');
-    if (diaryNew) diaryNew.addEventListener('click', () => openDiaryForm(user, null));
+    root.querySelectorAll('[data-diary-new]').forEach((b) =>
+      b.addEventListener('click', () => openDiaryForm(user, null)));
     root.querySelectorAll('[data-diary-filter]').forEach((b) => b.addEventListener('click', () => {
       diaryFilter = b.getAttribute('data-diary-filter');
-      render(root, user);
+      rerender();
     }));
     root.querySelectorAll('[data-diary-edit]').forEach((b) => b.addEventListener('click', () => {
       const rec = Store.diaryById(b.getAttribute('data-diary-edit'));
@@ -635,15 +841,25 @@ const ChildScreen = (() => {
       if (ok) { Store.removeDiary(rec.id); UI.toast('Registro apagado'); App.render(); }
     }));
 
-    const themeBtn = root.querySelector('[data-theme-toggle]');
-    if (themeBtn) themeBtn.addEventListener('click', () => { App.toggleTheme(); render(root, user); });
-    const logoutBtn = root.querySelector('[data-logout]');
-    if (logoutBtn) logoutBtn.addEventListener('click', () => App.logout());
+    root.querySelectorAll('[data-new-purchase]').forEach((b) =>
+      b.addEventListener('click', () => openPurchaseForm(user, null)));
+    root.querySelectorAll('[data-purchase-edit]').forEach((b) => b.addEventListener('click', () =>
+      openPurchaseForm(user, Store.purchaseById(b.getAttribute('data-purchase-edit')))));
+
     const passBtn = root.querySelector('[data-change-pass]');
     if (passBtn) passBtn.addEventListener('click', () => App.openChangePassword(user));
     root.querySelectorAll('[data-photo-profile]').forEach((b) =>
       b.addEventListener('click', () => App.openProfilePhoto(user)));
   }
 
-  return { render, reset() { tab = 'home'; date = Store.today(); filter = 'all'; diaryFilter = 'all'; } };
+  return {
+    render,
+    reset() {
+      tab = 'home';
+      date = Store.today();
+      filter = 'all';
+      diaryFilter = 'all';
+      Agenda.reset();
+    },
+  };
 })();

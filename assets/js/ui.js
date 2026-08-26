@@ -139,6 +139,91 @@ const UI = (() => {
     <input name="${esc(name)}" type="${opts.type || 'text'}" value="${esc(opts.value || '')}"
       placeholder="${esc(opts.placeholder || '')}" ${opts.attrs || ''} />`;
 
+  /**
+   * Estrutura da tela: barra lateral (marca, usuário, ação principal, navegação,
+   * rodapé) + cabeçalho da página + conteúdo em duas colunas.
+   */
+  function shell({ user, roleLabel, tab, nav, title, subtitle, actions = '', main, aside = '', fab }) {
+    return `
+      <div class="shell">
+        <aside class="side">
+          <div class="side-brand">
+            <span class="side-mark">${Icons.svg('wallet')}</span>
+            <span class="wordmark">Minha Mesada</span>
+          </div>
+          <div class="side-user">
+            ${avatar(user, '', 'width:40px;height:40px;font-size:16px')}
+            <span class="grow">
+              <span class="t1 block">${esc(user.name)}</span>
+              <span class="t2 block">${esc(roleLabel)}</span>
+            </span>
+          </div>
+          ${fab ? `<button class="fab" data-fab aria-label="${esc(fab.label)}">
+            ${Icons.svg(fab.icon)}<span class="fab-label">${esc(fab.label)}</span></button>` : ''}
+          <nav class="side-nav">
+            ${nav.map((n) => `
+              <button class="tab" data-tab="${esc(n.id)}" aria-pressed="${n.id === tab}">
+                ${Icons.svg(n.icon)}
+                <span class="tab-label">${esc(n.label)}</span>
+                ${n.count ? `<span class="nav-count">${n.count}</span>` : ''}
+              </button>`).join('')}
+          </nav>
+          <div class="side-foot">
+            <button class="mini-row" data-theme-toggle>
+              ${Icons.svg(Store.theme() === 'dark' ? 'sun' : 'moon')}
+              <span class="grow bold tiny" style="text-align:left">Tema ${Store.theme() === 'dark' ? 'claro' : 'escuro'}</span>
+            </button>
+            <button class="mini-row" data-logout>
+              ${Icons.svg('logout')}<span class="grow bold tiny" style="text-align:left">Sair</span>
+            </button>
+          </div>
+        </aside>
+
+        <div class="content">
+          <header class="page-head">
+            <div class="page-avatar">${avatar(user, '', 'width:40px;height:40px;font-size:16px;border-radius:14px')}</div>
+            <div class="page-title-box">
+              <h2>${esc(title)}</h2>
+              ${subtitle ? `<p>${esc(subtitle)}</p>` : ''}
+            </div>
+            <div class="page-actions">
+              ${actions}
+              <button class="icon-btn" data-menu aria-label="Menu">${Icons.svg('menu')}</button>
+            </div>
+          </header>
+          <div class="page ${aside ? '' : 'solo'}">
+            <main class="page-main">${main}</main>
+            ${aside ? `<aside class="page-aside">${aside}</aside>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /** liga navegação, ação principal, tema, sair e menu da estrutura */
+  function bindShell(root, { onTab, onFab, onMenu }) {
+    root.querySelectorAll('[data-tab]').forEach((b) =>
+      b.addEventListener('click', () => onTab && onTab(b.getAttribute('data-tab'))));
+    const fab = root.querySelector('[data-fab]');
+    if (fab && onFab) fab.addEventListener('click', onFab);
+    root.querySelectorAll('[data-menu]').forEach((b) =>
+      b.addEventListener('click', () => onMenu && onMenu()));
+    root.querySelectorAll('[data-theme-toggle]').forEach((b) => b.addEventListener('click', () => {
+      App.toggleTheme();
+      App.render();
+    }));
+    root.querySelectorAll('[data-logout]').forEach((b) => b.addEventListener('click', () => App.logout()));
+  }
+
+  /** painel da coluna lateral */
+  const panel = (title, icon, body, link = '') => `
+    <section class="panel">
+      <header class="panel-head">
+        <h3>${Icons.svg(icon)} ${esc(title)}</h3>
+        ${link}
+      </header>
+      ${body}
+    </section>`;
+
   /** avatar do usuário: foto quando existir, senão a inicial sobre a cor */
   const avatar = (user, cls = '', style = '') => {
     if (!user) return `<div class="avatar ${cls}" style="${style}"></div>`;
@@ -314,6 +399,7 @@ const UI = (() => {
     esc, toast, openSheet, closeSheet, confirm,
     iconPicker, gradPicker, bindPickers, bindSwitches,
     photoField, bindPhotos, photoStrip, bindPhotoViewers, avatar, catVisual, entryVisual,
+    shell, bindShell, panel,
     field, input, empty, statusChip, formData,
     GRADS,
   };

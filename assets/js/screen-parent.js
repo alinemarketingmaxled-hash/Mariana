@@ -5,25 +5,6 @@ const ParentScreen = (() => {
   let tab = 'validar';
   let childFilter = 'all';
 
-  /* ---------- topo ---------- */
-  function topbar(user) {
-    const pend = Store.pendingEntries().length + Store.pendingDiary().length;
-    return `
-      <header class="topbar">
-        <div class="who">
-          ${UI.avatar(user)}
-          <div>
-            <div class="t1">${UI.esc(user.name)}</div>
-            <div class="t2">Painel do responsável</div>
-          </div>
-        </div>
-        <div class="row" style="gap:9px">
-          <button class="icon-btn badge" data-count="${pend}" data-go="validar" aria-label="Pendências">${Icons.svg('bell')}</button>
-          <button class="icon-btn" data-menu aria-label="Menu">${Icons.svg('menu')}</button>
-        </div>
-      </header>`;
-  }
-
   /* ---------- aba: validar ---------- */
   function validarView() {
     const kids = Store.children();
@@ -239,8 +220,8 @@ const ParentScreen = (() => {
         <section class="card">
           <div class="stat-row">
             <div class="stat"><div class="k">validado</div><div class="v">${Store.money(t.approved)}</div></div>
-            <div class="stat"><div class="k">pago</div><div class="v">${Store.money(t.paid)}</div></div>
-            <div class="stat"><div class="k">saldo</div><div class="v">${Store.money(bal)}</div></div>
+            <div class="stat"><div class="k">a receber</div><div class="v">${Store.money(bal)}</div></div>
+            <div class="stat"><div class="k">na carteira</div><div class="v">${Store.money(Store.cash(k.id).left)}</div></div>
           </div>
           <div class="chart">
             ${days.map((d, i) => `
@@ -393,6 +374,33 @@ const ParentScreen = (() => {
     });
   }
 
+  /** o que o filho comprou com o dinheiro que recebeu */
+  function openPurchases(kid) {
+    const list = Store.purchasesOf(kid.id);
+    const c = Store.cash(kid.id);
+    UI.openSheet({
+      title: `Gastos de ${kid.name}`,
+      subtitle: `Recebeu ${Store.money(c.received)} • gastou ${Store.money(c.spent)} • sobrou ${Store.money(c.left)}`,
+      body: list.length ? `<div class="list">${list.map((pc) => {
+        const kind = Store.purchaseKind(pc.kind);
+        return `
+          <article class="diary">
+            <div class="row">
+              <span class="em ${kind.grad}" style="width:38px;height:38px;border-radius:13px;display:grid;place-items:center">
+                ${Icons.svg(kind.icon)}
+              </span>
+              <div class="grow">
+                <div class="bold small">${UI.esc(pc.title)}</div>
+                <div class="tiny muted">${UI.esc(kind.label)} • ${UI.esc(Store.labelDate(pc.date))}${pc.note ? ' • ' + UI.esc(pc.note) : ''}</div>
+              </div>
+              <span class="val pen">-${Store.money(pc.value).replace('R$ ', '')}</span>
+            </div>
+            ${UI.photoStrip(pc.photos, 'small-thumbs')}
+          </article>`;
+      }).join('')}</div>` : UI.empty('coins', 'Esse filho(a) ainda não anotou nenhum gasto.'),
+    });
+  }
+
   /** lista de pagamentos de um filho, com edição, exclusão e comprovante */
   function openPayouts(kid) {
     const list = Store.payoutsOf(kid.id);
@@ -476,6 +484,7 @@ const ParentScreen = (() => {
         </div>
         <div class="list">
           <button class="mini-row" data-a="pay">${Icons.svg('banknote')}<span class="grow bold small" style="text-align:left">Pagamentos e comprovantes</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-a="gastos">${Icons.svg('coins')}<span class="grow bold small" style="text-align:left">Gastos do filho(a)</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-a="manual">${Icons.svg('coins')}<span class="grow bold small" style="text-align:left">Lançamento avulso (bônus ou desconto)</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-a="photo">${Icons.svg('camera')}<span class="grow bold small" style="text-align:left">Foto do perfil</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-a="diary">${Icons.svg('book')}<span class="grow bold small" style="text-align:left">Ver diário de livros e lições</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
@@ -488,6 +497,7 @@ const ParentScreen = (() => {
           const a = b.getAttribute('data-a');
           UI.closeSheet();
           if (a === 'pay') return openPayouts(kid);
+          if (a === 'gastos') return openPurchases(kid);
           if (a === 'manual') return openManualEntry(kid, Store.currentUser() && Store.currentUser().id);
           if (a === 'photo') return App.openProfilePhoto(kid);
           if (a === 'history') return openHistory(kid);
@@ -803,32 +813,107 @@ const ParentScreen = (() => {
     });
   }
 
-  /* ---------- render ---------- */
-  function render(root, user) {
-    const views = { validar: validarView, filhos: filhosView, categorias: categoriasView, relatorio: relatorioView };
-    const view = (views[tab] || validarView)();
+  /** agenda com o filtro de filho no topo */
+  function agendaView(user, agendaChild) {
+    const kids = Store.children();
+    const filtro = kids.length > 1 ? `
+      <div class="seg-mini" role="group" aria-label="Filtrar por filho">
+        <button data-kid-filter="all" aria-pressed="${childFilter === 'all'}">Todos</button>
+        ${kids.map((k) => `
+          <button data-kid-filter="${k.id}" aria-pressed="${childFilter === k.id}">${UI.esc(k.name.split(' ')[0])}</button>`).join('')}
+      </div>` : '';
+    return filtro + Agenda.view(user, agendaChild, true);
+  }
 
-    root.innerHTML = `
-      <div class="shell">
-        ${topbar(user)}
-        <div class="scroll">${view}</div>
-        <nav class="tabbar">
-          <button class="tab" data-tab="validar" aria-pressed="${tab === 'validar'}">${Icons.svg('check')}Validar</button>
-          <button class="tab" data-tab="filhos" aria-pressed="${tab === 'filhos'}">${Icons.svg('users')}Filhos</button>
-          <button class="fab" data-fab aria-label="Ações rápidas">
-            ${Icons.svg('plus')}<span class="fab-label">Ações rápidas</span></button>
-          <button class="tab" data-tab="categorias" aria-pressed="${tab === 'categorias'}">${Icons.svg('folder')}Ações</button>
-          <button class="tab" data-tab="relatorio" aria-pressed="${tab === 'relatorio'}">${Icons.svg('trending')}Relatório</button>
-        </nav>
-      </div>`;
+  /* ---------- painéis da coluna lateral ---------- */
+  function filhosPanel() {
+    const kids = Store.children();
+    if (!kids.length) return '';
+    return UI.panel('Filhos', 'users', `
+      <div class="panel-list">
+        ${kids.map((k) => {
+          const t = Store.totals(k.id, Store.monthOf(Store.today()));
+          return `
+            <button class="up-row" data-kid="${k.id}">
+              ${UI.avatar(k, '', 'width:34px;height:34px;font-size:14px;border-radius:12px')}
+              <span class="grow">
+                <span class="bold small block">${UI.esc(k.name)}</span>
+                <span class="tiny muted block">${t.pendingCount} aguardando</span>
+              </span>
+              <span class="bold small">${Store.money(Store.balance(k.id))}</span>
+            </button>`;
+        }).join('')}
+      </div>`, '<button class="link" data-new-child>+ novo</button>');
+  }
+
+  /* ---------- render ---------- */
+  const PAGES = {
+    validar: { title: 'Validar', subtitle: 'Confira o que os filhos marcaram e aprove' },
+    filhos: { title: 'Filhos', subtitle: 'Acessos, metas, pagamentos e ajustes' },
+    agenda: { title: 'Agenda', subtitle: 'Provas, trabalhos e eventos da família' },
+    categorias: { title: 'Ações da mesada', subtitle: 'Categorias, valores e descontos' },
+    relatorio: { title: 'Relatório', subtitle: 'Como está o mês de cada filho' },
+  };
+
+  function render(root, user) {
+    const page = PAGES[tab] || PAGES.validar;
+    const pend = Store.pendingEntries().length + Store.pendingDiary().length;
+    const proximos = Store.upcomingEvents(null).filter((e) => !e.done).length;
+    const agendaChild = childFilter === 'all' ? null : childFilter;
+
+    const main = tab === 'validar' ? validarView()
+      : tab === 'filhos' ? filhosView()
+      : tab === 'agenda' ? agendaView(user, agendaChild)
+      : tab === 'categorias' ? categoriasView()
+      : relatorioView();
+
+    const aside = tab === 'agenda' ? ''
+      : `${filhosPanel()}${Agenda.upcoming(null, true)}`;
+
+    const actions = tab === 'agenda'
+      ? `<button class="btn btn-primary btn-sm" data-new-event>${Icons.svg('plus')} Compromisso</button>`
+      : tab === 'filhos'
+        ? `<button class="btn btn-primary btn-sm" data-new-child>${Icons.svg('plus')} Filho(a)</button>`
+        : tab === 'categorias'
+          ? `<button class="btn btn-primary btn-sm" data-new-cat>${Icons.svg('plus')} Categoria</button>`
+          : '';
+
+    root.innerHTML = UI.shell({
+      user,
+      roleLabel: 'Responsável',
+      tab,
+      title: page.title,
+      subtitle: page.subtitle,
+      actions,
+      main,
+      aside,
+      fab: tab === 'agenda' ? { icon: 'plus', label: 'Novo compromisso' } : { icon: 'plus', label: 'Ações rápidas' },
+      nav: [
+        { id: 'validar', label: 'Validar', icon: 'check', count: pend },
+        { id: 'filhos', label: 'Filhos', icon: 'users' },
+        { id: 'agenda', label: 'Agenda', icon: 'calendar', count: proximos },
+        { id: 'categorias', label: 'Ações', icon: 'folder' },
+        { id: 'relatorio', label: 'Relatório', icon: 'trending' },
+      ],
+    });
 
     const rerender = () => render(root, user);
 
-    root.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
-      tab = b.getAttribute('data-tab'); rerender();
-    }));
+    UI.bindShell(root, {
+      onTab(id) { tab = id; rerender(); },
+      onMenu() { openMenu(user); },
+      onFab() {
+        if (tab === 'agenda') return Agenda.openForm(user, null, { date: Agenda.selectedDate() });
+        return openQuickAdd(user);
+      },
+    });
+    Agenda.bind(root, user, rerender);
+
     root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
       tab = b.getAttribute('data-go'); rerender();
+    }));
+    root.querySelectorAll('[data-goto-agenda]').forEach((b) => b.addEventListener('click', () => {
+      tab = 'agenda'; rerender();
     }));
     root.querySelectorAll('[data-kid-filter]').forEach((b) => b.addEventListener('click', () => {
       childFilter = b.getAttribute('data-kid-filter'); rerender();
@@ -836,6 +921,7 @@ const ParentScreen = (() => {
     root.querySelectorAll('[data-approve]').forEach((b) => b.addEventListener('click', () => {
       Store.review(b.getAttribute('data-approve'), 'approved', '', user.id);
       UI.toast('Validado', 'ok');
+      Effects.burst('approved', b);
       App.render();
     }));
     root.querySelectorAll('[data-reject]').forEach((b) =>
@@ -876,10 +962,10 @@ const ParentScreen = (() => {
       const kid = Store.userById(b.getAttribute('data-history'));
       if (kid) openHistory(kid);
     }));
-    const newChild = root.querySelector('[data-new-child]');
-    if (newChild) newChild.addEventListener('click', () => openChildForm(null));
-    const newCat = root.querySelector('[data-new-cat]');
-    if (newCat) newCat.addEventListener('click', () => openCatForm(null));
+    root.querySelectorAll('[data-new-child]').forEach((b) =>
+      b.addEventListener('click', () => openChildForm(null)));
+    root.querySelectorAll('[data-new-cat]').forEach((b) =>
+      b.addEventListener('click', () => openCatForm(null)));
     root.querySelectorAll('[data-edit-cat]').forEach((b) =>
       b.addEventListener('click', () => openCatForm(Store.categoryById(b.getAttribute('data-edit-cat')))));
     root.querySelectorAll('[data-del-cat]').forEach((b) => b.addEventListener('click', async () => {
@@ -900,10 +986,14 @@ const ParentScreen = (() => {
       const item = cat && cat.items.find((i) => i.id === itemId);
       if (item) openItemForm(catId, item);
     }));
-    root.querySelectorAll('[data-menu]').forEach((b) => b.addEventListener('click', () => openMenu(user)));
-    const fab = root.querySelector('[data-fab]');
-    if (fab) fab.addEventListener('click', () => openQuickAdd(user));
   }
 
-  return { render, reset() { tab = 'validar'; childFilter = 'all'; } };
+  return {
+    render,
+    reset() {
+      tab = 'validar';
+      childFilter = 'all';
+      Agenda.reset();
+    },
+  };
 })();
