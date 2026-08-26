@@ -68,6 +68,8 @@ const UI = (() => {
     document.addEventListener('keydown', escHandler);
     const sheet = root.querySelector('.sheet');
     if (onMount) onMount(sheet);
+    Photos.hydrate(sheet);
+    bindPhotoViewers(sheet);
     const firstInput = sheet.querySelector('input:not([type=hidden]), textarea');
     if (firstInput && window.matchMedia('(min-width:900px)').matches) firstInput.focus();
     return sheet;
@@ -137,6 +139,118 @@ const UI = (() => {
     <input name="${esc(name)}" type="${opts.type || 'text'}" value="${esc(opts.value || '')}"
       placeholder="${esc(opts.placeholder || '')}" ${opts.attrs || ''} />`;
 
+  /** tira de fotos somente leitura; toca para abrir em tela cheia */
+  const photoStrip = (ids, cls = '') => {
+    const list = (ids || []).filter(Boolean);
+    if (!list.length) return '';
+    return `<div class="thumbs ${cls}" data-view-photos="${esc(list.join(','))}">
+      ${list.map((id, i) => `
+        <button type="button" class="thumb" data-index="${i}" aria-label="Ver foto ${i + 1}">
+          <img data-photo="${esc(id)}" alt="Foto ${i + 1}" />
+        </button>`).join('')}
+    </div>`;
+  };
+
+  /** liga as tiras de fotos somente leitura dentro de um container */
+  function bindPhotoViewers(scope) {
+    scope.querySelectorAll('[data-view-photos]').forEach((box) => {
+      if (box.dataset.bound) return;
+      box.dataset.bound = '1';
+      box.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('[data-index]');
+        if (!btn) return;
+        Photos.view(box.getAttribute('data-view-photos').split(','), Number(btn.getAttribute('data-index')));
+      });
+    });
+  }
+
+  /** campo de fotos para formulários (câmera ou galeria) */
+  const photoField = (label, ids = []) => `
+    <div class="field">
+      <label>${esc(label)}</label>
+      <div class="photo-picker" data-photo-picker>
+        <div class="thumbs" data-thumbs></div>
+        <label class="photo-add">
+          <input type="file" accept="image/*" multiple hidden data-file />
+          <span class="photo-add-in">Adicionar foto</span>
+        </label>
+        <p class="tiny muted" data-photo-hint>Até ${Photos.MAX_PER_RECORD} fotos. Elas ficam salvas neste aparelho.</p>
+      </div>
+      <input type="hidden" name="photos" value="${esc((ids || []).join(','))}" />
+    </div>`;
+
+  /**
+   * Liga o campo de fotos. Devolve { ids, commit, discard }: as fotos novas
+   * só ficam definitivas quando o formulário é salvo (commit).
+   */
+  function bindPhotos(scope) {
+    const box = scope.querySelector('[data-photo-picker]');
+    if (!box) return { ids: () => [], commit() {}, discard() {} };
+
+    const hidden = scope.querySelector('input[name="photos"]');
+    const thumbs = box.querySelector('[data-thumbs]');
+    const file = box.querySelector('[data-file]');
+    let ids = (hidden.value ? hidden.value.split(',') : []).filter(Boolean);
+    const added = [];
+    const removed = [];
+    let committed = false;
+
+    function paint() {
+      hidden.value = ids.join(',');
+      thumbs.innerHTML = ids.map((id, i) => `
+        <div class="thumb">
+          <img data-photo="${esc(id)}" alt="Foto ${i + 1}" />
+          <button type="button" class="thumb-x" data-remove="${esc(id)}" aria-label="Remover foto">
+            ${Icons.svg('close')}
+          </button>
+        </div>`).join('');
+      Photos.hydrate(thumbs);
+      box.querySelector('.photo-add').classList.toggle('hidden', ids.length >= Photos.MAX_PER_RECORD);
+    }
+
+    thumbs.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('[data-remove]');
+      if (!btn) return;
+      const id = btn.getAttribute('data-remove');
+      ids = ids.filter((x) => x !== id);
+      (added.includes(id) ? added : removed).push(id);
+      paint();
+    });
+
+    file.addEventListener('change', async () => {
+      const chosen = Array.from(file.files || []);
+      file.value = '';
+      for (const f of chosen) {
+        if (ids.length >= Photos.MAX_PER_RECORD) {
+          toast(`Máximo de ${Photos.MAX_PER_RECORD} fotos por registro`, 'bad');
+          break;
+        }
+        try {
+          const id = await Photos.save(await Photos.fromFile(f));
+          ids.push(id);
+          added.push(id);
+          paint();
+        } catch (err) {
+          toast(err.message || 'Não consegui usar essa foto', 'bad');
+        }
+      }
+    });
+
+    paint();
+
+    return {
+      ids: () => ids.slice(),
+      commit() {
+        committed = true;
+        Photos.removeMany(removed);   // apaga de vez as que foram tiradas do registro
+      },
+      discard() {
+        if (committed) return;
+        Photos.removeMany(added);     // formulário cancelado: some com as fotos novas
+      },
+    };
+  }
+
   const empty = (icon, text) =>
     `<div class="empty">${Icons.svg(icon, 'ico-lg')}<p>${esc(text)}</p></div>`;
 
@@ -171,6 +285,7 @@ const UI = (() => {
   return {
     esc, toast, openSheet, closeSheet, confirm,
     iconPicker, gradPicker, bindPickers, bindSwitches,
+    photoField, bindPhotos, photoStrip, bindPhotoViewers,
     field, input, empty, statusChip, formData,
     GRADS,
   };

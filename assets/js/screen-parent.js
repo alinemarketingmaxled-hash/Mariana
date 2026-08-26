@@ -7,7 +7,7 @@ const ParentScreen = (() => {
 
   /* ---------- topo ---------- */
   function topbar(user) {
-    const pend = Store.pendingEntries().length;
+    const pend = Store.pendingEntries().length + Store.pendingDiary().length;
     return `
       <header class="topbar">
         <div class="who">
@@ -71,9 +71,51 @@ const ParentScreen = (() => {
           </div>
           <div class="list">
             ${list.map(approvalCard).join('')}
-            <button class="btn btn-soft btn-sm" data-approve-all="${k}">${Icons.svg('check')} Validar os ${list.length} itens deste dia</button>
+            <button class="btn btn-soft btn-sm" data-approve-all="${k}">${Icons.svg('check')}
+              ${list.length === 1 ? 'Validar este item' : `Validar os ${list.length} itens deste dia`}</button>
           </div>`;
-      }).join('') : UI.empty('check', 'Nada pendente por aqui. Tudo validado.')}`;
+      }).join('') : UI.empty('check', 'Nada pendente por aqui. Tudo validado.')}
+
+      ${diarySection()}`;
+  }
+
+  /** registros de livros e lições esperando leitura do responsável */
+  function diarySection() {
+    const list = Store.pendingDiary().filter((d) => childFilter === 'all' || d.childId === childFilter);
+    if (!list.length) return '';
+    return `
+      <div class="section-title">
+        <h3>Diário de livros e lições</h3>
+        <span class="small muted">${list.length}</span>
+      </div>
+      <div class="list">${list.map(diaryApprovalCard).join('')}</div>`;
+  }
+
+  function diaryApprovalCard(d) {
+    const kid = Store.userById(d.childId);
+    const kind = Store.diaryKind(d.kind);
+    return `
+      <article class="appr">
+        <div class="row">
+          <span class="em g1" style="width:42px;height:42px;border-radius:15px;display:grid;place-items:center">
+            ${Icons.svg(kind.icon)}
+          </span>
+          <div class="grow">
+            <div class="nm bold" style="font-size:14px">${UI.esc(d.title)}</div>
+            <div class="mt small muted">
+              ${UI.esc(kind.label)} • ${kid ? UI.esc(kid.name.split(' ')[0]) : ''} •
+              ${Store.labelDate(d.date)} às ${UI.esc(d.time)}${d.minutes ? ` • ${d.minutes} min` : ''}
+            </div>
+          </div>
+        </div>
+        ${d.detail ? `<div class="small muted">${UI.esc(d.detail)}</div>` : ''}
+        <p class="diary-text">${UI.esc(d.text)}</p>
+        ${UI.photoStrip(d.photos)}
+        <div class="acts">
+          <button class="btn btn-ghost btn-sm" data-diary-reject="${d.id}">${Icons.svg('close')} Pedir revisão</button>
+          <button class="btn btn-primary btn-sm" data-diary-approve="${d.id}">${Icons.svg('check')} Validar</button>
+        </div>
+      </article>`;
   }
 
   function approvalCard(e) {
@@ -91,6 +133,7 @@ const ParentScreen = (() => {
           </span>
         </div>
         ${e.note ? `<div class="note">${UI.esc(e.note)}</div>` : ''}
+        ${UI.photoStrip(e.photos)}
         <div class="acts">
           <button class="btn btn-ghost btn-sm" data-reject="${e.id}">${Icons.svg('close')} Recusar</button>
           <button class="btn btn-primary btn-sm" data-approve="${e.id}">${Icons.svg('check')} Validar</button>
@@ -115,7 +158,7 @@ const ParentScreen = (() => {
               <span class="avatar ${k.color || 'g1'}">${UI.esc(k.name.trim().charAt(0).toUpperCase())}</span>
               <div class="grow">
                 <div class="bold" style="font-size:15px">${UI.esc(k.name)}</div>
-                <div class="small muted">@${UI.esc(k.username)} • ${t.pendingCount} aguardando</div>
+                <div class="small muted">@${UI.esc(k.username)} • ${t.pendingCount} aguardando • ${Store.diaryOf(k.id).length} no diário</div>
                 ${Number(k.goalAmount) > 0 ? `
                   <div class="bar mt8" style="background:var(--surface-2);height:6px">
                     <i style="width:${Math.max(0, Math.min(100, (bal / k.goalAmount) * 100))}%"></i>
@@ -206,7 +249,7 @@ const ParentScreen = (() => {
               </div>`).join('')}
           </div>
           <div class="row mt12" style="gap:9px">
-            <button class="btn btn-ghost btn-sm grow" data-history="${k.id}">${Icons.svg('chart')} Histórico</button>
+            <button class="btn btn-ghost btn-sm grow" data-diary="${k.id}">${Icons.svg('book')} Diário</button>
             <button class="btn btn-primary btn-sm grow" data-pay="${k.id}">${Icons.svg('banknote')} Pagar mesada</button>
           </div>
         </section>`;
@@ -214,22 +257,23 @@ const ParentScreen = (() => {
   }
 
   /* ---------- sheets ---------- */
-  function openReject(entryId, parentId) {
+  function openReject(entryId, parentId, isDiary) {
     UI.openSheet({
-      title: 'Recusar lançamento',
+      title: isDiary ? 'Pedir revisão' : 'Recusar lançamento',
       subtitle: 'Explique o motivo para o(a) filho(a) entender.',
       body: `<form id="rej-form">${UI.field('Motivo (opcional)', `
         <textarea name="reviewNote" rows="3" placeholder="ex.: a cama não foi arrumada hoje"></textarea>`)}</form>`,
       actions: `
         <button class="btn btn-ghost" data-cancel>Voltar</button>
-        <button class="btn btn-danger" data-ok>Recusar</button>`,
+        <button class="btn btn-danger" data-ok>${isDiary ? 'Pedir revisão' : 'Recusar'}</button>`,
       onMount(sheet) {
         sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
         sheet.querySelector('[data-ok]').addEventListener('click', () => {
           const data = UI.formData(sheet.querySelector('#rej-form'));
-          Store.review(entryId, 'rejected', data.reviewNote, parentId);
+          if (isDiary) Store.reviewDiary(entryId, 'rejected', data.reviewNote, parentId);
+          else Store.review(entryId, 'rejected', data.reviewNote, parentId);
           UI.closeSheet();
-          UI.toast('Lançamento recusado');
+          UI.toast(isDiary ? 'Revisão pedida' : 'Lançamento recusado');
           App.render();
         });
       },
@@ -283,6 +327,7 @@ const ParentScreen = (() => {
         </div>
         <div class="list">
           <button class="mini-row" data-a="pay">${Icons.svg('banknote')}<span class="grow bold small" style="text-align:left">Registrar pagamento</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-a="diary">${Icons.svg('book')}<span class="grow bold small" style="text-align:left">Ver diário de livros e lições</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-a="history">${Icons.svg('chart')}<span class="grow bold small" style="text-align:left">Ver histórico</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-a="edit">${Icons.svg('pencil')}<span class="grow bold small" style="text-align:left">Editar dados e meta</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-a="del"><span style="color:var(--bad);display:grid">${Icons.svg('trash')}</span><span class="grow bold small" style="text-align:left;color:var(--bad)">Excluir filho(a)</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
@@ -293,6 +338,7 @@ const ParentScreen = (() => {
           UI.closeSheet();
           if (a === 'pay') return openPayForm(kid);
           if (a === 'history') return openHistory(kid);
+          if (a === 'diary') return openDiary(kid);
           if (a === 'edit') return openChildForm(kid);
           if (a === 'del') {
             const ok = await UI.confirm({
@@ -358,6 +404,35 @@ const ParentScreen = (() => {
               <span class="val ${e.kind === 'penalty' ? 'pen' : 'earn'}">${e.kind === 'penalty' ? '-' : '+'}${Store.money(e.value).replace('R$ ', '')}</span>
             </div>`).join('')}
         </div>`).join('') : UI.empty('calendar', 'Sem lançamentos ainda.'),
+    });
+  }
+
+  function openDiary(kid) {
+    const list = Store.diaryOf(kid.id);
+    const minutos = list.reduce((sum, d) => sum + (d.minutes || 0), 0);
+    UI.openSheet({
+      title: `Diário de ${kid.name}`,
+      subtitle: `${list.length} ${list.length === 1 ? 'registro' : 'registros'} • ${minutos} minutos somados`,
+      body: list.length ? list.map((d) => {
+        const kind = Store.diaryKind(d.kind);
+        return `
+          <article class="diary">
+            <div class="row">
+              <span class="em g1" style="width:38px;height:38px;border-radius:13px;display:grid;place-items:center">
+                ${Icons.svg(kind.icon)}
+              </span>
+              <div class="grow">
+                <div class="bold small">${UI.esc(d.title)}</div>
+                <div class="tiny muted">${UI.esc(kind.label)} • ${Store.labelDate(d.date)} às ${UI.esc(d.time)}${d.minutes ? ` • ${d.minutes} min` : ''}</div>
+              </div>
+              ${UI.statusChip(d.status)}
+            </div>
+            ${d.detail ? `<div class="tiny muted">${UI.esc(d.detail)}</div>` : ''}
+            <p class="diary-text">${UI.esc(d.text)}</p>
+            ${UI.photoStrip(d.photos)}
+            ${d.reviewNote ? `<div class="note">${UI.esc(d.reviewNote)}</div>` : ''}
+          </article>`;
+      }).join('') : UI.empty('book', 'Esse filho(a) ainda não escreveu nenhum registro.'),
     });
   }
 
@@ -477,14 +552,17 @@ const ParentScreen = (() => {
           }
           if (q === 'approve') {
             const ids = Store.pendingEntries().map((e) => e.id);
-            if (!ids.length) return UI.toast('Não há nada pendente');
+            const diaryIds = Store.pendingDiary().map((d) => d.id);
+            const total = ids.length + diaryIds.length;
+            if (!total) return UI.toast('Não há nada pendente');
             const ok = await UI.confirm({
-              title: `Validar ${ids.length} ${ids.length === 1 ? 'item' : 'itens'}?`,
-              text: 'Todos os lançamentos pendentes serão aprovados de uma vez.',
+              title: `Validar ${total} ${total === 1 ? 'item' : 'itens'}?`,
+              text: 'Todos os lançamentos e registros pendentes serão aprovados de uma vez.',
               okLabel: 'Validar tudo',
             });
             if (ok) {
               Store.reviewMany(ids, 'approved', user.id);
+              diaryIds.forEach((id) => Store.reviewDiary(id, 'approved', '', user.id));
               UI.toast('Tudo validado', 'ok');
               App.render();
             }
@@ -560,7 +638,18 @@ const ParentScreen = (() => {
       App.render();
     }));
     root.querySelectorAll('[data-reject]').forEach((b) =>
-      b.addEventListener('click', () => openReject(b.getAttribute('data-reject'), user.id)));
+      b.addEventListener('click', () => openReject(b.getAttribute('data-reject'), user.id, false)));
+    root.querySelectorAll('[data-diary-reject]').forEach((b) =>
+      b.addEventListener('click', () => openReject(b.getAttribute('data-diary-reject'), user.id, true)));
+    root.querySelectorAll('[data-diary-approve]').forEach((b) => b.addEventListener('click', () => {
+      Store.reviewDiary(b.getAttribute('data-diary-approve'), 'approved', '', user.id);
+      UI.toast('Registro validado', 'ok');
+      App.render();
+    }));
+    root.querySelectorAll('[data-diary]').forEach((b) => b.addEventListener('click', () => {
+      const kid = Store.userById(b.getAttribute('data-diary'));
+      if (kid) openDiary(kid);
+    }));
     root.querySelectorAll('[data-approve-all]').forEach((b) => b.addEventListener('click', () => {
       const [childId, d] = b.getAttribute('data-approve-all').split('|');
       const ids = Store.pendingEntries(childId).filter((e) => e.date === d).map((e) => e.id);

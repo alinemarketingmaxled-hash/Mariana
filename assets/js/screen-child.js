@@ -5,6 +5,7 @@ const ChildScreen = (() => {
   let tab = 'home';
   let date = Store.today();
   let filter = 'all';
+  let diaryFilter = 'all';
 
   const greet = () => {
     const h = new Date().getHours();
@@ -168,6 +169,7 @@ const ChildScreen = (() => {
             <span>${UI.esc(e.catName || '')}</span>
             ${e.note ? `<span>• ${UI.esc(e.note)}</span>` : ''}
           </div>
+          ${UI.photoStrip(e.photos, 'small-thumbs')}
           ${e.reviewNote ? `<div class="note mt8">${UI.esc(e.reviewNote)}</div>` : ''}
         </div>
         <div class="col" style="align-items:flex-end;gap:6px">
@@ -215,6 +217,154 @@ const ChildScreen = (() => {
         </div>
         <div class="list">${byDate[d].map(entryRow).join('')}</div>`).join('')
         : UI.empty('calendar', 'Nenhum lançamento por aqui ainda.')}`;
+  }
+
+  /* ---------- aba: diário de livros e lições ---------- */
+  function diaryCard(d, editable) {
+    const kind = Store.diaryKind(d.kind);
+    return `
+      <article class="diary">
+        <div class="row">
+          <span class="em g1" style="width:40px;height:40px;border-radius:14px;display:grid;place-items:center">
+            ${Icons.svg(kind.icon)}
+          </span>
+          <div class="grow">
+            <div class="nm bold">${UI.esc(d.title)}</div>
+            <div class="mt small muted">
+              <span class="chip neutral">${UI.esc(kind.label)}</span>
+              <span>${[
+                `${Store.labelDate(d.date)} às ${d.time}`,
+                d.minutes ? `${d.minutes} min` : '',
+                d.detail || '',
+              ].filter(Boolean).map(UI.esc).join(' • ')}</span>
+            </div>
+          </div>
+          ${UI.statusChip(d.status)}
+        </div>
+        <p class="diary-text">${UI.esc(d.text)}</p>
+        ${UI.photoStrip(d.photos)}
+        ${d.reviewNote ? `<div class="note">${UI.esc(d.reviewNote)}</div>` : ''}
+        ${editable && d.status === 'pending' ? `
+          <div class="row" style="gap:9px">
+            <button class="btn btn-ghost btn-sm grow" data-diary-edit="${d.id}">${Icons.svg('pencil')} Editar</button>
+            <button class="btn btn-ghost btn-sm grow" data-diary-del="${d.id}">${Icons.svg('trash')} Apagar</button>
+          </div>` : ''}
+      </article>`;
+  }
+
+  function diarioView(user) {
+    const all = Store.diaryOf(user.id);
+    const list = diaryFilter === 'all' ? all : all.filter((d) => d.kind === diaryFilter);
+    const ym = Store.monthOf(Store.today());
+    const noMes = all.filter((d) => Store.monthOf(d.date) === ym).length;
+    const aguardando = all.filter((d) => d.status === 'pending').length;
+    const minutos = all
+      .filter((d) => Store.monthOf(d.date) === ym)
+      .reduce((sum, d) => sum + (d.minutes || 0), 0);
+
+    const byDate = {};
+    list.forEach((d) => { (byDate[d.date] = byDate[d.date] || []).push(d); });
+    const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+
+    return `
+      <section class="hero">
+        <div class="hero-top">
+          <div class="hero-ico">${Icons.svg('book')}</div>
+          <div class="grow">
+            <div class="label">Livros e lições</div>
+            <div class="value">${all.length}<small style="margin-left:6px">${all.length === 1 ? 'registro' : 'registros'}</small></div>
+          </div>
+        </div>
+        <div class="hero-stats mt16">
+          <div class="hero-stat"><div class="k">no mês</div><div class="v">${noMes}</div></div>
+          <div class="hero-stat"><div class="k">minutos</div><div class="v">${minutos}</div></div>
+          <div class="hero-stat"><div class="k">aguardando</div><div class="v">${aguardando}</div></div>
+        </div>
+      </section>
+
+      <button class="btn btn-primary btn-block mt16" data-diary-new>
+        ${Icons.svg('plus')} Escrever registro de hoje
+      </button>
+
+      <div class="seg-mini mt12" role="group" aria-label="Filtro do diário">
+        <button data-diary-filter="all" aria-pressed="${diaryFilter === 'all'}">Tudo</button>
+        ${Store.DIARY_KINDS.map((k) => `
+          <button data-diary-filter="${k.id}" aria-pressed="${diaryFilter === k.id}">${UI.esc(k.label)}</button>`).join('')}
+      </div>
+
+      ${dates.length ? dates.map((d) => `
+        <div class="date-head"><h4>${Store.labelDate(d)}</h4><span class="ln"></span>
+          <span class="tiny muted">${byDate[d].length}</span></div>
+        <div class="list">${byDate[d].map((rec) => diaryCard(rec, true)).join('')}</div>`).join('')
+      : UI.empty('book', 'Nenhum registro ainda. Conte o que você leu ou estudou hoje, com horário e foto.')}`;
+  }
+
+  function openDiaryForm(user, record) {
+    const editing = !!record;
+    const now = new Date();
+    const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const kind = editing ? record.kind : 'livro';
+    let picker = null;
+
+    UI.openSheet({
+      title: editing ? 'Editar registro' : 'Novo registro',
+      subtitle: 'Livros, lições e atividades do dia',
+      body: `
+        <form id="diary-form">
+          <div class="field">
+            <label>Tipo</label>
+            <div class="seg-mini" data-kind-group>
+              ${Store.DIARY_KINDS.map((k) => `
+                <button type="button" data-kind="${k.id}" aria-pressed="${kind === k.id}">${UI.esc(k.label)}</button>`).join('')}
+            </div>
+            <input type="hidden" name="kind" value="${UI.esc(kind)}" />
+          </div>
+          ${UI.field('Título', UI.input('title', {
+            value: editing ? record.title : '',
+            placeholder: 'ex.: O Pequeno Príncipe / Matemática',
+          }))}
+          ${UI.field('Detalhe (opcional)', UI.input('detail', {
+            value: editing ? (record.detail || '') : '',
+            placeholder: 'ex.: páginas 10 a 24',
+          }))}
+          <div class="row" style="gap:10px;align-items:stretch">
+            <div class="grow">${UI.field('Data', UI.input('date', { type: 'date', value: editing ? record.date : Store.today() }))}</div>
+            <div class="grow">${UI.field('Horário', UI.input('time', { type: 'time', value: editing ? record.time : hhmm }))}</div>
+          </div>
+          ${UI.field('Tempo em minutos (opcional)', UI.input('minutes', {
+            type: 'number', value: editing && record.minutes ? record.minutes : '',
+            attrs: 'min="0" step="5"', placeholder: '30',
+          }))}
+          ${UI.field('O que você fez', `
+            <textarea name="text" rows="5" placeholder="Escreva com suas palavras o que leu, estudou ou treinou hoje">${editing ? UI.esc(record.text) : ''}</textarea>`)}
+          ${UI.photoField('Fotos do que você fez', editing ? record.photos : [])}
+          ${editing ? `<input type="hidden" name="id" value="${UI.esc(record.id)}" />` : ''}
+        </form>`,
+      actions: `
+        <button class="btn btn-ghost" data-cancel>Cancelar</button>
+        <button class="btn btn-primary" data-save>${editing ? 'Salvar' : 'Enviar registro'}</button>`,
+      onMount(sheet) {
+        picker = UI.bindPhotos(sheet);
+        const kindInput = sheet.querySelector('input[name="kind"]');
+        sheet.querySelectorAll('[data-kind]').forEach((b) => b.addEventListener('click', () => {
+          sheet.querySelectorAll('[data-kind]').forEach((x) => x.setAttribute('aria-pressed', 'false'));
+          b.setAttribute('aria-pressed', 'true');
+          kindInput.value = b.getAttribute('data-kind');
+        }));
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-save]').addEventListener('click', () => {
+          const data = UI.formData(sheet.querySelector('#diary-form'));
+          data.childId = user.id;
+          const res = Store.saveDiary(data);
+          if (!res.ok) return UI.toast(res.error, 'bad');
+          picker.commit();
+          UI.closeSheet();
+          UI.toast(editing ? 'Registro atualizado' : 'Registro enviado para o responsável', 'ok');
+          App.render();
+        });
+      },
+      onClose() { if (picker) picker.discard(); },
+    });
   }
 
   /* ---------- aba: perfil ---------- */
@@ -329,27 +479,32 @@ const ChildScreen = (() => {
     const state = Store.get();
     const e = state.entries.find((x) => x.id === entryId);
     if (!e) return;
+    let picker = null;
     UI.openSheet({
-      title: 'Comentário',
+      title: 'Comentário e fotos',
       subtitle: e.name,
       body: `
         <form id="note-form">
           ${UI.field('Conte como foi (opcional)', `
             <textarea name="note" rows="3" placeholder="ex.: terminei toda a lição de matemática">${UI.esc(e.note)}</textarea>`)}
+          ${UI.photoField('Fotos (opcional)', e.photos || [])}
         </form>`,
       actions: `
         <button class="btn btn-ghost" data-cancel>Cancelar</button>
         <button class="btn btn-primary" data-save>Salvar</button>`,
       onMount(sheet) {
+        picker = UI.bindPhotos(sheet);
         sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
         sheet.querySelector('[data-save]').addEventListener('click', () => {
           const data = UI.formData(sheet.querySelector('#note-form'));
-          Store.setEntryNote(entryId, data.note);
+          Store.setEntryNote(entryId, data.note, picker.ids());
+          picker.commit();
           UI.closeSheet();
           UI.toast('Comentário salvo', 'ok');
           App.render();
         });
       },
+      onClose() { if (picker) picker.discard(); },
     });
   }
 
@@ -387,6 +542,7 @@ const ChildScreen = (() => {
       body: `
         <div class="list">
           <button class="mini-row" data-m="perfil">${Icons.svg('user')}<span class="grow bold small" style="text-align:left">Meu perfil</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-m="diario">${Icons.svg('book')}<span class="grow bold small" style="text-align:left">Diário de livros e lições</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="extrato">${Icons.svg('chart')}<span class="grow bold small" style="text-align:left">Extrato completo</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="theme">${Icons.svg(Store.theme() === 'dark' ? 'sun' : 'moon')}<span class="grow bold small" style="text-align:left">Trocar tema</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="logout">${Icons.svg('logout')}<span class="grow bold small" style="text-align:left">Sair</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
@@ -406,7 +562,7 @@ const ChildScreen = (() => {
 
   /* ---------- render ---------- */
   function render(root, user) {
-    const views = { home: homeView, extrato: extratoView, perfil: perfilView };
+    const views = { home: homeView, diario: diarioView, extrato: extratoView, perfil: perfilView };
     const view = (views[tab] || homeView)(user);
 
     root.innerHTML = `
@@ -415,9 +571,10 @@ const ChildScreen = (() => {
         <div class="scroll">${view}</div>
         <nav class="tabbar">
           <button class="tab" data-tab="home" aria-pressed="${tab === 'home'}">${Icons.svg('home')}Hoje</button>
+          <button class="tab" data-tab="diario" aria-pressed="${tab === 'diario'}">${Icons.svg('book')}Diário</button>
+          <button class="fab" data-fab aria-label="${tab === 'diario' ? 'Novo registro' : 'Resumo do dia'}">
+            ${Icons.svg(tab === 'diario' ? 'plus' : 'check')}</button>
           <button class="tab" data-tab="extrato" aria-pressed="${tab === 'extrato'}">${Icons.svg('chart')}Extrato</button>
-          <button class="fab" data-fab aria-label="Resumo do dia">${Icons.svg('check')}</button>
-          <button class="tab" data-tab="perfil" aria-pressed="${tab === 'perfil'}">${Icons.svg('user')}Perfil</button>
           <button class="tab" data-menu>${Icons.svg('menu')}Menu</button>
         </nav>
       </div>`;
@@ -447,7 +604,28 @@ const ChildScreen = (() => {
       render(root, user);
     }));
     const fab = root.querySelector('[data-fab]');
-    if (fab) fab.addEventListener('click', () => openDaySummary(user));
+    if (fab) fab.addEventListener('click', () => (tab === 'diario' ? openDiaryForm(user, null) : openDaySummary(user)));
+
+    const diaryNew = root.querySelector('[data-diary-new]');
+    if (diaryNew) diaryNew.addEventListener('click', () => openDiaryForm(user, null));
+    root.querySelectorAll('[data-diary-filter]').forEach((b) => b.addEventListener('click', () => {
+      diaryFilter = b.getAttribute('data-diary-filter');
+      render(root, user);
+    }));
+    root.querySelectorAll('[data-diary-edit]').forEach((b) => b.addEventListener('click', () => {
+      const rec = Store.diaryById(b.getAttribute('data-diary-edit'));
+      if (rec) openDiaryForm(user, rec);
+    }));
+    root.querySelectorAll('[data-diary-del]').forEach((b) => b.addEventListener('click', async () => {
+      const rec = Store.diaryById(b.getAttribute('data-diary-del'));
+      if (!rec) return;
+      const ok = await UI.confirm({
+        title: 'Apagar este registro?',
+        text: 'O texto e as fotos desse registro serão apagados.',
+        okLabel: 'Apagar', danger: true,
+      });
+      if (ok) { Store.removeDiary(rec.id); UI.toast('Registro apagado'); App.render(); }
+    }));
 
     const themeBtn = root.querySelector('[data-theme-toggle]');
     if (themeBtn) themeBtn.addEventListener('click', () => { App.toggleTheme(); render(root, user); });
@@ -457,5 +635,5 @@ const ChildScreen = (() => {
     if (passBtn) passBtn.addEventListener('click', () => App.openChangePassword(user));
   }
 
-  return { render, reset() { tab = 'home'; date = Store.today(); filter = 'all'; } };
+  return { render, reset() { tab = 'home'; date = Store.today(); filter = 'all'; diaryFilter = 'all'; } };
 })();

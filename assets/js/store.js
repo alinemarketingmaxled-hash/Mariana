@@ -117,6 +117,7 @@ const Store = (() => {
       ],
       entries: [],
       payouts: [],
+      diary: [],
     };
   }
 
@@ -157,7 +158,9 @@ const Store = (() => {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.users)) {
-          return parsed.version === 2 ? parsed : migrate(parsed);
+          const st = parsed.version === 2 ? parsed : migrate(parsed);
+          if (!Array.isArray(st.diary)) st.diary = [];
+          return st;
         }
       }
     } catch (e) {
@@ -262,9 +265,14 @@ const Store = (() => {
   }
 
   function removeChild(id) {
+    const trash = [];
+    state.entries.forEach((e) => { if (e.childId === id && e.photos) trash.push(...e.photos); });
+    state.diary.forEach((d) => { if (d.childId === id && d.photos) trash.push(...d.photos); });
+    if (trash.length) Photos.removeMany(trash);
     state.users = state.users.filter((u) => u.id !== id);
     state.entries = state.entries.filter((e) => e.childId !== id);
     state.payouts = state.payouts.filter((p) => p.childId !== id);
+    state.diary = state.diary.filter((d) => d.childId !== id);
     save();
   }
 
@@ -349,6 +357,7 @@ const Store = (() => {
       if (existing.status !== 'pending')
         return { ok: false, error: 'Já validado pelo responsável, não dá para alterar.' };
       state.entries = state.entries.filter((e) => e.id !== existing.id);
+      if (existing.photos && existing.photos.length) Photos.removeMany(existing.photos);
       save();
       return { ok: true, removed: true };
     }
@@ -357,7 +366,7 @@ const Store = (() => {
       id: uid('e'), childId, date, catId, itemId,
       name: item.name, value: item.value, kind: item.kind,
       icon: cat.icon, grad: cat.grad, catName: cat.name,
-      note: '', status: 'pending',
+      note: '', photos: [], status: 'pending',
       reviewNote: '', reviewedBy: null, reviewedAt: null,
       createdAt: new Date().toISOString(),
     });
@@ -365,10 +374,11 @@ const Store = (() => {
     return { ok: true, added: true };
   }
 
-  function setEntryNote(entryId, note) {
+  function setEntryNote(entryId, note, photos) {
     const e = state.entries.find((x) => x.id === entryId);
     if (!e) return;
     e.note = String(note || '').slice(0, 240);
+    if (photos) e.photos = photos.filter(Boolean).slice(0, 8);
     save();
   }
 
@@ -399,6 +409,89 @@ const Store = (() => {
       .filter((e) => e.childId === childId && e.date >= min)
       .sort((a, b) => (b.date.localeCompare(a.date)) || b.createdAt.localeCompare(a.createdAt));
   };
+
+  /* ---------- diário de livros e lições ---------- */
+  const DIARY_KINDS = [
+    { id: 'livro', label: 'Livro', icon: 'book' },
+    { id: 'licao', label: 'Lição', icon: 'pencil' },
+    { id: 'atividade', label: 'Atividade', icon: 'star' },
+  ];
+
+  const diaryKind = (id) => DIARY_KINDS.find((k) => k.id === id) || DIARY_KINDS[2];
+
+  function saveDiary(data) {
+    const title = String(data.title || '').trim();
+    const text = String(data.text || '').trim();
+    if (!title) return { ok: false, error: 'Escreva o título (o livro, a matéria ou a atividade).' };
+    if (!text) return { ok: false, error: 'Conte o que você fez.' };
+    if (!data.date) return { ok: false, error: 'Informe a data.' };
+    if (!data.time) return { ok: false, error: 'Informe o horário.' };
+
+    const photos = String(data.photos || '').split(',').filter(Boolean).slice(0, 8);
+    const fields = {
+      kind: diaryKind(data.kind).id,
+      title: title.slice(0, 90),
+      text: text.slice(0, 2000),
+      date: data.date,
+      time: data.time,
+      detail: String(data.detail || '').trim().slice(0, 60),
+      minutes: Math.max(0, Number(data.minutes) || 0),
+      photos,
+    };
+
+    if (data.id) {
+      const d = state.diary.find((x) => x.id === data.id);
+      if (!d) return { ok: false, error: 'Registro não encontrado.' };
+      if (d.status !== 'pending') {
+        return { ok: false, error: 'Esse registro já foi visto pelo responsável, não dá para editar.' };
+      }
+      const gone = (d.photos || []).filter((id) => !photos.includes(id));
+      if (gone.length) Photos.removeMany(gone);
+      Object.assign(d, fields);
+      save();
+      return { ok: true, record: d };
+    }
+
+    const record = Object.assign({
+      id: uid('d'), childId: data.childId,
+      status: 'pending', reviewNote: '', reviewedBy: null, reviewedAt: null,
+      createdAt: new Date().toISOString(),
+    }, fields);
+    state.diary.push(record);
+    save();
+    return { ok: true, record };
+  }
+
+  function removeDiary(id) {
+    const d = state.diary.find((x) => x.id === id);
+    if (!d) return;
+    if (d.photos && d.photos.length) Photos.removeMany(d.photos);
+    state.diary = state.diary.filter((x) => x.id !== id);
+    save();
+  }
+
+  const diaryOf = (childId, filter) =>
+    state.diary
+      .filter((d) => d.childId === childId && (!filter || filter === 'all' || d.status === filter))
+      .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+
+  const pendingDiary = (childId) =>
+    state.diary
+      .filter((d) => d.status === 'pending' && (!childId || d.childId === childId))
+      .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+  const diaryById = (id) => state.diary.find((d) => d.id === id) || null;
+
+  function reviewDiary(id, status, reviewNote, parentId) {
+    const d = diaryById(id);
+    if (!d) return { ok: false, error: 'Registro não encontrado.' };
+    d.status = status === 'approved' ? 'approved' : 'rejected';
+    d.reviewNote = String(reviewNote || '').slice(0, 240);
+    d.reviewedBy = parentId || null;
+    d.reviewedAt = new Date().toISOString();
+    save();
+    return { ok: true, record: d };
+  }
 
   /* ---------- dinheiro ---------- */
   const signed = (e) => (e.kind === 'penalty' ? -e.value : e.value);
@@ -486,6 +579,8 @@ const Store = (() => {
     // lançamentos
     entriesOf, entryFor, toggleEntry, setEntryNote, review, reviewMany,
     pendingEntries, historyOf, dayStatus, signed,
+    // diário
+    saveDiary, removeDiary, diaryOf, diaryById, pendingDiary, reviewDiary, diaryKind, DIARY_KINDS,
     // dinheiro
     totals, balance, addPayout, payoutsOf,
     // tema

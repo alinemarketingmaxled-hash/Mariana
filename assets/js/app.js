@@ -24,6 +24,8 @@ const App = (() => {
     }
     if (user.role === 'parent') ParentScreen.render(el, user);
     else ChildScreen.render(el, user);
+    Photos.hydrate(el);
+    UI.bindPhotoViewers(el);
   }
 
   function logout() {

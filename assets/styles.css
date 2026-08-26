@@ -420,6 +420,45 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 .appr .acts .btn{flex:1}
 .note{font-size:12px;color:var(--ink-2);background:var(--accent-soft);padding:9px 12px;border-radius:13px;line-height:1.5}
 
+/* ---------- fotos ---------- */
+.thumbs{display:flex;flex-wrap:wrap;gap:8px}
+.thumb{
+  position:relative;width:74px;height:74px;border-radius:16px;overflow:hidden;padding:0;
+  background:var(--surface-2);box-shadow:var(--neu-out-sm);display:block;flex:0 0 auto
+}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block;background:var(--surface-2)}
+.thumbs.small-thumbs .thumb{width:56px;height:56px;border-radius:13px}
+.thumb-missing{display:grid;place-items:center}
+.thumb-missing::after{content:"?";color:var(--muted);font-weight:800}
+.thumb-x{
+  position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:8px;display:grid;place-items:center;
+  background:rgba(24,18,54,.72);color:#fff;backdrop-filter:blur(4px)
+}
+.thumb-x .ico{width:13px;height:13px;stroke-width:2.6}
+
+.photo-picker{display:flex;flex-direction:column;gap:10px}
+.photo-add{display:block;cursor:pointer}
+.photo-add-in{
+  display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 16px;border-radius:17px;
+  font-size:12.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);
+  background:var(--accent-soft);border:1.5px dashed rgba(124,108,247,.45)
+}
+.photo-add:active .photo-add-in{transform:scale(.99)}
+.photo-full{border-radius:22px;overflow:hidden;background:var(--surface-2);box-shadow:var(--neu-in-sm)}
+.photo-full img{width:100%;display:block;max-height:64dvh;object-fit:contain;background:var(--surface-2)}
+
+/* ---------- diário ---------- */
+.diary{
+  display:flex;flex-direction:column;gap:11px;padding:15px;border-radius:22px;
+  background:var(--surface);box-shadow:var(--neu-out-sm)
+}
+.diary .nm{font-size:14.5px;line-height:1.25;text-transform:none;font-variation-settings:'wdth' 104}
+.diary .mt{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:3px}
+.diary-text{
+  font-size:13.5px;line-height:1.65;color:var(--ink-2);white-space:pre-wrap;
+  padding:12px 14px;border-radius:16px;background:var(--surface-2);text-transform:none
+}
+
 /* ---------- barra inferior ---------- */
 .tabbar{
   position:absolute;left:50%;transform:translateX(-50%);
@@ -464,6 +503,7 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 .sheet-head h3{font-size:18px;letter-spacing:-.3px}
 .sheet-head p{font-size:12.5px;color:var(--muted);margin-top:2px}
 .sheet-body{display:flex;flex-direction:column;gap:14px}
+.sheet-body form{display:flex;flex-direction:column;gap:14px}
 .sheet-actions{display:flex;gap:10px;margin-top:6px}
 .sheet-actions .btn{flex:1}
 @keyframes up{from{transform:translateY(26px);opacity:0}to{transform:none;opacity:1}}
