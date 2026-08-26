@@ -4,8 +4,8 @@ Aplicativo para acompanhar a **mesada dos filhos**: a criança preenche todo dia
 realizou (organizadas em categorias e subcategorias) e o responsável **valida ou recusa** cada
 lançamento. Só o que é validado entra no saldo.
 
-Visual inspirado em *neumorphism / glassmorphism* (lavanda, cartões suaves, painéis escuros),
-com tipografia grotesca pesada (Archivo, hospedada no próprio projeto) e ícones vetoriais próprios.
+Visual de blocos de cor chapados (limão, azul, rosa, laranja), formas arredondadas, personagens
+desenhados em SVG e tipografia grotesca pesada (Archivo, hospedada no próprio projeto).
 Feito em **HTML + CSS + JavaScript puro**, sem instalação, sem servidor e sem banco de dados.
 
 O layout é de site: no celular a navegação fica na barra de baixo, em telas largas vira um
@@ -59,6 +59,11 @@ quantos filhos quiser, cada um com o próprio login e senha.
 
 ### Filho(a)
 
+- **Bichinho**: um personagem que mora no topo da tela, reage ao que acontece no dia (dorme quando
+  nada foi feito, fica animado quando tem tarefa marcada, comemora quando o dia está completo,
+  fica preocupado com compromisso atrasado) e fala frases ligadas ao que está pendente. Recebe
+  carinho (até 5 por dia), ganha **pontos de amizade** a cada tarefa, livro, compromisso e
+  validação, sobe de nível e libera acessórios. Dá para trocar nome, formato, cor e acessório.
 - **Hoje**: saldo disponível, progresso da meta, tira dos últimos 7 dias e o quanto já rendeu no dia.
 - **Diário de livros e lições**: escreve um registro por atividade com **tipo** (livro, lição ou
   atividade), título, detalhe (ex.: páginas lidas), **data**, **horário**, tempo em minutos,

@@ -138,9 +138,11 @@ const ParentScreen = (() => {
           return `
             <button class="kid-card" data-kid="${k.id}">
               ${UI.avatar(k, '', 'width:50px;height:50px;font-size:21px')}
+              <span class="kid-pet">${Pet.svg(k, 54)}</span>
               <div class="grow">
                 <div class="bold" style="font-size:15px">${UI.esc(k.name)}</div>
-                <div class="small muted">@${UI.esc(k.username)} • ${t.pendingCount} aguardando • ${Store.diaryOf(k.id).length} no diário</div>
+                <div class="small muted">@${UI.esc(k.username)} • ${t.pendingCount} aguardando •
+                  ${UI.esc(Store.petOf(k.id).name)} nível ${Pet.level(Store.petOf(k.id).xp)}</div>
                 ${Number(k.goalAmount) > 0 ? `
                   <div class="bar mt8" style="background:var(--surface-2);height:6px">
                     <i style="width:${Math.max(0, Math.min(100, (bal / k.goalAmount) * 100))}%"></i>

@@ -364,8 +364,11 @@ const UI = (() => {
     };
   }
 
-  const empty = (icon, text) =>
-    `<div class="empty">${Icons.svg(icon, 'ico-lg')}<p>${esc(text)}</p></div>`;
+  const empty = (icon, text) => `
+    <div class="empty">
+      <span class="empty-blob">${Icons.svg(icon, 'ico-lg')}</span>
+      <p>${esc(text)}</p>
+    </div>`;
 
   const statusChip = (status) => {
     const map = {

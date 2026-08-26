@@ -394,6 +394,7 @@ const Store = (() => {
       return { ok: true, removed: true };
     }
 
+    petAddXp(childId, 2);
     state.entries.push({
       id: uid('e'), childId, date, catId, itemId,
       name: item.name, value: item.value, kind: item.kind,
@@ -472,10 +473,12 @@ const Store = (() => {
   function review(entryId, status, reviewNote, parentId) {
     const e = state.entries.find((x) => x.id === entryId);
     if (!e) return { ok: false, error: 'Registro não encontrado.' };
+    const antes = e.status;
     e.status = status === 'approved' ? 'approved' : 'rejected';
     e.reviewNote = String(reviewNote || '').slice(0, 240);
     e.reviewedBy = parentId || null;
     e.reviewedAt = new Date().toISOString();
+    if (e.status === 'approved' && antes !== 'approved') petAddXp(e.childId, 5);
     save();
     return { ok: true, entry: e };
   }
@@ -545,6 +548,7 @@ const Store = (() => {
       createdAt: new Date().toISOString(),
     }, fields);
     state.diary.push(record);
+    petAddXp(data.childId, 8);
     save();
     return { ok: true, record };
   }
@@ -578,6 +582,66 @@ const Store = (() => {
     d.reviewedAt = new Date().toISOString();
     save();
     return { ok: true, record: d };
+  }
+
+  /* ---------- bichinho do filho ---------- */
+  const PET_DEFAULT = { name: 'Pip', shape: 'blob', color: 'lime', accessory: '', xp: 0 };
+  const XP_NIVEL = 60;
+  const CARINHOS_DIA = 5;
+
+  /** devolve o bichinho do filho, criando um padrão na primeira vez */
+  function petOf(childId) {
+    const u = userById(childId);
+    if (!u) return Object.assign({}, PET_DEFAULT);
+    if (!u.pet) {
+      u.pet = Object.assign({}, PET_DEFAULT, { care: { date: today(), count: 0 } });
+      save();
+    }
+    if (!u.pet.care) u.pet.care = { date: today(), count: 0 };
+    return u.pet;
+  }
+
+  function savePet(childId, data) {
+    const u = userById(childId);
+    if (!u) return { ok: false, error: 'Filho(a) não encontrado(a).' };
+    const pet = petOf(childId);
+    const name = String(data.name || '').trim();
+    if (!name) return { ok: false, error: 'Dê um nome para o bichinho.' };
+    pet.name = name.slice(0, 20);
+    pet.shape = data.shape || pet.shape;
+    pet.color = data.color || pet.color;
+    pet.accessory = data.accessory === undefined ? pet.accessory : data.accessory;
+    save();
+    return { ok: true, pet };
+  }
+
+  /** pontos de amizade: cada ação do filho alimenta o bichinho */
+  function petAddXp(childId, amount) {
+    const pet = petOf(childId);
+    if (!pet || !amount) return null;
+    const antes = Math.floor(pet.xp / XP_NIVEL);
+    pet.xp = Math.max(0, pet.xp + amount);
+    save();
+    return { xp: pet.xp, levelUp: Math.floor(pet.xp / XP_NIVEL) > antes };
+  }
+
+  const petCareLeft = (childId) => {
+    const pet = petOf(childId);
+    const usados = pet.care && pet.care.date === today() ? pet.care.count : 0;
+    return Math.max(0, CARINHOS_DIA - usados);
+  };
+
+  /** carinho: dá pontos, com limite por dia para não virar clique infinito */
+  function petCare(childId) {
+    const pet = petOf(childId);
+    if (!pet.care || pet.care.date !== today()) pet.care = { date: today(), count: 0 };
+    if (pet.care.count >= CARINHOS_DIA) {
+      return { ok: false, error: 'Seu bichinho já recebeu carinho demais hoje. Volte amanhã!' };
+    }
+    pet.care.count += 1;
+    const res = petAddXp(childId, 3) || {};
+    save();
+    return { ok: true, count: pet.care.count, levelUp: !!res.levelUp };
   }
 
   /* ---------- gastos do filho (o que ele comprou) ---------- */
@@ -622,6 +686,7 @@ const Store = (() => {
       id: uid('gc'), childId, createdAt: new Date().toISOString(),
     }, fields);
     state.purchases.push(purchase);
+    petAddXp(childId, 1);
     save();
     return { ok: true, purchase };
   }
@@ -700,6 +765,7 @@ const Store = (() => {
       createdAt: new Date().toISOString(),
     }, fields);
     state.events.push(ev);
+    petAddXp(ev.childId, 3);
     save();
     return { ok: true, event: ev };
   }
@@ -716,6 +782,7 @@ const Store = (() => {
     const ev = state.events.find((x) => x.id === id);
     if (!ev) return;
     ev.done = !ev.done;
+    if (ev.done) petAddXp(ev.childId, 4);
     save();
     return ev;
   }
@@ -862,6 +929,8 @@ const Store = (() => {
     pendingEntries, historyOf, dayStatus, signed, adjustEntry, addManualEntry, removeEntry,
     // diário
     saveDiary, removeDiary, diaryOf, diaryById, pendingDiary, reviewDiary, diaryKind, DIARY_KINDS,
+    // bichinho
+    petOf, savePet, petAddXp, petCare, petCareLeft,
     // gastos
     savePurchase, removePurchase, purchaseById, purchasesOf, cash, purchaseKind, PURCHASE_KINDS,
     // agenda

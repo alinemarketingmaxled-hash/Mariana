@@ -84,9 +84,11 @@ const ChildScreen = (() => {
             pin = `<span class="pin ok">${entries.length}</span>`;
           }
           return `
-            <button class="tile" data-cat="${c.id}">
+            <button class="tile ${c.photo ? 'has-photo' : c.grad}" data-cat="${c.id}">
               ${pin}
-              ${UI.catVisual(c)}
+              ${c.photo
+                ? `<span class="tile-ico photo"><img data-photo="${UI.esc(c.photo)}" alt="" /></span>`
+                : `<span class="tile-ico">${Icons.svg(c.icon)}</span>`}
               <span class="nm">${UI.esc(c.name)}</span>
               <span class="sub">${c.items.length} ${c.items.length === 1 ? 'ação' : 'ações'}</span>
             </button>`;
@@ -97,6 +99,7 @@ const ChildScreen = (() => {
   function homeView(user) {
     const st = Store.dayStatus(user.id, date);
     return `
+      ${Pet.card(user)}
       ${heroCard(user)}
       ${daysStrip(user)}
       <div class="card mt8">
@@ -682,6 +685,7 @@ const ChildScreen = (() => {
       body: `
         <div class="list">
           <button class="mini-row" data-m="perfil">${Icons.svg('user')}<span class="grow bold small" style="text-align:left">Meu perfil</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-m="pet">${Icons.svg('heart')}<span class="grow bold small" style="text-align:left">Meu bichinho</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="agenda">${Icons.svg('calendar')}<span class="grow bold small" style="text-align:left">Agenda</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="diario">${Icons.svg('book')}<span class="grow bold small" style="text-align:left">Diário de livros e lições</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="extrato">${Icons.svg('chart')}<span class="grow bold small" style="text-align:left">Extrato completo</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
@@ -692,6 +696,7 @@ const ChildScreen = (() => {
         sheet.querySelectorAll('[data-m]').forEach((b) => b.addEventListener('click', () => {
           const m = b.getAttribute('data-m');
           UI.closeSheet();
+          if (m === 'pet') return Pet.openSheet(user);
           if (m === 'logout') return App.logout();
           if (m === 'theme') { App.toggleTheme(); return App.render(); }
           tab = m;
@@ -794,6 +799,7 @@ const ChildScreen = (() => {
       },
     });
     Agenda.bind(root, user, rerender);
+    Pet.bind(root, user, rerender);
 
     root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
       tab = b.getAttribute('data-go');
