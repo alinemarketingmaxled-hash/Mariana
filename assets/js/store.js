@@ -59,7 +59,11 @@ const Store = (() => {
     const childId = uid('u');
     return {
       version: 1,
-      settings: { theme: 'light' },
+      settings: {
+        // respeita a preferência do aparelho no primeiro acesso
+        theme: (typeof window !== 'undefined' && window.matchMedia
+          && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light',
+      },
       users: [
         {
           id: parentId, role: 'parent', name: 'Mãe / Pai',
