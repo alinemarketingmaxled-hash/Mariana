@@ -107,6 +107,18 @@ const Pet = (() => {
   }
 
   function face(moodId) {
+    if (moodId === 'tonto') {
+      return `
+        <g fill="none" stroke="#131338" stroke-width="6" stroke-linecap="round">
+          <path d="M74 98m-16 0a16 16 0 1 0 32 0a16 16 0 1 0-32 0M74 98m-8 0a8 8 0 1 0 16 0"/>
+          <path d="M126 98m-16 0a16 16 0 1 0 32 0a16 16 0 1 0-32 0M126 98m-8 0a8 8 0 1 0 16 0"/>
+        </g>
+        <path d="M74 138q13 16 26 0t26 0" stroke="#131338" stroke-width="7" fill="none" stroke-linecap="round"/>
+        <g class="pet-stars" fill="#ffd84b" stroke="#131338" stroke-width="3">
+          <path d="M40 44l5 11 12 2-9 8 3 12-11-6-11 6 3-12-9-8 12-2z"/>
+          <path d="M160 38l4 9 10 2-7 7 2 10-9-5-9 5 2-10-7-7 10-2z"/>
+        </g>`;
+    }
     const eyes = moodId === 'dormindo'
       ? `<path d="M60 100q14 14 28 0" stroke="#131338" stroke-width="7" fill="none" stroke-linecap="round"/>
          <path d="M112 100q14 14 28 0" stroke="#131338" stroke-width="7" fill="none" stroke-linecap="round"/>`
@@ -118,6 +130,7 @@ const Pet = (() => {
            <circle cx="70" cy="96" r="3" fill="#fff"/><circle cx="122" cy="96" r="3" fill="#fff"/>
          </g>`;
     const mouth = {
+      tonto: '<path d="M74 138q13 16 26 0t26 0" stroke="#131338" stroke-width="7" fill="none" stroke-linecap="round"/>',
       festa: '<path d="M74 132q26 34 52 0q-26 12-52 0z" fill="#131338"/>',
       feliz: '<path d="M76 134q24 24 48 0" stroke="#131338" stroke-width="8" fill="none" stroke-linecap="round"/>',
       triste: '<path d="M76 142q24-22 48 0" stroke="#131338" stroke-width="8" fill="none" stroke-linecap="round"/>',
@@ -317,8 +330,303 @@ const Pet = (() => {
       b.addEventListener('click', () => openSheet(child)));
   }
 
+  /* =======================================================
+     Companheiro que fica solto na tela, acima da navegação.
+     Ele brinca sozinho e responde ao toque, ao chacoalhão,
+     ao aperto longo e às quedas.
+     ======================================================= */
+  const Buddy = (() => {
+    const SIZE = 96;
+    const GRAVIDADE = 0.9;
+    const QUIQUE = 0.45;
+
+    let el = null;
+    let ball = null;
+    let child = null;
+    let raf = null;
+    let idleTimer = null;
+    let holdTimer = null;
+    let dizzyTimer = null;
+
+    const pos = { x: 0, y: 0, vx: 0, vy: 0 };
+    let dragging = false;
+    let pressed = false;
+    let pointerId = null;
+    let pressStart = 0;
+    let moved = 0;
+    let quedaMax = 0;
+    let shake = { dirs: 0, lastSign: 0, dist: 0, since: 0 };
+    let estado = 'parado';
+
+    const reduced = () =>
+      window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const chaoY = () => {
+      const barra = document.querySelector('.side');
+      const emBaixo = barra && getComputedStyle(barra).position === 'fixed';
+      const folga = emBaixo ? barra.getBoundingClientRect().height + 26 : 28;
+      return window.innerHeight - SIZE - folga;
+    };
+    const limiteX = () => window.innerWidth - SIZE - 10;
+
+    function aplicar() {
+      if (!el) return;
+      el.style.transform = `translate3d(${Math.round(pos.x)}px, ${Math.round(pos.y)}px, 0)`;
+    }
+
+    function setEstado(novo) {
+      if (!el || estado === novo) return;
+      estado = novo;
+      el.className = `pet-buddy is-${novo}`;
+      const m = novo === 'dormindo' ? 'dormindo'
+        : novo === 'tonto' || novo === 'derretendo' ? 'tonto'
+        : novo === 'brincando' || novo === 'pulando' ? 'festa'
+        : mood(child).id;
+      el.querySelector('.pet-buddy-art').innerHTML = svg(child, SIZE, m);
+      if (ball) ball.hidden = novo !== 'brincando';
+    }
+
+    /* ---------- física ---------- */
+    function loop() {
+      raf = null;
+      if (!el || dragging) return;
+      pos.vy += GRAVIDADE;
+      pos.x += pos.vx;
+      pos.y += pos.vy;
+
+      if (pos.x < 10) { pos.x = 10; pos.vx = -pos.vx * 0.6; }
+      if (pos.x > limiteX()) { pos.x = limiteX(); pos.vx = -pos.vx * 0.6; }
+      if (pos.y < 6) { pos.y = 6; pos.vy = Math.abs(pos.vy) * 0.4; }  // bateu no teto
+
+      const chao = chaoY();
+      if (pos.y >= chao) {
+        pos.y = chao;
+        quedaMax = Math.max(quedaMax, Math.abs(pos.vy));
+        if (Math.abs(pos.vy) > 2.4) {
+          pos.vy = -pos.vy * QUIQUE;
+          pos.vx *= 0.82;
+          el.classList.remove('is-squash');
+          void el.offsetWidth;
+          el.classList.add('is-squash');
+        } else {
+          pos.vy = 0;
+          pos.vx *= 0.7;
+          if (Math.abs(pos.vx) < 0.2) pos.vx = 0;
+          if (quedaMax > 17) {
+            ficarTonto(`Uau! Que voo... tô tonto.`);
+          } else if (estado === 'caindo') {
+            setEstado('parado');
+            agendarBrincadeira();
+          }
+          quedaMax = 0;
+        }
+      }
+      aplicar();
+      if (pos.vy !== 0 || pos.vx !== 0 || pos.y < chao) raf = requestAnimationFrame(loop);
+    }
+
+    const mover = () => { if (!raf) raf = requestAnimationFrame(loop); };
+
+    /* ---------- reações ---------- */
+    function fala(texto) {
+      if (!el) return;
+      const balao = el.querySelector('.buddy-bubble');
+      balao.textContent = texto;
+      balao.hidden = false;
+      balao.classList.remove('pop');
+      void balao.offsetWidth;
+      balao.classList.add('pop');
+      clearTimeout(balao._t);
+      balao._t = setTimeout(() => { balao.hidden = true; }, 2600);
+    }
+
+    function ficarTonto(texto) {
+      setEstado('tonto');
+      fala(texto || 'Ei, para de me sacudir!');
+      clearTimeout(dizzyTimer);
+      dizzyTimer = setTimeout(() => {
+        setEstado('parado');
+        agendarBrincadeira();
+      }, 4200);
+    }
+
+    function derreter() {
+      setEstado('derretendo');
+      fala('Tô derretendo...');
+      Effects.burst('spend', el);
+      clearTimeout(dizzyTimer);
+      dizzyTimer = setTimeout(() => ficarTonto('Ufa, voltei. Que tontura!'), 1800);
+    }
+
+    /* ---------- brincadeiras sozinho ---------- */
+    function agendarBrincadeira() {
+      clearTimeout(idleTimer);
+      if (reduced()) return;
+      idleTimer = setTimeout(() => {
+        if (!el || dragging || estado === 'tonto' || estado === 'derretendo') return agendarBrincadeira();
+        const hora = new Date().getHours();
+        const semAtividade = child && Store.entriesOf(child.id, Store.today()).length === 0;
+        const opcoes = (hora >= 21 || hora < 6 || semAtividade)
+          ? ['dormindo', 'dormindo', 'parado', 'pulando']
+          : ['pulando', 'brincando', 'parado', 'andando'];
+        const escolha = opcoes[Math.floor(Math.random() * opcoes.length)];
+
+        if (escolha === 'andando') {
+          setEstado('parado');
+          pos.vx = Math.random() > 0.5 ? 2.4 : -2.4;
+          pos.vy = -6;
+          mover();
+        } else if (escolha === 'pulando') {
+          setEstado('pulando');
+          pos.vy = -13;
+          mover();
+          setTimeout(() => { if (estado === 'pulando') setEstado('parado'); }, 1200);
+        } else {
+          setEstado(escolha);
+        }
+        agendarBrincadeira();
+      }, 5200 + Math.random() * 5200);
+    }
+
+    /* ---------- toque ---------- */
+    function onDown(ev) {
+      pressed = true;
+      dragging = false;
+      pointerId = ev.pointerId;
+      pressStart = Date.now();
+      moved = 0;
+      quedaMax = 0;
+      shake = { dirs: 0, lastSign: 0, dist: 0, since: Date.now() };
+      el.setPointerCapture(ev.pointerId);
+      el.classList.add('is-grab');
+      clearTimeout(holdTimer);
+      holdTimer = setTimeout(derreter, 4000);
+    }
+
+    function onMove(ev) {
+      if (!pressed || ev.pointerId !== pointerId) return;
+      const dx = ev.movementX || 0;
+      const dy = ev.movementY || 0;
+      moved += Math.abs(dx) + Math.abs(dy);
+      if (moved > 8) {
+        dragging = true;
+        clearTimeout(holdTimer);
+        if (estado !== 'tonto' && estado !== 'derretendo') setEstado('segurado');
+      }
+      if (!dragging) return;
+
+      pos.x = Math.max(10, Math.min(limiteX(), pos.x + dx));
+      pos.y = Math.max(10, Math.min(window.innerHeight - SIZE - 6, pos.y + dy));
+      pos.vx = dx;
+      pos.vy = dy;
+      aplicar();
+
+      // chacoalhão: muitas trocas de direção em pouco tempo
+      const sinal = Math.sign(dx);
+      if (sinal && sinal !== shake.lastSign) {
+        shake.dirs += 1;
+        shake.lastSign = sinal;
+      }
+      shake.dist += Math.abs(dx);
+      if (Date.now() - shake.since > 900) shake = { dirs: 0, lastSign: sinal, dist: 0, since: Date.now() };
+      if (shake.dirs >= 5 && shake.dist > 130 && estado !== 'tonto') {
+        shake = { dirs: 0, lastSign: 0, dist: 0, since: Date.now() };
+        ficarTonto('Ei, para de me sacudir!');
+      }
+    }
+
+    function onUp(ev) {
+      if (!pressed) return;
+      pressed = false;
+      clearTimeout(holdTimer);
+      el.classList.remove('is-grab');
+      try { el.releasePointerCapture(ev.pointerId); } catch (e) { /* já solto */ }
+      const rapido = Date.now() - pressStart < 500;
+
+      if (!dragging && rapido) {
+        openSheet(child);
+        return;
+      }
+      dragging = false;
+      if (estado === 'segurado') setEstado('caindo');
+      pos.vx = Math.max(-22, Math.min(22, pos.vx * 1.6));
+      pos.vy = Math.max(-24, Math.min(24, pos.vy * 1.4));
+      mover();
+    }
+
+    /* ---------- ciclo de vida ---------- */
+    function mount(user) {
+      child = user;
+      if (el) {
+        el.querySelector('.pet-buddy-art').innerHTML = svg(child, SIZE, estado === 'tonto' ? 'tonto' : undefined);
+        return;
+      }
+      el = document.createElement('div');
+      el.className = 'pet-buddy is-parado';
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('aria-label', 'Seu bichinho. Toque para cuidar dele.');
+      el.innerHTML = `
+        <div class="buddy-bubble" hidden></div>
+        <div class="pet-buddy-art">${svg(child, SIZE)}</div>`;
+      document.body.appendChild(el);
+
+      ball = document.createElement('span');
+      ball.className = 'pet-ball';
+      ball.hidden = true;
+      document.body.appendChild(ball);
+
+      pos.x = Math.min(limiteX(), window.innerWidth / 2 - SIZE / 2);
+      pos.y = chaoY();
+      aplicar();
+
+      el.addEventListener('pointerdown', onDown);
+      el.addEventListener('pointermove', onMove);
+      el.addEventListener('pointerup', onUp);
+      el.addEventListener('pointercancel', onUp);
+      el.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openSheet(child); }
+      });
+      window.addEventListener('resize', () => {
+        pos.x = Math.min(pos.x, limiteX());
+        pos.y = Math.min(pos.y, chaoY());
+        aplicar();
+        if (ball) posicionarBola();
+      });
+
+      agendarBrincadeira();
+      requestAnimationFrame(function seguirBola() {
+        if (!el) return;
+        if (estado === 'brincando') posicionarBola();
+        requestAnimationFrame(seguirBola);
+      });
+    }
+
+    function posicionarBola() {
+      if (!ball) return;
+      ball.style.transform = `translate3d(${Math.round(pos.x + SIZE - 12)}px, ${Math.round(pos.y + SIZE - 34)}px, 0)`;
+    }
+
+    function unmount() {
+      clearTimeout(idleTimer);
+      clearTimeout(holdTimer);
+      clearTimeout(dizzyTimer);
+      if (raf) cancelAnimationFrame(raf);
+      raf = null;
+      if (el) el.remove();
+      if (ball) ball.remove();
+      el = null;
+      ball = null;
+      child = null;
+      estado = 'parado';
+    }
+
+    return { mount, unmount, fala, setEstado };
+  })();
+
   return {
     svg, card, bind, openSheet, touch, mood, phrase,
+    mountBuddy: Buddy.mount, unmountBuddy: Buddy.unmount, buddySay: Buddy.fala,
     level, progress, COLORS, SHAPES, ACCESSORIES, XP_POR_NIVEL, CARINHOS_POR_DIA,
   };
 })();

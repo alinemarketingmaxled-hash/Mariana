@@ -685,6 +685,7 @@ const ChildScreen = (() => {
       body: `
         <div class="list">
           <button class="mini-row" data-m="perfil">${Icons.svg('user')}<span class="grow bold small" style="text-align:left">Meu perfil</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-m="jogos">${Icons.svg('ball')}<span class="grow bold small" style="text-align:left">Joguinhos</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="pet">${Icons.svg('heart')}<span class="grow bold small" style="text-align:left">Meu bichinho</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="agenda">${Icons.svg('calendar')}<span class="grow bold small" style="text-align:left">Agenda</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="diario">${Icons.svg('book')}<span class="grow bold small" style="text-align:left">Diário de livros e lições</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
@@ -738,6 +739,7 @@ const ChildScreen = (() => {
     home: { title: 'Hoje', subtitle: 'Marque o que você fez e envie para validação' },
     diario: { title: 'Diário', subtitle: 'Livros, lições e atividades do dia' },
     agenda: { title: 'Agenda', subtitle: 'Provas, trabalhos e eventos' },
+    jogos: { title: 'Joguinhos', subtitle: 'Brinque com o seu bichinho e ganhe pontos de amizade' },
     extrato: { title: 'Carteira', subtitle: 'O que entrou, o que você gastou e o que sobrou' },
     perfil: { title: 'Perfil', subtitle: 'Sua conta e sua meta' },
   };
@@ -750,10 +752,11 @@ const ChildScreen = (() => {
     const main = tab === 'home' ? homeView(user)
       : tab === 'diario' ? diarioView(user)
       : tab === 'agenda' ? Agenda.view(user, user.id, false)
+      : tab === 'jogos' ? Games.view(user)
       : tab === 'extrato' ? extratoView(user)
       : perfilView(user);
 
-    const aside = tab === 'agenda' ? ''
+    const aside = tab === 'agenda' || tab === 'jogos' ? ''
       : `${metaPanel(user)}${Agenda.upcoming(user.id, false)}${tab === 'home' ? resumoPanel(user) : ''}`;
 
     const actions = tab === 'agenda'
@@ -775,14 +778,15 @@ const ChildScreen = (() => {
       aside,
       fab: tab === 'diario' ? { icon: 'plus', label: 'Novo registro' }
         : tab === 'agenda' ? { icon: 'plus', label: 'Novo compromisso' }
+        : tab === 'jogos' ? { icon: 'ball', label: 'Jogar agora' }
         : tab === 'extrato' ? { icon: 'coins', label: 'Registrar gasto' }
         : { icon: 'check', label: 'Resumo do dia' },
       nav: [
         { id: 'home', label: 'Hoje', icon: 'home' },
         { id: 'diario', label: 'Diário', icon: 'book' },
+        { id: 'jogos', label: 'Jogos', icon: 'ball' },
         { id: 'agenda', label: 'Agenda', icon: 'calendar', count: proximos },
         { id: 'extrato', label: 'Carteira', icon: 'wallet', count: pending },
-        { id: 'perfil', label: 'Perfil', icon: 'user' },
       ],
     });
 
@@ -794,12 +798,17 @@ const ChildScreen = (() => {
       onFab() {
         if (tab === 'diario') return openDiaryForm(user, null);
         if (tab === 'agenda') return Agenda.openForm(user, null, { date: Agenda.selectedDate(), childId: user.id });
+        if (tab === 'jogos') {
+          const sorteio = Games.LISTA[Math.floor(Math.random() * Games.LISTA.length)];
+          return Games.abrir(user, sorteio.id);
+        }
         if (tab === 'extrato') return openPurchaseForm(user, null);
         return openDaySummary(user);
       },
     });
     Agenda.bind(root, user, rerender);
     Pet.bind(root, user, rerender);
+    Games.bind(root, user);
 
     root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
       tab = b.getAttribute('data-go');

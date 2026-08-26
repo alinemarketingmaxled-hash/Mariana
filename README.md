@@ -59,7 +59,16 @@ quantos filhos quiser, cada um com o próprio login e senha.
 
 ### Filho(a)
 
-- **Bichinho**: um personagem que mora no topo da tela, reage ao que acontece no dia (dorme quando
+- **Bichinho solto na tela**: ele fica acima da barra de navegação e vive sozinho: pula, brinca de
+  bola, anda de um lado para o outro e dorme quando o dia está parado. **Um toque** abre o painel
+  para cuidar dele; **segurar por 4 segundos** faz ele derreter e ficar tonto; **sacudir** deixa ele
+  zonzo; e dá para **arrastar e jogar de qualquer altura** (ele cai, quica no chão, bate no teto e,
+  se a queda for feia, fica vendo estrelinhas).
+- **Joguinhos**: aba com três jogos para brincar com o bichinho, *Pega a bola* (bolinhas caem e você
+  toca antes que cheguem no chão), *Jogo da memória* (seis pares de ícones) e *Repete comigo*
+  (sequência de cores). Cada partida rende pontos de amizade, com teto de 20 por dia e recorde
+  guardado por jogo.
+- **Bichinho**: o mesmo personagem também aparece no cartão da tela inicial, reage ao que acontece no dia (dorme quando
   nada foi feito, fica animado quando tem tarefa marcada, comemora quando o dia está completo,
   fica preocupado com compromisso atrasado) e fala frases ligadas ao que está pendente. Recebe
   carinho (até 5 por dia), ganha **pontos de amizade** a cada tarefa, livro, compromisso e

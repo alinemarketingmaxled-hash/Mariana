@@ -644,6 +644,29 @@ const Store = (() => {
     return { ok: true, count: pet.care.count, levelUp: !!res.levelUp };
   }
 
+  const XP_JOGOS_DIA = 20;
+
+  /** quanto os joguinhos já renderam hoje */
+  function petGamesToday(childId) {
+    const pet = petOf(childId);
+    if (!pet.games || pet.games.date !== today()) pet.games = { date: today(), xp: 0 };
+    return { xp: pet.games.xp, max: XP_JOGOS_DIA, left: Math.max(0, XP_JOGOS_DIA - pet.games.xp) };
+  }
+
+  /** guarda o resultado da partida, respeitando o teto de pontos do dia */
+  function petGameResult(childId, gameId, score, xpBruto) {
+    const pet = petOf(childId);
+    const hoje = petGamesToday(childId);
+    const xp = Math.max(0, Math.min(Math.round(xpBruto) || 0, hoje.left));
+    pet.games.xp += xp;
+    pet.best = pet.best || {};
+    const recorde = (pet.best[gameId] || 0) < score;
+    if (recorde) pet.best[gameId] = score;
+    const res = xp ? petAddXp(childId, xp) : null;
+    save();
+    return { xp, recorde, levelUp: !!(res && res.levelUp) };
+  }
+
   /* ---------- gastos do filho (o que ele comprou) ---------- */
   const PURCHASE_KINDS = [
     { id: 'lanche', label: 'Lanche', icon: 'apple', grad: 'g2' },
@@ -930,7 +953,7 @@ const Store = (() => {
     // diário
     saveDiary, removeDiary, diaryOf, diaryById, pendingDiary, reviewDiary, diaryKind, DIARY_KINDS,
     // bichinho
-    petOf, savePet, petAddXp, petCare, petCareLeft,
+    petOf, savePet, petAddXp, petCare, petCareLeft, petGamesToday, petGameResult,
     // gastos
     savePurchase, removePurchase, purchaseById, purchasesOf, cash, purchaseKind, PURCHASE_KINDS,
     // agenda
