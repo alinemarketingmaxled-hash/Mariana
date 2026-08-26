@@ -68,6 +68,15 @@ const Pet = (() => {
     { id: 'realeza', label: 'Cama de realeza', level: 7, cor: '#ffd84b' },
   ];
 
+  /** quartos: o cenário onde ele vive, também abre por nível */
+  const ROOMS = [
+    { id: 'quartinho', label: 'Quartinho', level: 1, cor: '#cfe0ff', chao: '#a9c4ff', ceu: '#e8f0ff' },
+    { id: 'jardim', label: 'Jardim', level: 1, cor: '#79e3b5', chao: '#4fc78f', ceu: '#d9f7ea' },
+    { id: 'praia', label: 'Praia', level: 3, cor: '#ffd84b', chao: '#ffdf8c', ceu: '#bfeaff' },
+    { id: 'espaco', label: 'Espaço', level: 5, cor: '#3b4fe4', chao: '#2b3390', ceu: '#191a4d' },
+    { id: 'castelo', label: 'Castelo', level: 7, cor: '#a98cff', chao: '#8f6ff0', ceu: '#efe8ff' },
+  ];
+
   const XP_POR_NIVEL = 60;
   const CARINHOS_POR_DIA = 5;
 
@@ -78,13 +87,80 @@ const Pet = (() => {
   const unlocked = (lv) => ACCESSORIES.filter((a) => a.level <= lv);
   const outfit = (id) => OUTFITS.find((o) => o.id === id) || OUTFITS[0];
   const bed = (id) => BEDS.find((b) => b.id === id) || BEDS[0];
+  const room = (id) => ROOMS.find((r) => r.id === id) || ROOMS[0];
+  const faltaParaSubir = (xp) => XP_POR_NIVEL - ((xp || 0) % XP_POR_NIVEL);
 
   /** tudo o que a lojinha oferece, com o nível que abre cada item */
   const catalogo = () => [
     ...OUTFITS.map((o) => ({ ...o, tipo: 'outfit', tipoLabel: 'Roupinha' })),
     ...BEDS.map((b) => ({ ...b, tipo: 'bed', tipoLabel: 'Cama' })),
     ...ACCESSORIES.filter((a) => a.id).map((a) => ({ ...a, tipo: 'accessory', tipoLabel: 'Acessório', cor: '#a98cff' })),
+    ...ROOMS.map((r) => ({ ...r, tipo: 'room', tipoLabel: 'Quarto' })),
   ];
+
+  /* ---------- voz ---------- */
+  /**
+   * O bichinho fala em voz alta usando a síntese de voz do navegador.
+   * Se o aparelho não tiver voz disponível, o balão de texto continua
+   * funcionando normalmente.
+   */
+  const Voz = (() => {
+    const suportada = () => typeof window !== 'undefined' && 'speechSynthesis' in window;
+    let vozBR = null;
+
+    function escolherVoz() {
+      if (!suportada()) return null;
+      if (vozBR) return vozBR;
+      const vozes = window.speechSynthesis.getVoices() || [];
+      vozBR = vozes.find((v) => /pt[-_]BR/i.test(v.lang))
+        || vozes.find((v) => /^pt/i.test(v.lang))
+        || vozes[0] || null;
+      return vozBR;
+    }
+
+    if (suportada() && typeof window.speechSynthesis.addEventListener === 'function') {
+      window.speechSynthesis.addEventListener('voiceschanged', () => { vozBR = null; escolherVoz(); });
+    }
+
+    /** marca as carinhas na tela como falando, para a boca mexer */
+    function bocaMexendo(ligar, alvo) {
+      const alvos = alvo && alvo.querySelectorAll
+        ? alvo.querySelectorAll('.pet-svg')
+        : document.querySelectorAll('.pet-svg');
+      alvos.forEach((el) => el.classList.toggle('is-falando', ligar));
+    }
+
+    function falar(texto, child, alvo) {
+      const limpo = String(texto || '').trim();
+      if (!limpo) return false;
+      if (child && Store.petOf(child.id).voice === false) return false;
+      if (!suportada()) return false;
+      try {
+        window.speechSynthesis.cancel();
+        const fala = new SpeechSynthesisUtterance(limpo);
+        const v = escolherVoz();
+        if (v) fala.voice = v;
+        fala.lang = (v && v.lang) || 'pt-BR';
+        fala.rate = 0.98;
+        fala.pitch = 1.35;   // vozinha mais aguda, de bichinho
+        fala.onstart = () => bocaMexendo(true, alvo);
+        fala.onend = () => bocaMexendo(false, alvo);
+        fala.onerror = () => bocaMexendo(false, alvo);
+        window.speechSynthesis.speak(fala);
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function parar() {
+      if (!suportada()) return;
+      try { window.speechSynthesis.cancel(); } catch (err) { /* nada a fazer */ }
+      bocaMexendo(false);
+    }
+
+    return { falar, parar, suportada };
+  })();
 
   /* ---------- humor ---------- */
   /** o humor sai do que aconteceu hoje, não de um contador escondido */
@@ -207,6 +283,47 @@ const Pet = (() => {
     return `<rect x="18" y="162" width="164" height="30" rx="14" fill="${b.cor}" stroke="#131338" stroke-width="5"/>`;
   }
 
+  /** cenário do quarto, desenhado atrás de tudo */
+  function roomSvg(id) {
+    const r = room(id);
+    const fundo = `<rect x="0" y="0" width="200" height="200" rx="26" fill="${r.ceu}"/>
+      <path d="M0 152h200v22a26 26 0 0 1-26 26H26A26 26 0 0 1 0 174z" fill="${r.chao}"/>`;
+    if (id === 'jardim') {
+      return `${fundo}
+        <circle cx="164" cy="42" r="18" fill="#ffd84b" stroke="#131338" stroke-width="4"/>
+        <path d="M30 152v-30M30 130c-14 0-18-14-6-18 8-2 12 6 6 18zM30 132c14-2 20-16 8-20-8-2-14 8-8 20z"
+              fill="#4fc78f" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M176 152v-24M176 132c-10 0-14-10-4-13 6-2 9 5 4 13z"
+              fill="#4fc78f" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>`;
+    }
+    if (id === 'praia') {
+      return `${fundo}
+        <circle cx="42" cy="40" r="18" fill="#ffd84b" stroke="#131338" stroke-width="4"/>
+        <path d="M0 138h200" stroke="#6fd3ff" stroke-width="14"/>
+        <path d="M168 152v-40M168 116c-16-10-30-4-30 4 12 2 22 0 30-4zM168 116c14-12 28-8 30 0-12 4-22 4-30 0z"
+              fill="#4fc78f" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>`;
+    }
+    if (id === 'espaco') {
+      return `${fundo}
+        <g fill="#fff"><circle cx="30" cy="36" r="3"/><circle cx="66" cy="18" r="2.4"/><circle cx="152" cy="30" r="3.4"/>
+          <circle cx="184" cy="66" r="2.6"/><circle cx="18" cy="88" r="2.4"/><circle cx="118" cy="46" r="2.2"/></g>
+        <circle cx="46" cy="52" r="16" fill="#a98cff" stroke="#131338" stroke-width="4"/>
+        <ellipse cx="46" cy="52" rx="26" ry="7" fill="none" stroke="#131338" stroke-width="4"/>`;
+    }
+    if (id === 'castelo') {
+      return `${fundo}
+        <path d="M22 152v-52h14v-14h14v14h14v52z" fill="${r.cor}" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M144 152v-64h16v-16h14v16h16v64z" fill="${r.cor}" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M50 86l6-16 6 16M174 72l6-16 6 16" fill="#ff8fc8" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>`;
+    }
+    return `${fundo}
+      <rect x="12" y="36" width="52" height="46" rx="10" fill="#fff" stroke="#131338" stroke-width="5"/>
+      <path d="M38 36v46M12 59h52" stroke="#131338" stroke-width="4"/>
+      <path d="M150 112v-16h22v16z" fill="#ffd84b" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>
+      <rect x="134" y="112" width="54" height="12" rx="6" fill="${r.cor}" stroke="#131338" stroke-width="4"/>
+      <path d="M142 124v28M180 124v28" stroke="#131338" stroke-width="5" stroke-linecap="round"/>`;
+  }
+
   function face(moodId) {
     if (moodId === 'tonto') {
       return `
@@ -214,7 +331,9 @@ const Pet = (() => {
           <path d="M74 98m-16 0a16 16 0 1 0 32 0a16 16 0 1 0-32 0M74 98m-8 0a8 8 0 1 0 16 0"/>
           <path d="M126 98m-16 0a16 16 0 1 0 32 0a16 16 0 1 0-32 0M126 98m-8 0a8 8 0 1 0 16 0"/>
         </g>
-        <path d="M74 138q13 16 26 0t26 0" stroke="#131338" stroke-width="7" fill="none" stroke-linecap="round"/>
+        <g class="pet-mouth">
+          <path d="M74 138q13 16 26 0t26 0" stroke="#131338" stroke-width="7" fill="none" stroke-linecap="round"/>
+        </g>
         <g class="pet-stars" fill="#ffd84b" stroke="#131338" stroke-width="3">
           <path d="M40 44l5 11 12 2-9 8 3 12-11-6-11 6 3-12-9-8 12-2z"/>
           <path d="M160 38l4 9 10 2-7 7 2 10-9-5-9 5 2-10-7-7 10-2z"/>
@@ -238,6 +357,7 @@ const Pet = (() => {
       preocupado: '<path d="M78 138h44" stroke="#131338" stroke-width="8" stroke-linecap="round"/>',
       dormindo: '<ellipse cx="100" cy="136" rx="11" ry="13" fill="#131338"/>',
     }[moodId] || '<path d="M76 134q24 24 48 0" stroke="#131338" stroke-width="8" fill="none" stroke-linecap="round"/>';
+    const bocaAnimada = `<g class="pet-mouth">${mouth}</g>`;
 
     if (moodId === 'estudando') {
       return `
@@ -247,7 +367,7 @@ const Pet = (() => {
           <circle cx="74" cy="104" r="8" fill="#131338"/><circle cx="126" cy="104" r="8" fill="#131338"/>
         </g>
         <path d="M56 78q16-10 32-2M112 76q16-8 32 2" stroke="#131338" stroke-width="6" fill="none" stroke-linecap="round"/>
-        <path d="M84 136h32" stroke="#131338" stroke-width="8" stroke-linecap="round"/>`;
+        <g class="pet-mouth"><path d="M84 136h32" stroke="#131338" stroke-width="8" stroke-linecap="round"/></g>`;
     }
     const extra = moodId === 'dormindo'
       ? `<g class="pet-zzz" fill="#131338" font-family="Archivo,Arial" font-weight="900">
@@ -258,7 +378,7 @@ const Pet = (() => {
         ? `<g class="pet-spark" fill="#131338"><circle cx="34" cy="66" r="5"/><circle cx="170" cy="76" r="6"/><circle cx="158" cy="40" r="4"/></g>`
         : '';
 
-    return eyes + mouth + extra;
+    return eyes + bocaAnimada + extra;
   }
 
   /** desenho do bichinho; `size` é a largura em px */
@@ -268,9 +388,15 @@ const Pet = (() => {
     const sh = shape(pet.shape);
     const m = moodId || mood(child).id;
     const comCama = (opts && opts.bed) || m === 'dormindo';
+    const comQuarto = !!(opts && opts.room);
+    const quartoId = (opts && opts.roomId) || pet.room;
+    // dentro do quarto o bichinho fica um pouco menor, para caber no cenário
+    const dentro = comQuarto ? ' transform="translate(30,22) scale(.7)"' : '';
     return `
       <svg class="pet-svg mood-${m}" viewBox="0 0 200 200" width="${size}" height="${size}"
            role="img" aria-label="${UI.esc(pet.name)}, ${UI.esc(mood(child).label)}">
+        ${comQuarto ? `<g class="pet-room">${roomSvg(quartoId)}</g>` : ''}
+        <g class="pet-cena"${dentro}>
         ${comCama ? `<g class="pet-bed">${bedSvg(pet.bed)}</g>` : ''}
         <g class="pet-body">
           <ellipse class="pet-foot" cx="74" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
@@ -282,13 +408,59 @@ const Pet = (() => {
           ${face(m)}
           ${accessorySvg(pet.accessory, c.hex)}
         </g>
+        </g>
       </svg>`;
+  }
+
+  /** desenho de teste: mostra como o bichinho vai ficar antes de salvar */
+  function previewSvg(data, size = 150, moodId = 'feliz', opts) {
+    const c = color(data.color);
+    const sh = shape(data.shape);
+    const comQuarto = !!(opts && opts.room);
+    const comCama = !!(opts && opts.bed);
+    const dentro = comQuarto ? ' transform="translate(30,22) scale(.7)"' : '';
+    return `
+      <svg class="pet-svg mood-${moodId}" viewBox="0 0 200 200" width="${size}" height="${size}" aria-hidden="true">
+        ${comQuarto ? `<g class="pet-room">${roomSvg(data.room)}</g>` : ''}
+        <g class="pet-cena"${dentro}>
+          ${comCama ? `<g class="pet-bed">${bedSvg(data.bed)}</g>` : ''}
+          <g class="pet-body">
+            <ellipse class="pet-foot" cx="74" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
+            <ellipse class="pet-foot" cx="126" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
+            <path d="${sh.path}" fill="${c.hex}" stroke="#131338" stroke-width="6" stroke-linejoin="round"/>
+            ${outfitSvg(data.outfit, data.shape)}
+            <ellipse cx="52" cy="120" rx="11" ry="7" fill="#131338" opacity=".16"/>
+            <ellipse cx="148" cy="120" rx="11" ry="7" fill="#131338" opacity=".16"/>
+            ${face(moodId)}
+            ${accessorySvg(data.accessory, c.hex)}
+          </g>
+        </g>
+      </svg>`;
+  }
+
+  /** rosquinha de progresso: no meio o nível, na volta o quanto falta */
+  function ringSvg(xp) {
+    const volta = 2 * Math.PI * 50;
+    const feito = Math.max(0.02, progress(xp)) * volta;
+    return `
+      <div class="pet-ring" aria-hidden="true">
+        <svg viewBox="0 0 120 120">
+          <circle class="ring-track" cx="60" cy="60" r="50"/>
+          <circle class="ring-fill" cx="60" cy="60" r="50"
+                  stroke-dasharray="${feito.toFixed(1)} ${volta.toFixed(1)}"/>
+        </svg>
+        <span class="pet-ring-mid">
+          <b>${level(xp)}</b>
+          <i>nível</i>
+        </span>
+      </div>`;
   }
 
   /* ---------- painel compacto da coluna lateral ---------- */
   function panel(child) {
     const pet = Store.petOf(child.id);
     const dormindo = Store.petSleeping(child.id);
+    const vozLigada = pet.voice !== false;
     const lv = level(pet.xp);
     const pct = Math.round(progress(pet.xp) * 100);
     const carinhos = Store.petCareLeft(child.id);
@@ -296,11 +468,18 @@ const Pet = (() => {
       <section class="panel pet-panel">
         <header class="panel-head">
           <h3>${Icons.svg('heart')} Meu bichinho</h3>
-          <button class="link" data-pet-open>cuidar</button>
+          <div class="row" style="gap:8px">
+            <button class="icon-btn sm" data-pet-voice
+                    aria-label="${vozLigada ? 'Desligar a voz' : 'Ligar a voz'}"
+                    aria-pressed="${vozLigada}">
+              ${Icons.svg(vozLigada ? 'speaker' : 'speakerOff')}
+            </button>
+            <button class="link" data-pet-open>cuidar</button>
+          </div>
         </header>
         <div class="pet-panel-top">
           <button class="pet-hit" data-pet-touch aria-label="Fazer carinho em ${UI.esc(pet.name)}">
-            ${svg(child, 92, null, { bed: true })}
+            ${svg(child, 104, null, { bed: true, room: true })}
           </button>
           <div class="grow">
             <div class="pet-name-row">
@@ -323,76 +502,94 @@ const Pet = (() => {
       </section>`;
   }
 
-  /* ---------- painel de personalização ---------- */
+  /* ---------- cartão de atualizar o bichinho ---------- */
   function openSheet(child) {
     const pet = Store.petOf(child.id);
     const lv = level(pet.xp);
+    const falta = faltaParaSubir(pet.xp);
     const liberados = unlocked(lv);
+    const quartos = ROOMS.filter((r) => r.level <= lv);
+    const bloqueados = ROOMS.filter((r) => r.level > lv);
+
+    const grade = (campo, itens, atual, render) => `
+      <div class="pick-grid ${campo}" data-pick="${campo}">
+        ${itens.map((it) => render(it, it.id === atual)).join('')}
+      </div>
+      <input type="hidden" name="${campo}" value="${UI.esc(atual || '')}" />`;
 
     UI.openSheet({
-      title: `Meu bichinho`,
-      subtitle: `${pet.name} • nível ${lv} • ${pet.xp} pontos de amizade`,
+      title: 'Atualizar o bichinho',
+      subtitle: `${pet.name} • ${pet.xp} pontos de amizade`,
       body: `
-        <div class="pet-preview" data-pet-preview>${svg(child, 150)}</div>
+        <div class="pet-atualiza">
+          <div class="pet-atualiza-art" data-pet-preview>
+            ${previewSvg(pet, 160, 'feliz', { room: true })}
+          </div>
+          <div class="pet-atualiza-side">
+            ${ringSvg(pet.xp)}
+            <p class="tiny muted center">
+              faltam <b data-falta>${falta}</b> ponto(s)<br/>para o nível ${lv + 1}
+            </p>
+          </div>
+        </div>
+
         <form id="pet-form">
           ${UI.field('Nome', UI.input('name', { value: pet.name, placeholder: 'ex.: Pipoca' }))}
+
           <div class="field">
-            <label>Formato</label>
-            <div class="pick-grid shapes" data-pick="shape">
-              ${SHAPES.map((sh) => `
-                <button type="button" data-value="${sh.id}" aria-pressed="${sh.id === pet.shape}" title="${sh.label}">
-                  <svg viewBox="0 0 200 200"><path d="${sh.path}" fill="currentColor"/></svg>
-                </button>`).join('')}
-            </div>
-            <input type="hidden" name="shape" value="${UI.esc(pet.shape)}" />
+            <label>Modelo do bonequinho</label>
+            ${grade('shape', SHAPES, pet.shape, (sh, on) => `
+              <button type="button" data-value="${sh.id}" aria-pressed="${on}" title="${sh.label}">
+                <svg viewBox="0 0 200 200"><path d="${sh.path}" fill="currentColor"/></svg>
+                <span class="tiny">${UI.esc(sh.label)}</span>
+              </button>`)}
           </div>
+
           <div class="field">
             <label>Cor</label>
-            <div class="pick-grid swatches" data-pick="color">
-              ${COLORS.map((c) => `
-                <button type="button" data-value="${c.id}" aria-pressed="${c.id === pet.color}"
-                        style="background:${c.hex}" aria-label="${c.label}"></button>`).join('')}
-            </div>
-            <input type="hidden" name="color" value="${UI.esc(pet.color)}" />
+            ${grade('color', COLORS, pet.color, (c, on) => `
+              <button type="button" data-value="${c.id}" aria-pressed="${on}"
+                      style="background:${c.hex}" aria-label="${c.label}" title="${c.label}"></button>`)}
           </div>
+
           <div class="field">
-            <label>Acessório</label>
-            <div class="seg-mini wrap" data-pick="accessory">
-              ${liberados.map((a) => `
-                <button type="button" data-value="${a.id}" aria-pressed="${a.id === pet.accessory}">${UI.esc(a.label)}</button>`).join('')}
-            </div>
-            <input type="hidden" name="accessory" value="${UI.esc(pet.accessory)}" />
+            <label>Acessórios disponíveis</label>
+            ${grade('accessory', liberados, pet.accessory, (a, on) => `
+              <button type="button" class="pick-tile" data-value="${a.id}" aria-pressed="${on}">
+                <span class="tiny">${UI.esc(a.label)}</span>
+              </button>`)}
+            ${ACCESSORIES.filter((a) => a.level > lv).length ? `
+              <div class="note">
+                Ainda bloqueado: ${ACCESSORIES.filter((a) => a.level > lv)
+                  .map((a) => `${a.label} (nível ${a.level})`).join(', ')}.
+              </div>` : ''}
           </div>
-          ${ACCESSORIES.filter((a) => a.level > lv).length ? `
-            <div class="note">
-              Ainda bloqueado: ${ACCESSORIES.filter((a) => a.level > lv)
-                .map((a) => `${a.label} (nível ${a.level})`).join(', ')}.
-              Cada tarefa, livro e compromisso concluído dá pontos de amizade.
-            </div>` : ''}
+
+          <div class="field">
+            <label>Quarto</label>
+            ${grade('room', quartos, pet.room, (r, on) => `
+              <button type="button" class="pick-room" data-value="${r.id}" aria-pressed="${on}" title="${r.label}">
+                <svg viewBox="0 0 200 200">${roomSvg(r.id)}</svg>
+                <span class="tiny">${UI.esc(r.label)}</span>
+              </button>`)}
+            ${bloqueados.length ? `
+              <div class="note">
+                Novos quartos: ${bloqueados.map((r) => `${r.label} (nível ${r.level})`).join(', ')}.
+              </div>` : ''}
+          </div>
         </form>`,
       actions: `
         <button class="btn btn-ghost" data-loja>${Icons.svg('coins')} Lojinha</button>
         <button class="btn btn-primary" data-save>Salvar</button>`,
       onMount(sheet) {
         const preview = sheet.querySelector('[data-pet-preview]');
+        const form = sheet.querySelector('#pet-form');
         const repaint = () => {
-          const data = UI.formData(sheet.querySelector('#pet-form'));
-          const c = color(data.color);
-          const sh = shape(data.shape);
-          preview.innerHTML = `
-            <svg class="pet-svg" viewBox="0 0 200 200" width="150" height="150" aria-hidden="true">
-              <g class="pet-body">
-                <ellipse cx="74" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
-                <ellipse cx="126" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
-                <path d="${sh.path}" fill="${c.hex}" stroke="#131338" stroke-width="6" stroke-linejoin="round"/>
-                ${outfitSvg(data.outfit || Store.petOf(child.id).outfit, data.shape)}
-                ${face('feliz')}
-                ${accessorySvg(data.accessory, c.hex)}
-              </g>
-            </svg>`;
+          const data = Object.assign({}, Store.petOf(child.id), UI.formData(form));
+          preview.innerHTML = previewSvg(data, 160, 'feliz', { room: true });
         };
         sheet.querySelectorAll('[data-pick]').forEach((box) => {
-          const input = sheet.querySelector(`input[name="${box.getAttribute('data-pick')}"]`);
+          const input = form.querySelector(`input[name="${box.getAttribute('data-pick')}"]`);
           box.addEventListener('click', (ev) => {
             const btn = ev.target.closest('[data-value]');
             if (!btn) return;
@@ -407,7 +604,7 @@ const Pet = (() => {
           openShop(child);
         });
         sheet.querySelector('[data-save]').addEventListener('click', () => {
-          const data = UI.formData(sheet.querySelector('#pet-form'));
+          const data = UI.formData(form);
           const res = Store.savePet(child.id, data);
           if (!res.ok) return UI.toast(res.error, 'bad');
           UI.closeSheet();
@@ -427,13 +624,14 @@ const Pet = (() => {
       { tipo: 'outfit', titulo: 'Roupinhas', atual: pet.outfit },
       { tipo: 'bed', titulo: 'Camas', atual: pet.bed },
       { tipo: 'accessory', titulo: 'Acessórios', atual: pet.accessory },
+      { tipo: 'room', titulo: 'Quartos', atual: pet.room },
     ];
 
     UI.openSheet({
       title: 'Lojinha do bichinho',
       subtitle: `Nível ${lv} • cada nível libera peças novas`,
       body: `
-        <div class="shop-preview" data-shop-preview>${svg(child, 140, 'feliz')}</div>
+        <div class="shop-preview" data-shop-preview>${svg(child, 150, 'feliz', { room: true })}</div>
         ${grupos.map((g) => `
           <div class="section-title"><h3>${g.titulo}</h3></div>
           <div class="shop-grid">
@@ -469,7 +667,7 @@ const Pet = (() => {
           const tag = b.querySelector('.shop-tag');
           if (tag) tag.textContent = 'em uso';
           sheet.querySelector('[data-shop-preview]').innerHTML =
-            svg(child, 140, tipo === 'bed' ? 'dormindo' : 'feliz');
+            svg(child, 150, tipo === 'bed' ? 'dormindo' : 'feliz', { room: true, bed: tipo === 'bed' });
           UI.toast(`${Store.petOf(child.id).name} vestiu isso`, 'ok');
         }));
       },
@@ -583,6 +781,7 @@ const Pet = (() => {
             Store.petSay(child.id, 'pet', resposta.texto);
             box.innerHTML = linhas();
             rolar();
+            Voz.falar(resposta.texto, child, sheet);
             if (resposta.pergunta) {
               setTimeout(() => {
                 UI.closeSheet();
@@ -627,7 +826,9 @@ const Pet = (() => {
         'Que carinho bom!', 'Hihi, faz de novo!', 'Você é minha pessoa favorita.',
         'Tô cheio de energia agora!', 'Vamos fazer uma tarefa juntos?',
       ];
-      bubble.textContent = falas[Math.floor(res.count % falas.length)];
+      const escolhida = falas[Math.floor(res.count % falas.length)];
+      bubble.textContent = escolhida;
+      Voz.falar(escolhida, child);
       bubble.classList.remove('pop');
       void bubble.offsetWidth;
       bubble.classList.add('pop');
@@ -647,6 +848,15 @@ const Pet = (() => {
       b.addEventListener('click', () => openShop(child)));
     root.querySelectorAll('[data-pet-chat]').forEach((b) =>
       b.addEventListener('click', () => openChat(child)));
+    root.querySelectorAll('[data-pet-voice]').forEach((b) => b.addEventListener('click', () => {
+      const pet = Store.petOf(child.id);
+      const ligar = pet.voice === false;
+      Store.savePet(child.id, { name: pet.name, voice: ligar });
+      Voz.parar();
+      UI.toast(ligar ? `${pet.name} vai falar em voz alta` : `${pet.name} ficou mudinho`);
+      if (ligar) Voz.falar('Oi! Agora você me escuta.', child);
+      App.render();
+    }));
     root.querySelectorAll('[data-pet-nap]').forEach((b) => b.addEventListener('click', () => {
       const dormindo = Store.petSleeping(child.id);
       Store.petNap(child.id, dormindo ? 0 : 20);
@@ -672,6 +882,7 @@ const Pet = (() => {
     let idleTimer = null;
     let holdTimer = null;
     let dizzyTimer = null;
+    let menuAberto = false;
 
     const pos = { x: 0, y: 0, vx: 0, vy: 0 };
     let dragging = false;
@@ -786,6 +997,94 @@ const Pet = (() => {
       dizzyTimer = setTimeout(() => ficarTonto('Ufa, voltei. Que tontura!'), 1800);
     }
 
+    /* ---------- menu em bolinhas em volta dele ---------- */
+    const ACOES = [
+      { id: 'dormir', label: 'Dormir', icone: 'moon', cor: '#a98cff' },
+      { id: 'brincar', label: 'Brincar', icone: 'ball', cor: '#ffa24b' },
+      { id: 'estudar', label: 'Estudar', icone: 'brain', cor: '#6fd3ff' },
+      { id: 'conversar', label: 'Conversar', icone: 'chat', cor: '#79e3b5' },
+      { id: 'atualizar', label: 'Atualizar', icone: 'refresh', cor: '#d6f154' },
+    ];
+
+    /** posiciona as cinco bolinhas num arco por cima do bichinho */
+    function desenharMenu() {
+      const dormindo = Store.petSleeping(child.id);
+      const raio = 90;
+      const inicio = 190;
+      const passo = 40;
+      return ACOES.map((a, idx) => {
+        const ang = ((inicio + idx * passo) * Math.PI) / 180;
+        const x = Math.round(SIZE / 2 + raio * Math.cos(ang) - 24);
+        const y = Math.round(SIZE / 2 + raio * Math.sin(ang) - 24);
+        const label = a.id === 'dormir' && dormindo ? 'Acordar' : a.label;
+        const icone = a.id === 'dormir' && dormindo ? 'sun' : a.icone;
+        return `
+          <button type="button" class="pet-menu-bolha" data-acao="${a.id}"
+                  style="left:${x}px; top:${y}px; background:${a.cor}; animation-delay:${idx * 45}ms"
+                  aria-label="${label}">
+            ${Icons.svg(icone)}
+            <span class="pet-menu-nome" data-pos="${idx === 0 ? 'esq' : idx === ACOES.length - 1 ? 'dir' : 'cima'}">${label}</span>
+          </button>`;
+      }).join('');
+    }
+
+    function fecharMenu() {
+      if (!el) return;
+      menuAberto = false;
+      const caixa = el.querySelector('.pet-menu');
+      if (caixa) { caixa.hidden = true; caixa.innerHTML = ''; }
+      el.classList.remove('is-menu');
+    }
+
+    function abrirMenu() {
+      if (!el) return;
+      menuAberto = true;
+      const caixa = el.querySelector('.pet-menu');
+      caixa.innerHTML = desenharMenu();
+      caixa.hidden = false;
+      el.classList.add('is-menu');
+      caixa.querySelectorAll('[data-acao]').forEach((b) => {
+        b.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+        b.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          escolher(b.getAttribute('data-acao'));
+        });
+      });
+    }
+
+    const alternarMenu = () => (menuAberto ? fecharMenu() : abrirMenu());
+
+    function escolher(acao) {
+      fecharMenu();
+      registrarInteracao();
+      if (acao === 'dormir') {
+        const dormindo = Store.petSleeping(child.id);
+        Store.petNap(child.id, dormindo ? 0 : 20);
+        setEstado(dormindo ? 'parado' : 'dormindo');
+        fala(dormindo ? 'Acordei! Bora?' : 'Vou tirar um cochilo...');
+        App.render();
+        return;
+      }
+      if (acao === 'brincar') {
+        setEstado('brincando');
+        fala('Joga a bola pra mim!');
+        pos.vy = -12;
+        mover();
+        setTimeout(() => { if (estado === 'brincando') { setEstado('parado'); agendarBrincadeira(); } }, 6000);
+        return;
+      }
+      if (acao === 'estudar') {
+        setEstado('estudando');
+        if (!Quiz.surpresa(child)) {
+          fala('Ainda não tenho perguntas. Monta uma prova comigo!');
+          Quiz.openProva(child);
+        }
+        return;
+      }
+      if (acao === 'conversar') { openChat(child); return; }
+      openSheet(child);
+    }
+
     /* ---------- brincadeiras sozinho ---------- */
     function agendarBrincadeira() {
       clearTimeout(idleTimer);
@@ -862,6 +1161,7 @@ const Pet = (() => {
       if (moved > 8) {
         dragging = true;
         clearTimeout(holdTimer);
+        if (menuAberto) fecharMenu();
         if (estado !== 'tonto' && estado !== 'derretendo') setEstado('segurado');
       }
       if (!dragging) return;
@@ -895,7 +1195,7 @@ const Pet = (() => {
       const rapido = Date.now() - pressStart < 500;
 
       if (!dragging && rapido) {
-        openSheet(child);
+        alternarMenu();
         return;
       }
       dragging = false;
@@ -919,7 +1219,8 @@ const Pet = (() => {
       el.setAttribute('aria-label', 'Seu bichinho. Toque para cuidar dele.');
       el.innerHTML = `
         <div class="buddy-bubble" hidden></div>
-        <div class="pet-buddy-art">${svg(child, SIZE)}</div>`;
+        <div class="pet-buddy-art">${svg(child, SIZE)}</div>
+        <div class="pet-menu" hidden></div>`;
       document.body.appendChild(el);
 
       ball = document.createElement('span');
@@ -936,7 +1237,14 @@ const Pet = (() => {
       el.addEventListener('pointerup', onUp);
       el.addEventListener('pointercancel', onUp);
       el.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openSheet(child); }
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); alternarMenu(); }
+        if (ev.key === 'Escape') fecharMenu();
+      });
+      document.addEventListener('pointerdown', (ev) => {
+        if (menuAberto && el && !el.contains(ev.target)) fecharMenu();
+      });
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape') fecharMenu();
       });
       window.addEventListener('resize', () => {
         pos.x = Math.min(pos.x, limiteX());
@@ -959,6 +1267,7 @@ const Pet = (() => {
     }
 
     function unmount() {
+      menuAberto = false;
       clearTimeout(idleTimer);
       clearTimeout(holdTimer);
       clearTimeout(dizzyTimer);
@@ -976,10 +1285,10 @@ const Pet = (() => {
   })();
 
   return {
-    svg, panel, bind, openSheet, openChat, touch, mood, phrase,
+    svg, panel, bind, openSheet, openChat, touch, mood, phrase, Voz,
     mountBuddy: Buddy.mount, unmountBuddy: Buddy.unmount, buddySay: Buddy.fala,
-    openShop, outfit, bed,
-    level, progress, COLORS, SHAPES, ACCESSORIES, OUTFITS, BEDS, catalogo,
+    openShop, outfit, bed, room, roomSvg, ringSvg, previewSvg, faltaParaSubir,
+    level, progress, COLORS, SHAPES, ACCESSORIES, OUTFITS, BEDS, ROOMS, catalogo,
     XP_POR_NIVEL, CARINHOS_POR_DIA,
   };
 })();

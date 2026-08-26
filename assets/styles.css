@@ -691,18 +691,7 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
   align-self:stretch;background:var(--surface-2);box-shadow:none;font-size:12px;line-height:1.45;padding:10px 12px
 }
 .pet-panel .pet-bubble::after{display:none}
-.pet-card{
-  display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:center;
-  padding:20px;border-radius:var(--r-lg);background:var(--blue);color:#fff;
-  box-shadow:0 16px 34px rgba(59,79,228,.28);position:relative;overflow:hidden
-}
-.pet-card::after{
-  content:"";position:absolute;right:-70px;bottom:-80px;width:200px;height:200px;
-  border-radius:46% 54% 58% 42% / 52% 46% 54% 48%;background:rgba(255,255,255,.1)
-}
-.pet-stage{position:relative;z-index:1}
 .pet-hit{display:block;padding:0;border-radius:50%;background:none;cursor:pointer}
-.pet-info{position:relative;z-index:1;display:flex;flex-direction:column;gap:10px;min-width:0}
 .pet-name-row{display:flex;align-items:center;gap:10px}
 .pet-name-row h3{font-size:19px;color:#fff}
 .chip.lime{background:var(--lime);color:var(--panel)}
@@ -718,11 +707,11 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 }
 .pet-bubble.pop{animation:bubble-pop .42s var(--ease)}
 @keyframes bubble-pop{0%{transform:scale(.9) translateY(6px);opacity:.4}60%{transform:scale(1.03)}100%{transform:none;opacity:1}}
-.pet-bar{background:rgba(255,255,255,.25)}
-.pet-card .tiny.muted{color:rgba(255,255,255,.75)}
-.pet-card .btn-ghost{background:rgba(255,255,255,.16);color:#fff;box-shadow:none}
 
 .pet-svg{display:block;overflow:visible}
+.pet-mouth{transform-origin:100px 138px;transform-box:view-box}
+.pet-svg.is-falando .pet-mouth{animation:pet-talk .26s ease-in-out infinite alternate}
+@keyframes pet-talk{from{transform:scaleY(.55)}to{transform:scaleY(1.35)}}
 .pet-body{transform-origin:100px 170px;animation:pet-idle 3.4s ease-in-out infinite}
 .pet-pupil{animation:pet-look 5s ease-in-out infinite}
 .pet-svg.mood-dormindo .pet-body{animation-duration:5.5s}
@@ -741,17 +730,12 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
   100%{transform:translateY(0) scale(1)}
 }
 .pet-preview{display:grid;place-items:center;padding:12px;border-radius:24px;background:var(--surface-2)}
-.pick-grid.shapes button{color:var(--violet);padding:9px}
-.pick-grid.shapes button svg{width:100%;height:100%}
-.pick-grid.shapes button[aria-pressed="true"]{background:var(--lime);color:var(--panel)}
 .kid-pet{flex:0 0 auto;display:grid;place-items:center;width:54px;height:54px}
 @media (max-width:999px){
   /* no celular o bichinho já está solto na tela; o painel fica só com os controles */
   .pet-panel .pet-hit{display:none}
 }
 @media (max-width:520px){
-  .pet-card{grid-template-columns:1fr;justify-items:center;text-align:center}
-  .pet-info{align-items:center}
   .pet-bubble{align-self:center}
   .pet-bubble::after{left:calc(50% - 8px)}
 }
@@ -1053,3 +1037,103 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 .task .mt,.empty p,.auth-hint,.note,.who .t2,.hero .value small,
 .tile .sub,.kid-card .small,.sheet-head p{text-transform:none;font-variation-settings:'wdth' 104}
 .section-title .small,.section-title .link{text-transform:none}
+
+/* ===== montar prova com o banco da escola ===== */
+.prova-cta{
+  display:flex;align-items:center;gap:12px;width:100%;margin-top:16px;padding:16px;
+  border-radius:24px;background:var(--blue);color:#fff;box-shadow:var(--neu-out-sm);
+  text-align:left;transition:.2s var(--ease);
+}
+.prova-cta:hover{transform:translateY(-2px)}
+.prova-cta .tiny{opacity:.82;text-transform:none;font-variation-settings:'wdth' 104}
+.prova-cta-ico{
+  width:44px;height:44px;flex:none;border-radius:16px;display:grid;place-items:center;
+  background:rgba(255,255,255,.18);
+}
+.prova-cta-ico svg{width:24px;height:24px}
+.mat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.mat-card{
+  display:flex;align-items:center;gap:10px;padding:12px;border-radius:20px;text-align:left;
+  background:var(--surface);box-shadow:var(--neu-out-sm);color:var(--ink);transition:.18s var(--ease);
+}
+.mat-card .tiny{text-transform:none;font-variation-settings:'wdth' 104;opacity:.7}
+.mat-ico{width:34px;height:34px;flex:none;border-radius:12px;display:grid;place-items:center;background:var(--surface-2);color:#fff}
+.mat-ico svg{width:19px;height:19px}
+.mat-check{width:22px;height:22px;flex:none;border-radius:50%;display:grid;place-items:center;
+  background:var(--surface-2);color:transparent}
+.mat-check svg{width:14px;height:14px}
+.mat-card[aria-pressed="true"]{background:var(--lime);color:var(--panel)}
+.mat-card[aria-pressed="true"] .mat-check{background:var(--panel);color:var(--lime)}
+
+.topico-bloco{margin-bottom:12px}
+.topico-bloco .up{letter-spacing:.06em;margin-bottom:6px;opacity:.7}
+.prova-resumo{
+  margin-top:6px;padding:12px 14px;border-radius:18px;background:var(--surface-2);
+  font-size:13px;text-transform:none;font-variation-settings:'wdth' 104;
+}
+.prova-tag{
+  font-size:11px;letter-spacing:.1em;text-transform:uppercase;opacity:.62;margin:14px 0 -6px;
+}
+.prova-discursiva{display:block;margin-top:12px}
+.prova-discursiva textarea{width:100%}
+.resp-feedback{margin-top:12px;padding:14px;border-radius:20px;background:var(--surface-2)}
+.resp-feedback.ok{background:rgba(121,227,181,.34)}
+.resp-feedback.nao{background:rgba(255,162,75,.28)}
+.resp-feedback .small{text-transform:none;font-variation-settings:'wdth' 104}
+
+/* ===== cartão de atualizar o bichinho ===== */
+.pet-atualiza{
+  display:flex;align-items:center;gap:14px;padding:14px;border-radius:26px;
+  background:var(--surface-2);margin-bottom:16px;color:var(--ink);
+}
+.pet-atualiza-art{flex:none;border-radius:22px;overflow:hidden;line-height:0;box-shadow:var(--neu-out-sm)}
+.pet-atualiza-side{flex:1;display:grid;justify-items:center;gap:8px}
+.pet-atualiza-side .center{text-align:center;text-transform:none;font-variation-settings:'wdth' 104;color:var(--ink-2)}
+.pet-ring{position:relative;width:120px;height:120px}
+.pet-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.pet-ring circle{fill:none;stroke-width:12;stroke-linecap:round}
+.pet-ring .ring-track{stroke:var(--ink);opacity:.12}
+.pet-ring .ring-fill{stroke:var(--accent);opacity:.55;transition:stroke-dasharray .5s var(--ease)}
+.pet-ring-mid{
+  position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:0;
+}
+.pet-ring-mid b{color:var(--ink);font-size:34px;line-height:1;font-variation-settings:'wdth' 118}
+.pet-ring-mid i{color:var(--ink);font-style:normal;font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.6}
+.pick-grid.shape{grid-template-columns:repeat(4,1fr)}
+.pick-grid.shape button,.pick-grid.room button,.pick-grid.accessory button{
+  aspect-ratio:auto;padding:8px 6px;gap:4px;grid-template-rows:1fr auto;
+}
+.pick-grid.shape button svg{width:100%;height:38px;color:var(--violet)}
+.pick-grid.shape button[aria-pressed="true"]{background:var(--lime);color:var(--panel)}
+.pick-grid.shape button[aria-pressed="true"] svg{color:var(--panel)}
+.pick-grid.room{grid-template-columns:repeat(3,1fr)}
+.pick-grid.room button svg{width:100%;height:52px;border-radius:12px}
+.pick-grid.room button[aria-pressed="true"]{background:var(--lime);color:var(--panel)}
+.pick-grid.accessory{grid-template-columns:repeat(3,1fr)}
+.pick-grid.accessory button[aria-pressed="true"]{background:var(--lime);color:var(--panel)}
+.pick-grid .tiny{text-transform:none;font-variation-settings:'wdth' 104;line-height:1.2;text-align:center}
+
+/* ===== bolinhas em volta do bichinho ===== */
+.pet-menu{position:absolute;inset:0;pointer-events:none;z-index:2}
+.pet-menu-bolha{
+  position:absolute;width:48px;height:48px;border-radius:50%;pointer-events:auto;
+  display:grid;place-items:center;color:#131338;
+  box-shadow:0 0 0 3px #131338, 0 10px 20px rgba(19,19,56,.3);
+  animation:bolha-entra .28s var(--ease) both;
+}
+.pet-menu-bolha svg{width:22px;height:22px;stroke-width:2.2}
+.pet-menu-bolha:hover,.pet-menu-bolha:focus-visible{transform:scale(1.12)}
+.pet-menu-nome{
+  position:absolute;font-size:9px;letter-spacing:.06em;text-transform:uppercase;
+  background:#fff;color:#131338;padding:3px 7px;border-radius:9px;white-space:nowrap;
+  box-shadow:0 0 0 2px #131338;font-weight:800;
+}
+.pet-menu-nome[data-pos="cima"]{bottom:calc(100% + 6px);left:50%;transform:translateX(-50%)}
+.pet-menu-nome[data-pos="esq"]{right:calc(100% + 6px);top:50%;transform:translateY(-50%)}
+.pet-menu-nome[data-pos="dir"]{left:calc(100% + 6px);top:50%;transform:translateY(-50%)}
+@keyframes bolha-entra{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
+.pet-buddy.is-menu .pet-buddy-art{transform:scale(.94)}
+@media (prefers-reduced-motion:reduce){.pet-menu-bolha{animation:none}}
+.pick-grid.color{grid-template-columns:repeat(8,1fr)}
+.pick-grid.color button{aspect-ratio:1;box-shadow:var(--neu-out-sm)}
+.pick-grid.color button[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:2px}

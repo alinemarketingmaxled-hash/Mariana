@@ -34,6 +34,7 @@ const UI = (() => {
   function closeSheet() {
     const root = sheetRoot();
     if (!root) return;
+    if (typeof Pet !== 'undefined' && Pet.Voz) Pet.Voz.parar();
     root.innerHTML = '';
     root.hidden = true;
     document.removeEventListener('keydown', escHandler);

@@ -61,15 +61,29 @@ quantos filhos quiser, cada um com o próprio login e senha.
 
 - **Bichinho solto na tela**: ele fica acima da barra de navegação e vive sozinho: pula, brinca de
   bola, anda, estuda e só **dorme de madrugada** (das 22h às 6h) ou depois de muito tempo sem
-  ninguém por perto, e quando dorme aparece na **cama** dele. **Um toque** abre o painel
-  para cuidar dele; **segurar por 4 segundos** faz ele derreter e ficar tonto; **sacudir** deixa ele
+  ninguém por perto, e quando dorme aparece na **cama** dele. **Um toque** abre **cinco bolinhas
+  em volta dele**: *dormir* (ou acordar), *brincar*, *estudar*, *conversar* e *atualizar*;
+  **segurar por 4 segundos** faz ele derreter e ficar tonto; **sacudir** deixa ele
   zonzo; e dá para **arrastar e jogar de qualquer altura** (ele cai, quica no chão, bate no teto e,
   se a queda for feia, fica vendo estrelinhas).
+- **Atualizar o bichinho**: a bolinha de atualizar abre um cartão com ele dentro do **quarto** e,
+  ao lado, um **gráfico de círculo** meio transparente que mostra o **nível no meio** e o quanto
+  falta de pontos para evoluir. No mesmo cartão dá para trocar **nome**, **modelo do bonequinho**,
+  **cor**, os **acessórios já liberados** e o **quarto** (Quartinho, Jardim, Praia, Espaço e
+  Castelo, cada um abrindo em um nível). O que ainda está bloqueado aparece com o nível que falta.
 - **Jogos e estudo**: uma aba com dois espaços.
   - *Joguinhos*: **Conta rápida**, com **níveis por série** (até o 5º ano, 6º, 7º, 8º e 9º) e
     questões próprias de cada ano: quatro operações, frações, porcentagem, MMC e MDC, números
     negativos, **equações do 1º grau**, potências e raízes, regra de três, **equações do 2º grau**,
     funções e Pitágoras. Também *Pega a bola*, *Jogo da memória* e *Repete comigo*. Cada partida rende pontos de amizade, com teto de 20 por dia e recorde por jogo.
+  - *Montar prova*: um **levantamento do conteúdo da escola** já vem pronto no app, com
+    **6 matérias** (Português, Matemática, Ciências, História, Geografia e Inglês), **27 assuntos**
+    e **135 questões**. Ela marca as matérias na lista, pode afinar por assunto, escolhe
+    **quantas questões** (5, 10, 15 ou 20) e o **tipo**: *alternativas*, *discursivas* ou
+    *misturadas*. O app sorteia a prova na hora. Nas discursivas ela escreve a resposta e o
+    bichinho compara com o gabarito (ignorando acento, maiúscula e pontuação); se a resposta
+    dela estiver certa de outro jeito, o botão **"escrevi certo"** conta como acerto. No fim
+    aparece a lista do que errou, com o gabarito, para revisar.
   - *Quiz das matérias*: a criança cria um assunto (matéria, nome, o que aconteceu na aula) e
     escreve as perguntas, uma por linha no formato `pergunta = resposta`; o app monta as cartas.
     Há atalho para gerar a tabuada de qualquer número. Cada assunto pode ser estudado como
@@ -78,12 +92,14 @@ quantos filhos quiser, cada um com o próprio login e senha.
     surpresa** sozinho enquanto ela usa o app.
 
   > O app funciona sem internet e sem servidor, então ele não inventa perguntas a partir de um texto
-  > livre: as perguntas são as que a criança escreve, cola do caderno ou gera pelos atalhos.
+  > livre: as perguntas saem do **banco de conteúdo da escola** que já vem embutido, ou são as que
+  > a criança escreve, cola do caderno ou gera pelos atalhos.
 - **Bichinho**: o mesmo personagem também aparece no cartão da tela inicial, reage ao que acontece no dia (dorme quando
   nada foi feito, fica animado quando tem tarefa marcada, comemora quando o dia está completo,
   fica preocupado com compromisso atrasado) e fala frases ligadas ao que está pendente. Recebe
   carinho (até 5 por dia), ganha **pontos de amizade** a cada tarefa, livro, compromisso e
-  validação, sobe de nível e libera acessórios. Dá para trocar nome, formato, cor e acessório.
+  validação, sobe de nível e libera roupinhas, camas, acessórios e quartos. Ele também **fala em
+  voz alta** as perguntas e as respostas (dá para desligar no alto-falante do painel).
 - **Hoje**: saldo disponível, progresso da meta, tira dos últimos 7 dias e o quanto já rendeu no dia.
 - **Diário de livros e lições**: escreve um registro por atividade com **tipo** (livro, lição ou
   atividade), título, detalhe (ex.: páginas lidas), **data**, **horário**, tempo em minutos,
@@ -156,6 +172,10 @@ assets/
     photos.js         # câmera/galeria, compressão e IndexedDB das fotos
     effects.js        # animações de resposta (moedas, livros, estrelas)
     agenda.js         # calendário compartilhado de provas, trabalhos e eventos
+    bank.js           # banco de conteúdo da escola (matérias, assuntos e questões)
+    pet.js            # o bichinho: desenho, quartos, menu em bolinhas, voz e lojinha
+    quiz.js           # montar prova, assuntos escritos por ela, cartas e quizzes
+    games.js          # joguinhos e a aba de estudo
     store.js          # dados, regras de negócio e localStorage
     ui.js             # toast, bottom-sheet, formulários
     screen-auth.js    # login (filho(a) / responsável)

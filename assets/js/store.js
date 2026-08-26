@@ -590,7 +590,7 @@ const Store = (() => {
   /* ---------- bichinho do filho ---------- */
   const PET_DEFAULT = {
     name: 'Pip', shape: 'blob', color: 'lime', accessory: '',
-    outfit: 'camiseta', bed: 'colchonete', xp: 0,
+    outfit: 'camiseta', bed: 'colchonete', room: 'quartinho', xp: 0,
   };
   const XP_NIVEL = 60;
   const CARINHOS_DIA = 5;
@@ -606,6 +606,7 @@ const Store = (() => {
     if (!u.pet.care) u.pet.care = { date: today(), count: 0 };
     if (!u.pet.outfit) u.pet.outfit = 'camiseta';
     if (!u.pet.bed) u.pet.bed = 'colchonete';
+    if (!u.pet.room) u.pet.room = 'quartinho';
     return u.pet;
   }
 
@@ -621,7 +622,9 @@ const Store = (() => {
     pet.accessory = data.accessory === undefined ? pet.accessory : data.accessory;
     if (data.outfit) pet.outfit = data.outfit;
     if (data.serie) pet.serie = data.serie;
+    if (data.voice !== undefined) pet.voice = !!data.voice;
     if (data.bed) pet.bed = data.bed;
+    if (data.room) pet.room = data.room;
     save();
     return { ok: true, pet };
   }
