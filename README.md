@@ -66,21 +66,40 @@ quantos filhos quiser, cada um com o próprio login e senha.
   **segurar por 4 segundos** faz ele derreter e ficar tonto; **sacudir** deixa ele
   zonzo; e dá para **arrastar e jogar de qualquer altura** (ele cai, quica no chão, bate no teto e,
   se a queda for feia, fica vendo estrelinhas).
-- **Atualizar o bichinho**: a bolinha de atualizar abre um cartão com ele dentro do **quarto** e,
-  ao lado, um **gráfico de círculo** meio transparente que mostra o **nível no meio** e o quanto
-  falta de pontos para evoluir. No mesmo cartão dá para trocar **nome**, **modelo do bonequinho**,
-  **cor**, os **acessórios já liberados** e o **quarto** (Quartinho, Jardim, Praia, Espaço e
-  Castelo, cada um abrindo em um nível). O que ainda está bloqueado aparece com o nível que falta.
+- **Atualizar o bichinho**: a bolinha de atualizar abre uma tela grande com ele dentro do
+  **quarto** e, ao lado, um **gráfico de círculo** que mostra o **nível no meio** e quantos pontos
+  faltam para evoluir. A tela tem três abas:
+  - *Bichinho*: nome, **8 modelos de bonequinho** (Redondinho, Gotinha, Feijãozinho, Estrelinha,
+    Gatinho, Coelhinho, Ursinho e Robozinho), 8 cores e os acessórios.
+  - *Quarto*: **tema pronto** (Quartinho, Jardim, Praia, Espaço, Castelo), **8 cores de parede**,
+    **8 cores de chão** e **16 móveis** distribuídos em seis cantinhos (parede da esquerda, parede
+    da direita, cantinho da esquerda, cantinho da direita, no chão e no teto): janela, quadro,
+    prateleira, relógio, televisão, mural de fotos, estante de livros, plantinha, violão, mesinha
+    de estudo, pufe, baú, tapete, almofadas, luminária e bandeirinhas.
+  - *Roupas e cama*: as 8 roupinhas e as 4 camas.
+
+  Tudo o que ainda está bloqueado aparece com cadeado e o nível que falta, e o botão **Ver tudo**
+  abre o catálogo completo com o que já foi liberado e qual é a próxima peça.
 - **Jogos e estudo**: uma aba com dois espaços.
   - *Joguinhos*: **Conta rápida**, com **níveis por série** (até o 5º ano, 6º, 7º, 8º e 9º) e
     questões próprias de cada ano: quatro operações, frações, porcentagem, MMC e MDC, números
     negativos, **equações do 1º grau**, potências e raízes, regra de três, **equações do 2º grau**,
     funções e Pitágoras. Também *Pega a bola*, *Jogo da memória* e *Repete comigo*. Cada partida rende pontos de amizade, com teto de 20 por dia e recorde por jogo.
   - *Montar prova*: um **levantamento do conteúdo da escola** já vem pronto no app, com
-    **6 matérias** (Português, Matemática, Ciências, História, Geografia e Inglês), **27 assuntos**
-    e **135 questões**. Ela marca as matérias na lista, pode afinar por assunto, escolhe
-    **quantas questões** (5, 10, 15 ou 20) e o **tipo**: *alternativas*, *discursivas* ou
-    *misturadas*. O app sorteia a prova na hora. Nas discursivas ela escreve a resposta e o
+    **16 matérias**, **57 submatérias** e **285 questões**. As matérias saem de uma
+    **lista oculta** separada por área:
+    - *Linguagens*: Português, Literatura, Redação, Inglês, Espanhol, Artes e Educação Física
+    - *Matemática*
+    - *Ciências da Natureza*: Ciências, Biologia, Física e Química
+    - *Ciências Humanas*: História, Geografia, Filosofia e Sociologia
+
+    Ela escolhe uma matéria por vez na lista e ela vira uma etiqueta. Depois abre a segunda
+    lista oculta e marca as **submatérias estudadas** (ou escreve uma que a professora passou
+    e não está na lista). No campo **o que foi passado nas últimas aulas** ela conta o que caiu:
+    o app usa essas palavras para trazer primeiro as questões que combinam com a aula dela.
+    Se escrever uma linha no formato `pergunta = resposta`, essa pergunta entra na prova.
+    Ela **digita quantas questões** quer (de 1 a 50) e escolhe o **tipo**: *alternativas*,
+    *discursivas* ou *misturadas*. Nas discursivas ela escreve a resposta e o
     bichinho compara com o gabarito (ignorando acento, maiúscula e pontuação); se a resposta
     dela estiver certa de outro jeito, o botão **"escrevi certo"** conta como acerto. No fim
     aparece a lista do que errou, com o gabarito, para revisar.
@@ -117,6 +136,13 @@ quantos filhos quiser, cada um com o próprio login e senha.
 - **Carteira**: além do extrato, o filho registra **o que comprou** (lanche, brinquedo, jogo,
   presente, roupa ou outro) com valor, data, observação e foto. O app mostra quanto recebeu,
   quanto gastou e quanto sobrou.
+- **Meu dinheiro**: um painel só de números, com o quanto ela **já ganhou** (validado),
+  **já recebeu** (mesada paga), **já gastou** e **tem agora** na carteira, mais o que está
+  a receber, o que está aguardando validação e as médias por mês. Tem um **gráfico de barras
+  mês a mês** comparando ganhou, recebeu e gastou nos últimos 6 meses, um **anel** com quanto
+  por cento do recebido ainda está guardado, a divisão de **onde o dinheiro foi** (por tipo de
+  gasto) e **de onde veio** (por categoria de tarefa), os cinco maiores gastos e o progresso
+  da meta.
 - **Perfil**: meta, estatísticas, foto, troca de senha e tema.
 
 Cada ação do filho responde com uma animação: tarefa marcada solta estrelas, registro de livro
@@ -172,7 +198,8 @@ assets/
     photos.js         # câmera/galeria, compressão e IndexedDB das fotos
     effects.js        # animações de resposta (moedas, livros, estrelas)
     agenda.js         # calendário compartilhado de provas, trabalhos e eventos
-    bank.js           # banco de conteúdo da escola (matérias, assuntos e questões)
+    bank.js           # banco de conteúdo da escola (matérias, submatérias e questões)
+    dash.js           # painel de ganhos e gastos
     pet.js            # o bichinho: desenho, quartos, menu em bolinhas, voz e lojinha
     quiz.js           # montar prova, assuntos escritos por ela, cartas e quizzes
     games.js          # joguinhos e a aba de estudo

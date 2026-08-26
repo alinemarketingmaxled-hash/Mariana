@@ -22,7 +22,10 @@ const Quiz = (() => {
         <span class="prova-cta-ico">${Icons.svg('brain')}</span>
         <span class="grow">
           <span class="nm block">Montar prova das matérias da escola</span>
-          <span class="tiny block">${Banco.MATERIAS.length} matérias, ${assuntos} assuntos e ${questoes} questões prontas</span>
+          <span class="tiny block">
+            ${Banco.MATERIAS.length} matérias na lista, de História a Filosofia,
+            com ${assuntos} submatérias e ${questoes} questões
+          </span>
         </span>
         <span class="game-play">${Icons.svg('chevron')}</span>
       </button>
@@ -427,7 +430,6 @@ const Quiz = (() => {
      prefere alternativas ou discursivas. O app sorteia.
      ======================================================= */
 
-  const QUANTIDADES = [5, 10, 15, 20];
   const TIPOS = [
     { id: 'alternativas', label: 'Alternativas' },
     { id: 'discursivas', label: 'Discursivas' },
@@ -460,135 +462,259 @@ const Quiz = (() => {
     const estado = {
       materias: [],
       topicos: [],
+      extras: [],          // submatérias escritas por ela
       quantidade: 10,
       tipo: 'alternativas',
+      aulas: '',
     };
 
-    const listaMaterias = () => Banco.MATERIAS.map((m) => `
-      <button type="button" class="mat-card" data-mat="${m.id}"
-              aria-pressed="${estado.materias.includes(m.id)}">
-        <span class="mat-ico ${m.grad}">${Icons.svg(m.icon)}</span>
-        <span class="grow">
-          <span class="nm block">${UI.esc(m.label)}</span>
-          <span class="tiny block">${m.topicos.length} assuntos • ${Banco.totalQuestoes(m.id)} questões</span>
-        </span>
-        <span class="mat-check">${Icons.svg('check')}</span>
-      </button>`).join('');
+    /* lista oculta das matérias, separada por área */
+    const listaMaterias = () => `
+      <select data-sel-materia aria-label="Matérias da escola">
+        <option value="">Escolha a matéria...</option>
+        ${Banco.AREAS.map((area) => `
+          <optgroup label="${UI.esc(area.label)}">
+            ${area.materias
+              .filter((id) => !estado.materias.includes(id))
+              .map((id) => {
+                const m = Banco.materia(id);
+                return `<option value="${m.id}">${UI.esc(m.label)}</option>`;
+              }).join('')}
+          </optgroup>`).join('')}
+      </select>
+      <span class="sel-caret">${Icons.svg('chevron')}</span>`;
 
-    const listaTopicos = () => {
-      if (!estado.materias.length) {
-        return '<div class="note">Escolha ao menos uma matéria para ver os assuntos.</div>';
-      }
-      return Banco.MATERIAS.filter((m) => estado.materias.includes(m.id)).map((m) => `
-        <div class="topico-bloco">
-          <div class="tiny bold up">${UI.esc(m.label)}</div>
-          <div class="seg-mini wrap">
-            ${m.topicos.map((t) => {
-              const chave = `${m.id}:${t.id}`;
-              return `<button type="button" data-top="${chave}"
-                        aria-pressed="${estado.topicos.includes(chave)}">${UI.esc(t.label)}</button>`;
-            }).join('')}
-          </div>
-        </div>`).join('')
-        + '<div class="note">Sem marcar nada, a prova sorteia de todos os assuntos das matérias escolhidas.</div>';
+    /* lista oculta das submatérias das matérias já escolhidas */
+    const listaTopicos = () => `
+      <select data-sel-topico aria-label="Submatérias estudadas"
+              ${estado.materias.length ? '' : 'disabled'}>
+        <option value="">${estado.materias.length
+          ? 'Escolha a submatéria...'
+          : 'Escolha uma matéria primeiro'}</option>
+        ${Banco.MATERIAS.filter((m) => estado.materias.includes(m.id)).map((m) => `
+          <optgroup label="${UI.esc(m.label)}">
+            ${m.topicos
+              .filter((t) => !estado.topicos.includes(`${m.id}:${t.id}`))
+              .map((t) => `<option value="${m.id}:${t.id}">${UI.esc(t.label)}</option>`).join('')}
+          </optgroup>`).join('')}
+      </select>
+      <span class="sel-caret">${Icons.svg('chevron')}</span>`;
+
+    const chipsMaterias = () => estado.materias.length
+      ? estado.materias.map((id) => {
+        const m = Banco.materia(id);
+        return `<button type="button" class="chip-tag forte" data-tira-mat="${id}">
+          ${UI.esc(m.label)} <span aria-hidden="true">x</span></button>`;
+      }).join('')
+      : '<span class="tiny muted">Nenhuma matéria escolhida ainda.</span>';
+
+    const chipsTopicos = () => {
+      const doBanco = estado.topicos.map((chave) => {
+        const [mid, tid] = chave.split(':');
+        return `<button type="button" class="chip-tag" data-tira-top="${chave}">
+          ${UI.esc(Banco.topico(mid, tid).label)} <span aria-hidden="true">x</span></button>`;
+      });
+      const escritas = estado.extras.map((texto, i) => `
+        <button type="button" class="chip-tag escrita" data-tira-extra="${i}">
+          ${UI.esc(texto)} <span aria-hidden="true">x</span></button>`);
+      const todas = doBanco.concat(escritas);
+      return todas.length ? todas.join('')
+        : '<span class="tiny muted">Sem submatéria marcada: a prova sorteia de tudo da matéria.</span>';
     };
 
     UI.openSheet({
       title: 'Montar prova',
-      subtitle: 'Todo o conteúdo da escola, do jeito que você quiser treinar',
+      subtitle: 'Escolha as matérias na lista, diga o que caiu na aula e quantas questões quer',
       body: `
         <div class="field">
-          <label>Matérias</label>
-          <div class="mat-grid" data-materias>${listaMaterias()}</div>
+          <label>Matérias da escola</label>
+          <div class="input-wrap">${listaMaterias()}</div>
+          <div class="chip-row" data-chips-mat>${chipsMaterias()}</div>
         </div>
+
         <div class="field">
-          <label>Assuntos (opcional)</label>
-          <div data-topicos>${listaTopicos()}</div>
-        </div>
-        <div class="field">
-          <label>Quantas questões</label>
-          <div class="seg-mini wrap" data-qtd>
-            ${QUANTIDADES.map((n) => `
-              <button type="button" data-value="${n}" aria-pressed="${n === estado.quantidade}">${n} questões</button>`).join('')}
+          <label>Submatérias estudadas</label>
+          <div class="input-wrap" data-box-top>${listaTopicos()}</div>
+          <div class="input-wrap">
+            <input data-extra placeholder="Outra submatéria que a professora passou" />
+            <button type="button" class="chip-btn" data-add-extra>incluir</button>
           </div>
+          <div class="chip-row" data-chips-top>${chipsTopicos()}</div>
         </div>
+
         <div class="field">
-          <label>Tipo de questão</label>
-          <div class="seg-mini wrap" data-tipo>
-            ${TIPOS.map((t) => `
-              <button type="button" data-value="${t.id}" aria-pressed="${t.id === estado.tipo}">${t.label}</button>`).join('')}
+          <label>O que foi passado nas últimas aulas</label>
+          <div class="input-wrap">
+            <textarea data-aulas rows="4"
+              placeholder="Escreva os assuntos das últimas aulas, o que a professora falou que cai na prova ou o que você precisa treinar."></textarea>
           </div>
           <div class="note">
-            Nas discursivas você escreve a resposta e o bichinho confere com o gabarito.
+            O app usa o que você escreveu para escolher as questões que combinam com a sua aula.
+            Se quiser incluir uma pergunta sua, escreva a linha assim:
+            <b>pergunta = resposta</b>.
           </div>
         </div>
+
+        <div class="row" style="gap:12px;align-items:flex-end">
+          <div class="field grow">
+            <label>Quantas questões</label>
+            <div class="input-wrap">
+              <input data-qtd type="number" inputmode="numeric" min="1" max="50" value="10" />
+            </div>
+          </div>
+          <div class="field grow">
+            <label>Tipo de questão</label>
+            <div class="input-wrap">
+              <select data-tipo>
+                ${TIPOS.map((t) => `<option value="${t.id}">${t.label}</option>`).join('')}
+              </select>
+              <span class="sel-caret">${Icons.svg('chevron')}</span>
+            </div>
+          </div>
+        </div>
+
         <div class="prova-resumo" data-resumo></div>`,
       actions: `
         <button class="btn btn-ghost" data-cancel>Cancelar</button>
         <button class="btn btn-primary" data-gerar>Gerar as questões</button>`,
       onMount(sheet) {
-        const boxTop = sheet.querySelector('[data-topicos]');
+        const boxMat = sheet.querySelector('[data-chips-mat]');
+        const boxTopSel = sheet.querySelector('[data-box-top]');
+        const boxTop = sheet.querySelector('[data-chips-top]');
         const resumo = sheet.querySelector('[data-resumo]');
         const btnGerar = sheet.querySelector('[data-gerar]');
+        const campoAulas = sheet.querySelector('[data-aulas]');
+        const campoQtd = sheet.querySelector('[data-qtd]');
+
+        const termos = () => `${estado.extras.join(' ')} ${estado.aulas}`;
 
         function atualizar() {
-          const total = Banco.disponiveis({ materias: estado.materias, topicos: estado.topicos });
-          const tipo = TIPOS.find((t) => t.id === estado.tipo).label.toLowerCase();
-          resumo.innerHTML = estado.materias.length
-            ? `<b>${Math.min(total, estado.quantidade)} questões ${tipo}</b> sorteadas entre as
-               ${total} disponíveis de ${estado.materias.length} matéria(s).`
-            : 'Escolha as matérias que caíram na prova.';
-          btnGerar.disabled = !estado.materias.length || total < 1;
+          estado.aulas = campoAulas.value;
+          estado.quantidade = Math.max(1, Math.min(50, Number(campoQtd.value) || 1));
+          const minhas = Store.parseCards(estado.aulas).length;
+          const total = Banco.disponiveis(estado);
+          const casam = Banco.combinam({ ...estado, termos: termos() });
+          const doBanco = Math.max(0, Math.min(total, estado.quantidade - minhas));
+          if (!estado.materias.length && !minhas) {
+            resumo.innerHTML = 'Escolha as matérias na lista para o app montar a prova.';
+          } else {
+            resumo.innerHTML = `
+              <b>${minhas + doBanco} questão(ões)</b> nesta prova:
+              ${minhas ? `${minhas} escrita(s) por você e ` : ''}${doBanco} do conteúdo da escola,
+              entre as ${total} disponíveis${casam ? `, com ${casam} que combinam com a sua aula` : ''}.`;
+          }
+          btnGerar.disabled = !estado.materias.length && !minhas;
         }
 
-        sheet.querySelector('[data-materias]').addEventListener('click', (ev) => {
-          const b = ev.target.closest('[data-mat]');
-          if (!b) return;
-          const id = b.getAttribute('data-mat');
-          if (estado.materias.includes(id)) {
-            estado.materias = estado.materias.filter((x) => x !== id);
-            estado.topicos = estado.topicos.filter((x) => !x.startsWith(`${id}:`));
-          } else {
+        function repintarTopicos() {
+          boxTopSel.innerHTML = listaTopicos();
+          ligarTopico();
+          boxTop.innerHTML = chipsTopicos();
+        }
+
+        function ligarMateria() {
+          sheet.querySelector('[data-sel-materia]').addEventListener('change', (ev) => {
+            const id = ev.target.value;
+            if (!id) return;
             estado.materias.push(id);
-          }
-          b.setAttribute('aria-pressed', estado.materias.includes(id));
-          boxTop.innerHTML = listaTopicos();
+            sheet.querySelector('[data-sel-materia]').parentElement.innerHTML = listaMaterias();
+            ligarMateria();
+            boxMat.innerHTML = chipsMaterias();
+            repintarTopicos();
+            atualizar();
+          });
+        }
+
+        function ligarTopico() {
+          const sel = sheet.querySelector('[data-sel-topico]');
+          if (!sel) return;
+          sel.addEventListener('change', (ev) => {
+            const chave = ev.target.value;
+            if (!chave) return;
+            estado.topicos.push(chave);
+            repintarTopicos();
+            atualizar();
+          });
+        }
+
+        boxMat.addEventListener('click', (ev) => {
+          const b = ev.target.closest('[data-tira-mat]');
+          if (!b) return;
+          const id = b.getAttribute('data-tira-mat');
+          estado.materias = estado.materias.filter((x) => x !== id);
+          estado.topicos = estado.topicos.filter((x) => !x.startsWith(`${id}:`));
+          sheet.querySelector('[data-sel-materia]').parentElement.innerHTML = listaMaterias();
+          ligarMateria();
+          boxMat.innerHTML = chipsMaterias();
+          repintarTopicos();
           atualizar();
         });
 
         boxTop.addEventListener('click', (ev) => {
-          const b = ev.target.closest('[data-top]');
-          if (!b) return;
-          const chave = b.getAttribute('data-top');
-          estado.topicos = estado.topicos.includes(chave)
-            ? estado.topicos.filter((x) => x !== chave)
-            : estado.topicos.concat([chave]);
-          b.setAttribute('aria-pressed', estado.topicos.includes(chave));
-          atualizar();
+          const b = ev.target.closest('[data-tira-top]');
+          const e = ev.target.closest('[data-tira-extra]');
+          if (b) estado.topicos = estado.topicos.filter((x) => x !== b.getAttribute('data-tira-top'));
+          if (e) estado.extras.splice(Number(e.getAttribute('data-tira-extra')), 1);
+          if (b || e) { repintarTopicos(); atualizar(); }
         });
 
-        [['[data-qtd]', 'quantidade'], ['[data-tipo]', 'tipo']].forEach(([sel, campo]) => {
-          sheet.querySelector(sel).addEventListener('click', (ev) => {
-            const b = ev.target.closest('[data-value]');
-            if (!b) return;
-            ev.currentTarget.querySelectorAll('[data-value]').forEach((x) => x.setAttribute('aria-pressed', 'false'));
-            b.setAttribute('aria-pressed', 'true');
-            const v = b.getAttribute('data-value');
-            estado[campo] = campo === 'quantidade' ? Number(v) : v;
-            atualizar();
-          });
+        const incluirExtra = () => {
+          const campo = sheet.querySelector('[data-extra]');
+          const texto = campo.value.trim();
+          if (!texto) return;
+          estado.extras.push(texto.slice(0, 40));
+          campo.value = '';
+          boxTop.innerHTML = chipsTopicos();
+          atualizar();
+        };
+        sheet.querySelector('[data-add-extra]').addEventListener('click', incluirExtra);
+        sheet.querySelector('[data-extra]').addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter') { ev.preventDefault(); incluirExtra(); }
+        });
+
+        campoAulas.addEventListener('input', atualizar);
+        campoQtd.addEventListener('input', atualizar);
+        sheet.querySelector('[data-tipo]').addEventListener('change', (ev) => {
+          estado.tipo = ev.target.value;
+          atualizar();
         });
 
         sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
         btnGerar.addEventListener('click', () => {
-          const questoes = Banco.sortear(estado);
+          const questoes = montarQuestoes(estado);
           if (!questoes.length) return UI.toast('Nenhuma questão para esse filtro', 'bad');
           UI.closeSheet();
           runProva(child, estado, questoes);
         });
+
+        ligarMateria();
+        ligarTopico();
         atualizar();
       },
     });
+  }
+
+  /**
+   * Junta as perguntas que ela mesma escreveu com as do banco da escola.
+   * As dela entram sempre; o banco completa o número pedido.
+   */
+  function montarQuestoes(estado) {
+    const minhas = Store.parseCards(estado.aulas).map((c) => ({
+      q: c.q, a: c.a, opts: null,
+      materia: 'Sua aula', materiaId: 'aula', topico: 'Escrita por você', grad: 'g7', icon: 'pencil',
+    }));
+    const faltam = Math.max(0, estado.quantidade - minhas.length);
+    const doBanco = faltam
+      ? Banco.sortear({
+        materias: estado.materias,
+        topicos: estado.topicos,
+        quantidade: faltam,
+        termos: `${estado.extras.join(' ')} ${estado.aulas}`,
+      })
+      : [];
+    return minhas.concat(doBanco)
+      .slice(0, estado.quantidade)
+      .sort(() => Math.random() - 0.5);
   }
 
   /* ---------- a prova rodando ---------- */
@@ -654,12 +780,19 @@ const Quiz = (() => {
             ? 'Escreve com suas palavras, eu confiro.'
             : 'Pensa com calma e escolhe.';
           Pet.Voz.falar(q.q, child, sheet);
-          if (q.modo === 'discursiva') return discursiva(q);
+          const semAlternativas = (!q.opts || !q.opts.length)
+            && opcoes(rodada.map((x) => ({ a: x.a })), q.a).length < 2;
+          if (q.modo === 'discursiva' || semAlternativas) return discursiva(q);
           return alternativa(q);
         }
 
         function alternativa(q) {
-          const ops = q.opts.slice().sort(() => Math.random() - 0.5);
+          // as perguntas escritas por ela não têm alternativas prontas:
+          // o app usa as respostas das outras questões da prova como distratores
+          const base = q.opts && q.opts.length
+            ? q.opts
+            : opcoes(rodada.map((x) => ({ a: x.a })), q.a);
+          const ops = base.slice().sort(() => Math.random() - 0.5);
           elArea.className = 'quiz-options';
           elArea.innerHTML = ops
             .map((op) => `<button class="quiz-op" data-op="${UI.esc(op)}">${UI.esc(op)}</button>`).join('');
@@ -780,5 +913,5 @@ const Quiz = (() => {
       b.addEventListener('click', () => openProva(child)));
   }
 
-  return { view, bind, openDeckForm, openDeck, startQuiz, surpresa, openProva, runProva };
+  return { view, bind, openDeckForm, openDeck, startQuiz, surpresa, openProva, runProva, montarQuestoes };
 })();

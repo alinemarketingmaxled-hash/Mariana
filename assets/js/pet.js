@@ -18,24 +18,44 @@ const Pet = (() => {
   /** cada corpo é um caminho fechado, no espaço 0..200 */
   const SHAPES = [
     {
-      id: 'blob', label: 'Redondinho',
+      id: 'blob', label: 'Redondinho', level: 1,
       path: 'M100 12c40 0 76 26 82 64 6 40-8 76-40 96-30 18-74 18-104 0C6 152-8 116-2 76 4 38 60 12 100 12z',
       fit: { tx: 0, ty: 0, sx: 1, sy: 1 },      // ajuste da roupinha em cada corpo
     },
     {
-      id: 'drop', label: 'Gotinha',
+      id: 'drop', label: 'Gotinha', level: 1,
       path: 'M100 8c34 30 74 62 74 106a74 74 0 1 1-148 0C26 70 66 38 100 8z',
       fit: { tx: 0, ty: 8, sx: 1.14, sy: 1.05 },
     },
     {
-      id: 'bean', label: 'Feijãozinho',
+      id: 'bean', label: 'Feijãozinho', level: 1,
       path: 'M52 22c40-18 96-8 118 30 20 34 6 78-16 108-22 30-70 42-104 26C14 170-2 128 4 92 10 56 24 34 52 22z',
       fit: { tx: -4, ty: 6, sx: 1.04, sy: 1.02 },
     },
     {
-      id: 'star', label: 'Estrelinha',
+      id: 'star', label: 'Estrelinha', level: 2,
       path: 'M100 6c14 30 26 42 58 50-26 20-34 34-30 66 4 30-14 44-28 60-14-16-32-30-28-60 4-32-4-46-30-66 32-8 44-20 58-50z',
       fit: { tx: 0, ty: -12, sx: .58, sy: .72 },
+    },
+    {
+      id: 'gato', label: 'Gatinho', level: 3,
+      path: 'M46 46l-6-34 34 20c16-6 36-6 52 0l34-20-6 34c14 16 20 36 18 56-4 40-32 62-72 62s-68-22-72-62c-2-20 4-40 18-56z',
+      fit: { tx: 0, ty: 6, sx: 1.02, sy: 1 },
+    },
+    {
+      id: 'coelho', label: 'Coelhinho', level: 4,
+      path: 'M70 66C60 44 56 20 66 10c12-12 22 12 24 44 6-2 14-2 20 0 2-32 12-56 24-44 10 10 6 34-4 56 20 14 30 34 28 56-4 38-30 58-58 58s-54-20-58-58c-2-22 8-42 28-56z',
+      fit: { tx: 0, ty: 14, sx: .94, sy: .96 },
+    },
+    {
+      id: 'urso', label: 'Ursinho', level: 5,
+      path: 'M52 52a22 22 0 1 1 22-22 88 88 0 0 1 52 0 22 22 0 1 1 22 22c14 16 20 36 18 56-4 40-32 62-72 62s-68-22-72-62c-2-20 4-40 18-56z',
+      fit: { tx: 0, ty: 6, sx: 1.02, sy: 1 },
+    },
+    {
+      id: 'robo', label: 'Robozinho', level: 6,
+      path: 'M100 8v22M84 30h32a44 44 0 0 1 44 44v56a44 44 0 0 1-44 44H84a44 44 0 0 1-44-44V74a44 44 0 0 1 44-44z',
+      fit: { tx: 0, ty: 4, sx: 1, sy: 1 },
     },
   ];
 
@@ -68,13 +88,72 @@ const Pet = (() => {
     { id: 'realeza', label: 'Cama de realeza', level: 7, cor: '#ffd84b' },
   ];
 
-  /** quartos: o cenário onde ele vive, também abre por nível */
+  /** cores de parede, liberadas aos poucos */
+  const PAREDES = [
+    { id: 'nuvem', label: 'Nuvem', hex: '#e8f0ff', level: 1 },
+    { id: 'menta', label: 'Menta', hex: '#d9f7ea', level: 1 },
+    { id: 'algodao', label: 'Algodão', hex: '#ffe6f2', level: 1 },
+    { id: 'areia', label: 'Areia', hex: '#fdf0d5', level: 2 },
+    { id: 'lavanda', label: 'Lavanda', hex: '#ece4ff', level: 3 },
+    { id: 'ceu', label: 'Céu', hex: '#d5efff', level: 4 },
+    { id: 'limao', label: 'Limão', hex: '#eef9c8', level: 5 },
+    { id: 'noite', label: 'Noite', hex: '#191a4d', level: 6 },
+  ];
+
+  /** cores de chão */
+  const CHAOS = [
+    { id: 'madeira', label: 'Madeira', hex: '#e0b184', level: 1 },
+    { id: 'azulejo', label: 'Azulejo', hex: '#a9c4ff', level: 1 },
+    { id: 'grama', label: 'Grama', hex: '#4fc78f', level: 1 },
+    { id: 'areia-chao', label: 'Areia', hex: '#ffdf8c', level: 2 },
+    { id: 'rosado', label: 'Rosado', hex: '#ffc2de', level: 3 },
+    { id: 'cinza', label: 'Cinza', hex: '#cfd3e6', level: 4 },
+    { id: 'uva', label: 'Uva', hex: '#8f6ff0', level: 5 },
+    { id: 'espacial-chao', label: 'Espacial', hex: '#2b3390', level: 6 },
+  ];
+
+  /** cada cantinho do quarto aceita um móvel de cada vez */
+  const SLOTS = [
+    { id: 'pdEsq', label: 'Parede à esquerda' },
+    { id: 'pdDir', label: 'Parede à direita' },
+    { id: 'chEsq', label: 'Cantinho da esquerda' },
+    { id: 'chDir', label: 'Cantinho da direita' },
+    { id: 'chao', label: 'No chão' },
+    { id: 'alto', label: 'No teto' },
+  ];
+
+  /** móveis que ela ganha subindo de nível */
+  const MOVEIS = [
+    { id: 'janela', label: 'Janela', slot: 'pdEsq', level: 1, cor: '#ffffff' },
+    { id: 'quadro', label: 'Quadro', slot: 'pdEsq', level: 3, cor: '#ff8fc8' },
+    { id: 'prateleira', label: 'Prateleira', slot: 'pdEsq', level: 5, cor: '#ffa24b' },
+    { id: 'relogio', label: 'Relógio', slot: 'pdDir', level: 2, cor: '#ffd84b' },
+    { id: 'tv', label: 'Televisão', slot: 'pdDir', level: 4, cor: '#131338' },
+    { id: 'mural', label: 'Mural de fotos', slot: 'pdDir', level: 6, cor: '#6fd3ff' },
+    { id: 'estante', label: 'Estante de livros', slot: 'chEsq', level: 1, cor: '#ffa24b' },
+    { id: 'planta', label: 'Plantinha', slot: 'chEsq', level: 2, cor: '#4fc78f' },
+    { id: 'violao', label: 'Violão', slot: 'chEsq', level: 5, cor: '#e0b184' },
+    { id: 'mesa', label: 'Mesinha de estudo', slot: 'chDir', level: 1, cor: '#a98cff' },
+    { id: 'pufe', label: 'Pufe', slot: 'chDir', level: 3, cor: '#6fd3ff' },
+    { id: 'bau', label: 'Baú de brinquedos', slot: 'chDir', level: 6, cor: '#ff8fc8' },
+    { id: 'tapete', label: 'Tapete', slot: 'chao', level: 2, cor: '#ff8fc8' },
+    { id: 'almofadas', label: 'Almofadas', slot: 'chao', level: 4, cor: '#79e3b5' },
+    { id: 'lustre', label: 'Luminária', slot: 'alto', level: 3, cor: '#ffd84b' },
+    { id: 'bandeirinhas', label: 'Bandeirinhas', slot: 'alto', level: 5, cor: '#a98cff' },
+  ];
+
+  /** temas prontos: arrumam parede, chão e móveis de uma vez */
   const ROOMS = [
-    { id: 'quartinho', label: 'Quartinho', level: 1, cor: '#cfe0ff', chao: '#a9c4ff', ceu: '#e8f0ff' },
-    { id: 'jardim', label: 'Jardim', level: 1, cor: '#79e3b5', chao: '#4fc78f', ceu: '#d9f7ea' },
-    { id: 'praia', label: 'Praia', level: 3, cor: '#ffd84b', chao: '#ffdf8c', ceu: '#bfeaff' },
-    { id: 'espaco', label: 'Espaço', level: 5, cor: '#3b4fe4', chao: '#2b3390', ceu: '#191a4d' },
-    { id: 'castelo', label: 'Castelo', level: 7, cor: '#a98cff', chao: '#8f6ff0', ceu: '#efe8ff' },
+    { id: 'quartinho', label: 'Quartinho', level: 1, cor: '#cfe0ff',
+      parede: 'nuvem', piso: 'azulejo', moveis: ['janela', 'mesa'] },
+    { id: 'jardim', label: 'Jardim', level: 1, cor: '#79e3b5',
+      parede: 'menta', piso: 'grama', moveis: ['planta'] },
+    { id: 'praia', label: 'Praia', level: 3, cor: '#ffd84b',
+      parede: 'ceu', piso: 'areia-chao', moveis: ['janela', 'pufe'] },
+    { id: 'espaco', label: 'Espaço', level: 5, cor: '#3b4fe4',
+      parede: 'noite', piso: 'espacial-chao', moveis: ['relogio', 'lustre'] },
+    { id: 'castelo', label: 'Castelo', level: 7, cor: '#a98cff',
+      parede: 'lavanda', piso: 'uva', moveis: ['quadro', 'bau', 'tapete'] },
   ];
 
   const XP_POR_NIVEL = 60;
@@ -90,13 +169,6 @@ const Pet = (() => {
   const room = (id) => ROOMS.find((r) => r.id === id) || ROOMS[0];
   const faltaParaSubir = (xp) => XP_POR_NIVEL - ((xp || 0) % XP_POR_NIVEL);
 
-  /** tudo o que a lojinha oferece, com o nível que abre cada item */
-  const catalogo = () => [
-    ...OUTFITS.map((o) => ({ ...o, tipo: 'outfit', tipoLabel: 'Roupinha' })),
-    ...BEDS.map((b) => ({ ...b, tipo: 'bed', tipoLabel: 'Cama' })),
-    ...ACCESSORIES.filter((a) => a.id).map((a) => ({ ...a, tipo: 'accessory', tipoLabel: 'Acessório', cor: '#a98cff' })),
-    ...ROOMS.map((r) => ({ ...r, tipo: 'room', tipoLabel: 'Quarto' })),
-  ];
 
   /* ---------- voz ---------- */
   /**
@@ -283,45 +355,130 @@ const Pet = (() => {
     return `<rect x="18" y="162" width="164" height="30" rx="14" fill="${b.cor}" stroke="#131338" stroke-width="5"/>`;
   }
 
-  /** cenário do quarto, desenhado atrás de tudo */
-  function roomSvg(id) {
-    const r = room(id);
-    const fundo = `<rect x="0" y="0" width="200" height="200" rx="26" fill="${r.ceu}"/>
-      <path d="M0 152h200v22a26 26 0 0 1-26 26H26A26 26 0 0 1 0 174z" fill="${r.chao}"/>`;
-    if (id === 'jardim') {
-      return `${fundo}
-        <circle cx="164" cy="42" r="18" fill="#ffd84b" stroke="#131338" stroke-width="4"/>
-        <path d="M30 152v-30M30 130c-14 0-18-14-6-18 8-2 12 6 6 18zM30 132c14-2 20-16 8-20-8-2-14 8-8 20z"
-              fill="#4fc78f" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>
-        <path d="M176 152v-24M176 132c-10 0-14-10-4-13 6-2 9 5 4 13z"
-              fill="#4fc78f" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>`;
+  const parede = (id) => PAREDES.find((p) => p.id === id) || PAREDES[0];
+  const chao = (id) => CHAOS.find((c) => c.id === id) || CHAOS[0];
+  const movel = (id) => MOVEIS.find((m) => m.id === id) || null;
+
+  /** o quarto do bichinho já com os padrões preenchidos */
+  function quartoDe(pet) {
+    const tema = ROOMS.find((r) => r.id === pet.room) || ROOMS[0];
+    return {
+      tema: tema.id,
+      parede: pet.parede || tema.parede,
+      piso: pet.piso || tema.piso,
+      moveis: Array.isArray(pet.moveis) ? pet.moveis : tema.moveis.slice(),
+    };
+  }
+
+  /** desenho de cada móvel, no cantinho que é dele */
+  function movelSvg(id) {
+    const m = movel(id);
+    if (!m) return '';
+    const traco = 'stroke="#131338" stroke-width="4" stroke-linejoin="round"';
+    if (id === 'janela') {
+      return `<g><rect x="12" y="34" width="52" height="46" rx="9" fill="#cfeaff" ${traco}/>
+        <path d="M38 34v46M12 57h52" stroke="#131338" stroke-width="4"/>
+        <rect x="12" y="34" width="52" height="46" rx="9" fill="none" ${traco}/></g>`;
     }
-    if (id === 'praia') {
-      return `${fundo}
-        <circle cx="42" cy="40" r="18" fill="#ffd84b" stroke="#131338" stroke-width="4"/>
-        <path d="M0 138h200" stroke="#6fd3ff" stroke-width="14"/>
-        <path d="M168 152v-40M168 116c-16-10-30-4-30 4 12 2 22 0 30-4zM168 116c14-12 28-8 30 0-12 4-22 4-30 0z"
-              fill="#4fc78f" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>`;
+    if (id === 'quadro') {
+      return `<g><rect x="14" y="34" width="48" height="42" rx="7" fill="${m.cor}" ${traco}/>
+        <path d="M22 66l12-16 10 12 8-8 10 12z" fill="#fff" ${traco}/>
+        <circle cx="50" cy="46" r="5" fill="#ffd84b" ${traco}/></g>`;
     }
-    if (id === 'espaco') {
-      return `${fundo}
-        <g fill="#fff"><circle cx="30" cy="36" r="3"/><circle cx="66" cy="18" r="2.4"/><circle cx="152" cy="30" r="3.4"/>
-          <circle cx="184" cy="66" r="2.6"/><circle cx="18" cy="88" r="2.4"/><circle cx="118" cy="46" r="2.2"/></g>
-        <circle cx="46" cy="52" r="16" fill="#a98cff" stroke="#131338" stroke-width="4"/>
-        <ellipse cx="46" cy="52" rx="26" ry="7" fill="none" stroke="#131338" stroke-width="4"/>`;
+    if (id === 'prateleira') {
+      return `<g><rect x="10" y="66" width="56" height="8" rx="4" fill="${m.cor}" ${traco}/>
+        <rect x="18" y="44" width="11" height="22" rx="2" fill="#ff8fc8" ${traco}/>
+        <rect x="32" y="38" width="11" height="28" rx="2" fill="#6fd3ff" ${traco}/>
+        <rect x="46" y="48" width="11" height="18" rx="2" fill="#79e3b5" ${traco}/></g>`;
     }
-    if (id === 'castelo') {
-      return `${fundo}
-        <path d="M22 152v-52h14v-14h14v14h14v52z" fill="${r.cor}" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>
-        <path d="M144 152v-64h16v-16h14v16h16v64z" fill="${r.cor}" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>
-        <path d="M50 86l6-16 6 16M174 72l6-16 6 16" fill="#ff8fc8" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>`;
+    if (id === 'relogio') {
+      return `<g><circle cx="164" cy="52" r="22" fill="${m.cor}" ${traco}/>
+        <path d="M164 40v13l9 7" stroke="#131338" stroke-width="4" fill="none" stroke-linecap="round"/></g>`;
     }
-    return `${fundo}
-      <rect x="12" y="36" width="52" height="46" rx="10" fill="#fff" stroke="#131338" stroke-width="5"/>
-      <path d="M38 36v46M12 59h52" stroke="#131338" stroke-width="4"/>
-      <path d="M150 112v-16h22v16z" fill="#ffd84b" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>
-      <rect x="134" y="112" width="54" height="12" rx="6" fill="${r.cor}" stroke="#131338" stroke-width="4"/>
-      <path d="M142 124v28M180 124v28" stroke="#131338" stroke-width="5" stroke-linecap="round"/>`;
+    if (id === 'tv') {
+      return `<g><rect x="132" y="34" width="58" height="42" rx="7" fill="${m.cor}" ${traco}/>
+        <rect x="140" y="42" width="42" height="26" rx="4" fill="#6fd3ff"/>
+        <path d="M155 76v8h12v-8" fill="none" ${traco}/></g>`;
+    }
+    if (id === 'mural') {
+      return `<g><rect x="132" y="32" width="58" height="46" rx="7" fill="${m.cor}" ${traco}/>
+        <rect x="140" y="40" width="18" height="14" rx="2" fill="#fff" ${traco}/>
+        <rect x="164" y="40" width="18" height="14" rx="2" fill="#fff" ${traco}/>
+        <rect x="152" y="58" width="18" height="14" rx="2" fill="#fff" ${traco}/></g>`;
+    }
+    if (id === 'estante') {
+      return `<g><rect x="8" y="84" width="52" height="68" rx="7" fill="${m.cor}" ${traco}/>
+        <path d="M8 110h52M8 132h52" stroke="#131338" stroke-width="4"/>
+        <rect x="14" y="90" width="9" height="18" rx="2" fill="#ff8fc8" ${traco}/>
+        <rect x="26" y="92" width="9" height="16" rx="2" fill="#6fd3ff" ${traco}/>
+        <rect x="38" y="88" width="9" height="20" rx="2" fill="#79e3b5" ${traco}/>
+        <rect x="16" y="114" width="9" height="16" rx="2" fill="#ffd84b" ${traco}/></g>`;
+    }
+    if (id === 'planta') {
+      return `<g><path d="M22 152l-4-30h34l-4 30z" fill="#ffa24b" ${traco}/>
+        <path d="M36 122V96M36 104c-14 0-18-14-6-18 8-2 12 6 6 18zM36 106c14-2 20-16 8-20-8-2-14 8-8 20z"
+              fill="${m.cor}" ${traco}/></g>`;
+    }
+    if (id === 'violao') {
+      return `<g>
+        <path d="M32 62v40" stroke="#131338" stroke-width="7" stroke-linecap="round"/>
+        <rect x="24" y="52" width="16" height="14" rx="4" fill="#131338"/>
+        <ellipse cx="32" cy="112" rx="17" ry="15" fill="${m.cor}" ${traco}/>
+        <ellipse cx="32" cy="136" rx="22" ry="19" fill="${m.cor}" ${traco}/>
+        <circle cx="32" cy="122" r="6" fill="#131338"/></g>`;
+    }
+    if (id === 'mesa') {
+      return `<g><path d="M150 112v-18h24v18z" fill="#ffd84b" ${traco}/>
+        <rect x="134" y="112" width="56" height="12" rx="6" fill="${m.cor}" ${traco}/>
+        <path d="M142 124v28M182 124v28" stroke="#131338" stroke-width="5" stroke-linecap="round"/></g>`;
+    }
+    if (id === 'pufe') {
+      return `<g><ellipse cx="164" cy="136" rx="28" ry="18" fill="${m.cor}" ${traco}/>
+        <path d="M140 132c14 8 34 8 48 0" fill="none" stroke="#131338" stroke-width="3" opacity=".5"/></g>`;
+    }
+    if (id === 'bau') {
+      return `<g><rect x="134" y="116" width="56" height="36" rx="7" fill="${m.cor}" ${traco}/>
+        <path d="M134 128h56" stroke="#131338" stroke-width="4"/>
+        <rect x="156" y="122" width="12" height="12" rx="3" fill="#ffd84b" ${traco}/></g>`;
+    }
+    if (id === 'tapete') {
+      return `<ellipse cx="100" cy="170" rx="66" ry="20" fill="${m.cor}" ${traco}/>`;
+    }
+    if (id === 'almofadas') {
+      return `<g><rect x="60" y="158" width="34" height="26" rx="9" fill="${m.cor}" ${traco}/>
+        <rect x="106" y="162" width="32" height="22" rx="8" fill="#ffd84b" ${traco}/></g>`;
+    }
+    if (id === 'lustre') {
+      return `<g><path d="M100 0v20" stroke="#131338" stroke-width="4"/>
+        <path d="M78 44c0-14 10-24 22-24s22 10 22 24z" fill="${m.cor}" ${traco}/></g>`;
+    }
+    if (id === 'bandeirinhas') {
+      return `<g><path d="M4 16q96 26 192 0" fill="none" stroke="#131338" stroke-width="3"/>
+        ${[20, 56, 92, 128, 164].map((x, i) => {
+          const cores = ['#ff8fc8', '#6fd3ff', '#ffd84b', '#79e3b5', '#a98cff'];
+          const y = 20 + (i === 2 ? 6 : i === 1 || i === 3 ? 5 : 2);
+          return `<path d="M${x} ${y}h20l-10 20z" fill="${cores[i]}" ${traco}/>`;
+        }).join('')}</g>`;
+    }
+    return '';
+  }
+
+  /** cenário do quarto: parede, chão e os móveis escolhidos */
+  function roomSvg(quarto) {
+    const q = typeof quarto === 'string'
+      ? quartoDe({ room: quarto })
+      : quarto;
+    const cp = parede(q.parede).hex;
+    const cc = chao(q.piso).hex;
+    const noite = q.parede === 'noite';
+    return `
+      <rect x="0" y="0" width="200" height="200" rx="26" fill="${cp}"/>
+      ${noite ? `<g fill="#fff" opacity=".9">
+        <circle cx="30" cy="24" r="3"/><circle cx="70" cy="14" r="2.2"/><circle cx="150" cy="20" r="3.2"/>
+        <circle cx="186" cy="60" r="2.4"/><circle cx="16" cy="80" r="2.2"/><circle cx="120" cy="30" r="2"/></g>` : ''}
+      <path d="M0 152h200v22a26 26 0 0 1-26 26H26A26 26 0 0 1 0 174z" fill="${cc}"/>
+      <path d="M0 152h200" stroke="#131338" stroke-width="3" opacity=".25"/>
+      ${(q.moveis || []).map((id) => movelSvg(id)).join('')}`;
   }
 
   function face(moodId) {
@@ -389,13 +546,13 @@ const Pet = (() => {
     const m = moodId || mood(child).id;
     const comCama = (opts && opts.bed) || m === 'dormindo';
     const comQuarto = !!(opts && opts.room);
-    const quartoId = (opts && opts.roomId) || pet.room;
+    const quarto = (opts && opts.quarto) || quartoDe(pet);
     // dentro do quarto o bichinho fica um pouco menor, para caber no cenário
     const dentro = comQuarto ? ' transform="translate(30,22) scale(.7)"' : '';
     return `
       <svg class="pet-svg mood-${m}" viewBox="0 0 200 200" width="${size}" height="${size}"
            role="img" aria-label="${UI.esc(pet.name)}, ${UI.esc(mood(child).label)}">
-        ${comQuarto ? `<g class="pet-room">${roomSvg(quartoId)}</g>` : ''}
+        ${comQuarto ? `<g class="pet-room">${roomSvg(quarto)}</g>` : ''}
         <g class="pet-cena"${dentro}>
         ${comCama ? `<g class="pet-bed">${bedSvg(pet.bed)}</g>` : ''}
         <g class="pet-body">
@@ -421,7 +578,7 @@ const Pet = (() => {
     const dentro = comQuarto ? ' transform="translate(30,22) scale(.7)"' : '';
     return `
       <svg class="pet-svg mood-${moodId}" viewBox="0 0 200 200" width="${size}" height="${size}" aria-hidden="true">
-        ${comQuarto ? `<g class="pet-room">${roomSvg(data.room)}</g>` : ''}
+        ${comQuarto ? `<g class="pet-room">${roomSvg(quartoDe(data))}</g>` : ''}
         <g class="pet-cena"${dentro}>
           ${comCama ? `<g class="pet-bed">${bedSvg(data.bed)}</g>` : ''}
           <g class="pet-body">
@@ -502,174 +659,328 @@ const Pet = (() => {
       </section>`;
   }
 
-  /* ---------- cartão de atualizar o bichinho ---------- */
-  function openSheet(child) {
+  /* ---------- cartão grande de atualizar o bichinho ---------- */
+  const ABAS = [
+    { id: 'bichinho', label: 'Bichinho', icone: 'paw' },
+    { id: 'quarto', label: 'Quarto', icone: 'house' },
+    { id: 'roupas', label: 'Roupas e cama', icone: 'basket' },
+  ];
+
+  function openSheet(child, abaInicial) {
     const pet = Store.petOf(child.id);
     const lv = level(pet.xp);
-    const falta = faltaParaSubir(pet.xp);
-    const liberados = unlocked(lv);
-    const quartos = ROOMS.filter((r) => r.level <= lv);
-    const bloqueados = ROOMS.filter((r) => r.level > lv);
+    // tudo o que ela mexe fica aqui até apertar salvar
+    const draft = {
+      name: pet.name,
+      shape: pet.shape,
+      color: pet.color,
+      accessory: pet.accessory,
+      outfit: pet.outfit,
+      bed: pet.bed,
+      room: pet.room,
+      parede: quartoDe(pet).parede,
+      piso: quartoDe(pet).piso,
+      moveis: quartoDe(pet).moveis.slice(),
+    };
+    let aba = abaInicial || 'bichinho';
 
-    const grade = (campo, itens, atual, render) => `
-      <div class="pick-grid ${campo}" data-pick="${campo}">
-        ${itens.map((it) => render(it, it.id === atual)).join('')}
+    const aberto = (item) => (item.level || 1) <= lv;
+
+    /** grade de escolhas com cadeado no que ainda não abriu */
+    const grade = (campo, itens, atual, render, classe = '') => `
+      <div class="pick-grid ${campo} ${classe}" data-pick="${campo}">
+        ${itens.map((it) => {
+          const on = it.id === atual;
+          const livre = aberto(it);
+          return `
+            <button type="button" data-value="${it.id}" aria-pressed="${on}"
+                    class="${livre ? '' : 'travado'}" ${livre ? '' : 'disabled'}
+                    title="${UI.esc(it.label)}${livre ? '' : ` (nível ${it.level})`}">
+              ${render(it)}
+              <span class="tiny">${livre ? UI.esc(it.label) : `nível ${it.level}`}</span>
+              ${livre ? '' : `<span class="pick-lock">${Icons.svg('lock')}</span>`}
+            </button>`;
+        }).join('')}
+      </div>`;
+
+    const abaBichinho = () => `
+      <div class="field">
+        <label>Nome</label>
+        <div class="input-wrap"><input data-nome value="${UI.esc(draft.name)}" placeholder="ex.: Pipoca" /></div>
       </div>
-      <input type="hidden" name="${campo}" value="${UI.esc(atual || '')}" />`;
+      <div class="field">
+        <label>Modelo do bonequinho</label>
+        ${grade('shape', SHAPES, draft.shape, (sh) =>
+          `<svg viewBox="0 0 200 200"><path d="${sh.path}" fill="currentColor"/></svg>`)}
+      </div>
+      <div class="field">
+        <label>Cor do bonequinho</label>
+        ${grade('color', COLORS.map((c) => ({ ...c, level: 1 })), draft.color, (c) =>
+          `<span class="pick-cor" style="background:${c.hex}"></span>`)}
+      </div>
+      <div class="field">
+        <label>Acessórios</label>
+        ${grade('accessory', ACCESSORIES, draft.accessory, (a) =>
+          `<span class="pick-cor" style="background:${a.id ? '#a98cff' : 'var(--surface-2)'}"></span>`)}
+      </div>`;
+
+    const abaQuarto = () => `
+      <div class="field">
+        <label>Tema pronto do quarto</label>
+        ${grade('room', ROOMS, draft.room, (r) =>
+          `<svg viewBox="0 0 200 200">${roomSvg({
+            parede: r.parede, piso: r.piso, moveis: r.moveis,
+          })}</svg>`, 'temas')}
+        <div class="note">O tema arruma parede, chão e móveis de uma vez. Depois dá para mudar cada coisa.</div>
+      </div>
+      <div class="field">
+        <label>Cor da parede</label>
+        ${grade('parede', PAREDES, draft.parede, (c) =>
+          `<span class="pick-cor" style="background:${c.hex}"></span>`)}
+      </div>
+      <div class="field">
+        <label>Cor do chão</label>
+        ${grade('piso', CHAOS, draft.piso, (c) =>
+          `<span class="pick-cor" style="background:${c.hex}"></span>`)}
+      </div>
+      ${SLOTS.map((slot) => {
+        const doSlot = MOVEIS.filter((m) => m.slot === slot.id);
+        const atual = draft.moveis.find((id) => (movel(id) || {}).slot === slot.id) || '';
+        return `
+          <div class="field">
+            <label>${UI.esc(slot.label)}</label>
+            <div class="pick-grid movel" data-slot="${slot.id}">
+              <button type="button" data-value="" aria-pressed="${!atual}">
+                <svg viewBox="0 0 200 200" class="movel-mini">
+                  ${roomSvg({ parede: draft.parede, piso: draft.piso, moveis: [] })}
+                </svg>
+                <span class="tiny">Vazio</span>
+              </button>
+              ${doSlot.map((m) => {
+                const livre = aberto(m);
+                return `
+                  <button type="button" data-value="${m.id}" aria-pressed="${m.id === atual}"
+                          class="${livre ? '' : 'travado'}" ${livre ? '' : 'disabled'}>
+                    <svg viewBox="0 0 200 200" class="movel-mini">
+                      ${roomSvg({ parede: draft.parede, piso: draft.piso, moveis: [m.id] })}
+                    </svg>
+                    <span class="tiny">${livre ? UI.esc(m.label) : `nível ${m.level}`}</span>
+                    ${livre ? '' : `<span class="pick-lock">${Icons.svg('lock')}</span>`}
+                  </button>`;
+              }).join('')}
+            </div>
+          </div>`;
+      }).join('')}`;
+
+    const abaRoupas = () => `
+      <div class="field">
+        <label>Roupinha</label>
+        ${grade('outfit', OUTFITS, draft.outfit, (o) =>
+          `<span class="pick-cor" style="background:${o.cor}"></span>`)}
+      </div>
+      <div class="field">
+        <label>Caminha</label>
+        ${grade('bed', BEDS, draft.bed, (b) =>
+          `<svg viewBox="0 0 200 200" class="movel-mini">
+            ${roomSvg({ parede: draft.parede, piso: draft.piso, moveis: [] })}
+            ${bedSvg(b.id)}
+          </svg>`)}
+      </div>
+      <div class="note">
+        Cada ${XP_POR_NIVEL} pontos de amizade sobem um nível e abrem peças novas:
+        modelos do bonequinho, roupinhas, camas, acessórios, cores de parede e chão e móveis.
+      </div>`;
 
     UI.openSheet({
+      size: 'larga',
       title: 'Atualizar o bichinho',
       subtitle: `${pet.name} • ${pet.xp} pontos de amizade`,
       body: `
         <div class="pet-atualiza">
           <div class="pet-atualiza-art" data-pet-preview>
-            ${previewSvg(pet, 160, 'feliz', { room: true })}
+            ${previewSvg(draft, 220, 'feliz', { room: true, quarto: draft })}
           </div>
           <div class="pet-atualiza-side">
             ${ringSvg(pet.xp)}
             <p class="tiny muted center">
-              faltam <b data-falta>${falta}</b> ponto(s)<br/>para o nível ${lv + 1}
+              faltam <b data-falta>${faltaParaSubir(pet.xp)}</b> ponto(s)<br/>para o nível ${lv + 1}
             </p>
+            <div class="pet-atualiza-tags">
+              <span class="chip lime">nível ${lv}</span>
+              <span class="chip neutral">${desbloqueados(lv)} peças abertas</span>
+            </div>
           </div>
         </div>
 
-        <form id="pet-form">
-          ${UI.field('Nome', UI.input('name', { value: pet.name, placeholder: 'ex.: Pipoca' }))}
+        <div class="seg-tabs" data-abas>
+          ${ABAS.map((a) => `
+            <button type="button" data-aba="${a.id}" aria-pressed="${a.id === aba}">
+              ${Icons.svg(a.icone)} ${a.label}
+            </button>`).join('')}
+        </div>
 
-          <div class="field">
-            <label>Modelo do bonequinho</label>
-            ${grade('shape', SHAPES, pet.shape, (sh, on) => `
-              <button type="button" data-value="${sh.id}" aria-pressed="${on}" title="${sh.label}">
-                <svg viewBox="0 0 200 200"><path d="${sh.path}" fill="currentColor"/></svg>
-                <span class="tiny">${UI.esc(sh.label)}</span>
-              </button>`)}
-          </div>
-
-          <div class="field">
-            <label>Cor</label>
-            ${grade('color', COLORS, pet.color, (c, on) => `
-              <button type="button" data-value="${c.id}" aria-pressed="${on}"
-                      style="background:${c.hex}" aria-label="${c.label}" title="${c.label}"></button>`)}
-          </div>
-
-          <div class="field">
-            <label>Acessórios disponíveis</label>
-            ${grade('accessory', liberados, pet.accessory, (a, on) => `
-              <button type="button" class="pick-tile" data-value="${a.id}" aria-pressed="${on}">
-                <span class="tiny">${UI.esc(a.label)}</span>
-              </button>`)}
-            ${ACCESSORIES.filter((a) => a.level > lv).length ? `
-              <div class="note">
-                Ainda bloqueado: ${ACCESSORIES.filter((a) => a.level > lv)
-                  .map((a) => `${a.label} (nível ${a.level})`).join(', ')}.
-              </div>` : ''}
-          </div>
-
-          <div class="field">
-            <label>Quarto</label>
-            ${grade('room', quartos, pet.room, (r, on) => `
-              <button type="button" class="pick-room" data-value="${r.id}" aria-pressed="${on}" title="${r.label}">
-                <svg viewBox="0 0 200 200">${roomSvg(r.id)}</svg>
-                <span class="tiny">${UI.esc(r.label)}</span>
-              </button>`)}
-            ${bloqueados.length ? `
-              <div class="note">
-                Novos quartos: ${bloqueados.map((r) => `${r.label} (nível ${r.level})`).join(', ')}.
-              </div>` : ''}
-          </div>
-        </form>`,
+        <div data-conteudo>${abaBichinho()}</div>`,
       actions: `
-        <button class="btn btn-ghost" data-loja>${Icons.svg('coins')} Lojinha</button>
+        <button class="btn btn-ghost" data-loja>${Icons.svg('coins')} Ver tudo</button>
         <button class="btn btn-primary" data-save>Salvar</button>`,
       onMount(sheet) {
         const preview = sheet.querySelector('[data-pet-preview]');
-        const form = sheet.querySelector('#pet-form');
+        const conteudo = sheet.querySelector('[data-conteudo]');
+        const nome = () => sheet.querySelector('[data-nome]');
+
         const repaint = () => {
-          const data = Object.assign({}, Store.petOf(child.id), UI.formData(form));
-          preview.innerHTML = previewSvg(data, 160, 'feliz', { room: true });
+          preview.innerHTML = previewSvg(draft, 220, 'feliz', { room: true, quarto: draft });
         };
-        sheet.querySelectorAll('[data-pick]').forEach((box) => {
-          const input = form.querySelector(`input[name="${box.getAttribute('data-pick')}"]`);
-          box.addEventListener('click', (ev) => {
-            const btn = ev.target.closest('[data-value]');
-            if (!btn) return;
-            box.querySelectorAll('[data-value]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
-            btn.setAttribute('aria-pressed', 'true');
-            if (input) input.value = btn.getAttribute('data-value');
-            repaint();
+
+        function pintarAba() {
+          conteudo.innerHTML = aba === 'bichinho' ? abaBichinho()
+            : aba === 'quarto' ? abaQuarto()
+            : abaRoupas();
+          ligar();
+        }
+
+        function ligar() {
+          const campo = nome();
+          if (campo) campo.addEventListener('input', () => { draft.name = campo.value; });
+
+          conteudo.querySelectorAll('[data-pick]').forEach((box) => {
+            box.addEventListener('click', (ev) => {
+              const btn = ev.target.closest('[data-value]:not([disabled])');
+              if (!btn) return;
+              const chave = box.getAttribute('data-pick');
+              const valor = btn.getAttribute('data-value');
+              box.querySelectorAll('[data-value]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+              btn.setAttribute('aria-pressed', 'true');
+              draft[chave] = valor;
+              // escolher um tema pronto arruma parede, chão e móveis
+              if (chave === 'room') {
+                const tema = ROOMS.find((r) => r.id === valor);
+                draft.parede = tema.parede;
+                draft.piso = tema.piso;
+                draft.moveis = tema.moveis.filter((id) => aberto(movel(id) || { level: 1 }));
+                pintarAba();
+              }
+              repaint();
+            });
           });
+
+          conteudo.querySelectorAll('[data-slot]').forEach((box) => {
+            box.addEventListener('click', (ev) => {
+              const btn = ev.target.closest('[data-value]:not([disabled])');
+              if (!btn) return;
+              const slot = box.getAttribute('data-slot');
+              const valor = btn.getAttribute('data-value');
+              box.querySelectorAll('[data-value]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+              btn.setAttribute('aria-pressed', 'true');
+              draft.moveis = draft.moveis.filter((id) => (movel(id) || {}).slot !== slot);
+              if (valor) draft.moveis.push(valor);
+              repaint();
+            });
+          });
+        }
+
+        sheet.querySelector('[data-abas]').addEventListener('click', (ev) => {
+          const b = ev.target.closest('[data-aba]');
+          if (!b) return;
+          aba = b.getAttribute('data-aba');
+          sheet.querySelectorAll('[data-aba]').forEach((x) =>
+            x.setAttribute('aria-pressed', x.getAttribute('data-aba') === aba));
+          pintarAba();
         });
+
         sheet.querySelector('[data-loja]').addEventListener('click', () => {
           UI.closeSheet();
           openShop(child);
         });
         sheet.querySelector('[data-save]').addEventListener('click', () => {
-          const data = UI.formData(form);
-          const res = Store.savePet(child.id, data);
+          const res = Store.savePet(child.id, draft);
           if (!res.ok) return UI.toast(res.error, 'bad');
           UI.closeSheet();
-          UI.toast(`${res.pet.name} adorou o visual novo`, 'ok');
+          UI.toast(`${res.pet.name} adorou o quarto novo`, 'ok');
           App.render();
         });
+
+        ligar();
       },
     });
   }
 
-  /* ---------- lojinha de roupinhas ---------- */
+  /** quantas peças já estão liberadas para o nível atual */
+  function desbloqueados(lv) {
+    const conta = (lista) => lista.filter((i) => (i.level || 1) <= lv).length;
+    return conta(SHAPES) + conta(OUTFITS) + conta(BEDS) + conta(ACCESSORIES)
+      + conta(PAREDES) + conta(CHAOS) + conta(MOVEIS) + conta(ROOMS);
+  }
+
+  /* ---------- catálogo: tudo o que existe e o que ainda falta ---------- */
   function openShop(child) {
     const pet = Store.petOf(child.id);
     const lv = level(pet.xp);
-    const itens = catalogo();
+    const q = quartoDe(pet);
     const grupos = [
-      { tipo: 'outfit', titulo: 'Roupinhas', atual: pet.outfit },
-      { tipo: 'bed', titulo: 'Camas', atual: pet.bed },
-      { tipo: 'accessory', titulo: 'Acessórios', atual: pet.accessory },
-      { tipo: 'room', titulo: 'Quartos', atual: pet.room },
+      { titulo: 'Modelos do bonequinho', itens: SHAPES, atual: [pet.shape] },
+      { titulo: 'Roupinhas', itens: OUTFITS, atual: [pet.outfit] },
+      { titulo: 'Camas', itens: BEDS, atual: [pet.bed] },
+      { titulo: 'Acessórios', itens: ACCESSORIES.filter((a) => a.id), atual: [pet.accessory] },
+      { titulo: 'Temas de quarto', itens: ROOMS, atual: [pet.room] },
+      { titulo: 'Cores de parede', itens: PAREDES, atual: [q.parede] },
+      { titulo: 'Cores de chão', itens: CHAOS, atual: [q.piso] },
+      { titulo: 'Móveis', itens: MOVEIS, atual: q.moveis },
     ];
+    const total = grupos.reduce((soma, g) => soma + g.itens.length, 0);
+    const abertos = grupos.reduce((soma, g) => soma + g.itens.filter((i) => (i.level || 1) <= lv).length, 0);
+    const proximo = grupos
+      .flatMap((g) => g.itens.map((i) => ({ ...i, grupo: g.titulo })))
+      .filter((i) => (i.level || 1) > lv)
+      .sort((a, b) => a.level - b.level)[0];
 
     UI.openSheet({
-      title: 'Lojinha do bichinho',
-      subtitle: `Nível ${lv} • cada nível libera peças novas`,
+      size: 'larga',
+      title: 'Tudo do bichinho',
+      subtitle: `Nível ${lv} • ${abertos} de ${total} peças já liberadas`,
       body: `
-        <div class="shop-preview" data-shop-preview>${svg(child, 150, 'feliz', { room: true })}</div>
+        <div class="pet-atualiza">
+          <div class="pet-atualiza-art">${svg(child, 200, 'feliz', { room: true })}</div>
+          <div class="pet-atualiza-side">
+            ${ringSvg(pet.xp)}
+            <p class="tiny muted center">
+              faltam <b>${faltaParaSubir(pet.xp)}</b> ponto(s)<br/>para o nível ${lv + 1}
+            </p>
+            ${proximo ? `<p class="tiny muted center">
+              A próxima peça é <b>${UI.esc(proximo.label)}</b>, no nível ${proximo.level}.
+            </p>` : '<p class="tiny muted center">Você já abriu tudo!</p>'}
+          </div>
+        </div>
         ${grupos.map((g) => `
-          <div class="section-title"><h3>${g.titulo}</h3></div>
+          <div class="section-title"><h3>${g.titulo}</h3>
+            <span class="small muted">${g.itens.filter((i) => (i.level || 1) <= lv).length}/${g.itens.length}</span>
+          </div>
           <div class="shop-grid">
-            ${itens.filter((i) => i.tipo === g.tipo).map((i) => {
-              const aberto = i.level <= lv;
-              const usando = i.id === g.atual;
+            ${g.itens.map((i) => {
+              const livre = (i.level || 1) <= lv;
+              const usando = g.atual.includes(i.id);
               return `
-                <button class="shop-item ${aberto ? '' : 'locked'} ${usando ? 'usando' : ''}"
-                        data-shop="${i.tipo}:${i.id}" ${aberto ? '' : 'disabled'}>
-                  <span class="shop-chip" style="background:${i.cor}"></span>
+                <div class="shop-item ${livre ? '' : 'locked'} ${usando ? 'usando' : ''}">
+                  <span class="shop-chip" style="background:${i.cor || i.hex || '#a98cff'}"></span>
                   <span class="shop-nome">${UI.esc(i.label)}</span>
-                  <span class="shop-tag">${aberto ? (usando ? 'em uso' : 'usar') : `nível ${i.level}`}</span>
-                  ${aberto ? '' : `<span class="shop-lock">${Icons.svg('lock')}</span>`}
-                </button>`;
+                  <span class="shop-tag">${livre ? (usando ? 'em uso' : 'liberado') : `nível ${i.level}`}</span>
+                  ${livre ? '' : `<span class="shop-lock">${Icons.svg('lock')}</span>`}
+                </div>`;
             }).join('')}
           </div>`).join('')}
         <div class="note">
-          Ganhe pontos de amizade fazendo tarefas, estudando e jogando. A cada ${XP_POR_NIVEL} pontos
-          o bichinho sobe de nível e abre peças novas.
+          Cada tarefa, livro, compromisso, jogo e prova rende pontos de amizade.
+          A cada ${XP_POR_NIVEL} pontos o bichinho sobe de nível e abre peças novas.
         </div>`,
-      actions: '<button class="btn btn-primary btn-block" data-ok>Pronto</button>',
+      actions: `
+        <button class="btn btn-ghost" data-voltar>Personalizar</button>
+        <button class="btn btn-primary" data-ok>Pronto</button>`,
       onMount(sheet) {
         sheet.querySelector('[data-ok]').addEventListener('click', () => { UI.closeSheet(); App.render(); });
-        sheet.querySelectorAll('[data-shop]').forEach((b) => b.addEventListener('click', () => {
-          const [tipo, id] = b.getAttribute('data-shop').split(':');
-          Store.savePet(child.id, { name: Store.petOf(child.id).name, [tipo]: id });
-          sheet.querySelectorAll(`[data-shop^="${tipo}:"]`).forEach((x) => {
-            x.classList.remove('usando');
-            const tag = x.querySelector('.shop-tag');
-            if (tag && !x.classList.contains('locked')) tag.textContent = 'usar';
-          });
-          b.classList.add('usando');
-          const tag = b.querySelector('.shop-tag');
-          if (tag) tag.textContent = 'em uso';
-          sheet.querySelector('[data-shop-preview]').innerHTML =
-            svg(child, 150, tipo === 'bed' ? 'dormindo' : 'feliz', { room: true, bed: tipo === 'bed' });
-          UI.toast(`${Store.petOf(child.id).name} vestiu isso`, 'ok');
-        }));
+        sheet.querySelector('[data-voltar]').addEventListener('click', () => {
+          UI.closeSheet();
+          openSheet(child, 'quarto');
+        });
       },
     });
   }
@@ -1287,8 +1598,8 @@ const Pet = (() => {
   return {
     svg, panel, bind, openSheet, openChat, touch, mood, phrase, Voz,
     mountBuddy: Buddy.mount, unmountBuddy: Buddy.unmount, buddySay: Buddy.fala,
-    openShop, outfit, bed, room, roomSvg, ringSvg, previewSvg, faltaParaSubir,
-    level, progress, COLORS, SHAPES, ACCESSORIES, OUTFITS, BEDS, ROOMS, catalogo,
+    openShop, outfit, bed, roomSvg, movelSvg, quartoDe, ringSvg, previewSvg, faltaParaSubir,
+    level, progress, COLORS, SHAPES, ACCESSORIES, OUTFITS, BEDS, ROOMS, PAREDES, CHAOS, MOVEIS, SLOTS,
     XP_POR_NIVEL, CARINHOS_POR_DIA,
   };
 })();

@@ -47,13 +47,13 @@ const UI = (() => {
    * openSheet({ title, subtitle, body, actions, onMount, onClose })
    * `body` e `actions` são HTML; `onMount(sheetEl)` conecta os eventos.
    */
-  function openSheet({ title = '', subtitle = '', body = '', actions = '', onMount, onClose } = {}) {
+  function openSheet({ title = '', subtitle = '', body = '', actions = '', size = '', onMount, onClose } = {}) {
     const root = sheetRoot();
     root.hidden = false;
     onCloseHook = onClose || null;
     root.innerHTML = `
       <div class="sheet-bg" data-close></div>
-      <section class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+      <section class="sheet ${esc(size)}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
         <div class="grabber"></div>
         <header class="sheet-head">
           <div>

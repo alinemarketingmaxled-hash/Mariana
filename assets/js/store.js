@@ -625,6 +625,9 @@ const Store = (() => {
     if (data.voice !== undefined) pet.voice = !!data.voice;
     if (data.bed) pet.bed = data.bed;
     if (data.room) pet.room = data.room;
+    if (data.parede) pet.parede = data.parede;
+    if (data.piso) pet.piso = data.piso;
+    if (Array.isArray(data.moveis)) pet.moveis = data.moveis.slice();
     save();
     return { ok: true, pet };
   }
@@ -1011,6 +1014,88 @@ const Store = (() => {
     return { approved, pending, penalties, paid, approvedCount, pendingCount };
   }
 
+  /**
+   * Números do painel: o que ela ganhou, o que recebeu e o que gastou,
+   * mês a mês e por categoria.
+   */
+  function dashboard(childId, meses = 6) {
+    const hoje = today();
+    const lista = [];
+    const base = new Date(`${hoje}T12:00:00`);
+    for (let i = meses - 1; i >= 0; i--) {
+      const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      lista.push({ ym, label: MONTHS[d.getMonth()].slice(0, 3), ano: d.getFullYear(),
+        ganho: 0, desconto: 0, recebido: 0, gasto: 0 });
+    }
+    const porMes = {};
+    lista.forEach((m) => { porMes[m.ym] = m; });
+
+    let ganho = 0, desconto = 0, aguardando = 0;
+    const porCategoria = {};
+    state.entries.forEach((e) => {
+      if (e.childId !== childId) return;
+      const mes = porMes[monthOf(e.date)];
+      if (e.status === 'pending') { aguardando += signed(e); return; }
+      if (e.status !== 'approved') return;
+      if (e.kind === 'penalty') {
+        desconto += e.value;
+        if (mes) mes.desconto += e.value;
+      } else {
+        ganho += e.value;
+        if (mes) mes.ganho += e.value;
+        const chave = e.catName || 'Outros';
+        const atual = porCategoria[chave] || { nome: chave, grad: e.grad || 'g7', icon: e.icon || 'star', total: 0, vezes: 0 };
+        atual.total += e.value;
+        atual.vezes += 1;
+        porCategoria[chave] = atual;
+      }
+    });
+
+    let recebido = 0;
+    state.payouts.forEach((p) => {
+      if (p.childId !== childId) return;
+      recebido += p.amount;
+      const mes = porMes[monthOf(p.date)];
+      if (mes) mes.recebido += p.amount;
+    });
+
+    let gasto = 0;
+    const porTipo = {};
+    const compras = state.purchases.filter((p) => p.childId === childId);
+    compras.forEach((p) => {
+      gasto += p.value;
+      const mes = porMes[monthOf(p.date)];
+      if (mes) mes.gasto += p.value;
+      const k = purchaseKind(p.kind);
+      const atual = porTipo[k.id] || { id: k.id, nome: k.label, grad: k.grad, icon: k.icon, total: 0, vezes: 0 };
+      atual.total += p.value;
+      atual.vezes += 1;
+      porTipo[k.id] = atual;
+    });
+
+    const ordenar = (obj) => Object.values(obj).sort((a, b) => b.total - a.total);
+    const mesesComGasto = lista.filter((m) => m.gasto > 0).length;
+    const mesesComGanho = lista.filter((m) => m.ganho > 0).length;
+
+    return {
+      meses: lista,
+      ganho, desconto, recebido, gasto, aguardando,
+      liquido: ganho - desconto,
+      aReceber: balance(childId),
+      naCarteira: recebido - gasto,
+      guardado: Math.max(0, recebido - gasto),
+      gastosPorTipo: ordenar(porTipo),
+      ganhosPorCategoria: ordenar(porCategoria),
+      maioresGastos: compras.slice().sort((a, b) => b.value - a.value).slice(0, 5),
+      mediaGasto: mesesComGasto ? gasto / mesesComGasto : 0,
+      mediaGanho: mesesComGanho ? ganho / mesesComGanho : 0,
+      comprasCount: compras.length,
+      // quanto de cada real recebido ela ainda tem guardado
+      guardadoPct: recebido ? Math.max(0, (recebido - gasto) / recebido) * 100 : 0,
+    };
+  }
+
   /** saldo disponível = tudo que já foi aprovado (menos descontos) - pagamentos */
   function balance(childId) {
     const earned = state.entries
@@ -1112,7 +1197,7 @@ const Store = (() => {
     saveEvent, removeEvent, toggleEventDone, eventById, eventsOf, eventsOfMonth,
     eventsOfDay, upcomingEvents, daysUntil, eventKind, EVENT_KINDS,
     // dinheiro
-    totals, balance, savePayout, removePayout, payoutById, payoutsOf,
+    totals, balance, dashboard, savePayout, removePayout, payoutById, payoutsOf,
     // tema
     setTheme, theme,
     // helpers

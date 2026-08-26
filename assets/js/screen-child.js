@@ -740,6 +740,7 @@ const ChildScreen = (() => {
     agenda: { title: 'Agenda', subtitle: 'Provas, trabalhos e eventos' },
     jogos: { title: 'Jogos e estudo', subtitle: 'Brinque com o bichinho e treine as matérias da escola' },
     extrato: { title: 'Carteira', subtitle: 'O que entrou, o que você gastou e o que sobrou' },
+    painel: { title: 'Meu dinheiro', subtitle: 'Quanto você ganhou, recebeu e gastou' },
     perfil: { title: 'Perfil', subtitle: 'Sua conta e sua meta' },
   };
 
@@ -753,9 +754,10 @@ const ChildScreen = (() => {
       : tab === 'agenda' ? Agenda.view(user, user.id, false)
       : tab === 'jogos' ? Games.view(user)
       : tab === 'extrato' ? extratoView(user)
+      : tab === 'painel' ? Dash.view(user)
       : perfilView(user);
 
-    const aside = tab === 'agenda' || tab === 'jogos' ? ''
+    const aside = tab === 'agenda' || tab === 'jogos' || tab === 'painel' ? ''
       : `${metaPanel(user)}${Agenda.upcoming(user.id, false)}` +
         `${tab === 'home' ? resumoPanel(user) : ''}${Pet.panel(user)}`;
 
@@ -780,6 +782,7 @@ const ChildScreen = (() => {
         : tab === 'agenda' ? { icon: 'plus', label: 'Novo compromisso' }
         : tab === 'jogos' ? { icon: 'ball', label: 'Jogar agora' }
         : tab === 'extrato' ? { icon: 'coins', label: 'Registrar gasto' }
+        : tab === 'painel' ? { icon: 'coins', label: 'Registrar gasto' }
         : { icon: 'check', label: 'Resumo do dia' },
       nav: [
         { id: 'home', label: 'Hoje', icon: 'home' },
@@ -787,6 +790,7 @@ const ChildScreen = (() => {
         { id: 'jogos', label: 'Jogos', icon: 'ball' },
         { id: 'agenda', label: 'Agenda', icon: 'calendar', count: proximos },
         { id: 'extrato', label: 'Carteira', icon: 'wallet', count: pending },
+        { id: 'painel', label: 'Dinheiro', icon: 'chart' },
       ],
     });
 
@@ -802,7 +806,7 @@ const ChildScreen = (() => {
           const sorteio = Games.LISTA[Math.floor(Math.random() * Games.LISTA.length)];
           return Games.abrir(user, sorteio.id);
         }
-        if (tab === 'extrato') return openPurchaseForm(user, null);
+        if (tab === 'extrato' || tab === 'painel') return openPurchaseForm(user, null);
         return openDaySummary(user);
       },
     });
