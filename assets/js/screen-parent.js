@@ -1,5 +1,5 @@
 /* =========================================================
-   screen-parent.js — área do responsável
+   screen-parent.js: área do responsável
    ========================================================= */
 const ParentScreen = (() => {
   let tab = 'validar';
@@ -11,15 +11,15 @@ const ParentScreen = (() => {
     return `
       <header class="topbar">
         <div class="who">
-          <div class="avatar">${user.emoji || '👨‍👩‍👧'}</div>
+          <div class="avatar ${user.color || 'g4'}">${UI.esc(user.name.trim().charAt(0).toUpperCase())}</div>
           <div>
             <div class="t1">${UI.esc(user.name)}</div>
             <div class="t2">Painel do responsável</div>
           </div>
         </div>
         <div class="row" style="gap:9px">
-          <button class="icon-btn badge" data-count="${pend}" data-go="validar" aria-label="Pendências">🔔</button>
-          <button class="icon-btn" data-menu aria-label="Menu">☰</button>
+          <button class="icon-btn badge" data-count="${pend}" data-go="validar" aria-label="Pendências">${Icons.svg('bell')}</button>
+          <button class="icon-btn" data-menu aria-label="Menu">${Icons.svg('menu')}</button>
         </div>
       </header>`;
   }
@@ -40,14 +40,14 @@ const ParentScreen = (() => {
     return `
       <section class="hero">
         <div class="hero-top">
-          <div class="hero-ico">📋</div>
+          <div class="hero-ico">${Icons.svg('clipboard')}</div>
           <div class="grow">
             <div class="label">Aguardando sua validação</div>
             <div class="value">${pending.length}<small style="margin-left:6px">${pending.length === 1 ? 'item' : 'itens'}</small></div>
           </div>
         </div>
         <div class="hero-stats mt16">
-          <div class="hero-stat"><div class="k">valor em análise</div><div class="v">${Store.money(totalPend)}</div></div>
+          <div class="hero-stat"><div class="k">em análise</div><div class="v">${Store.money(totalPend)}</div></div>
           <div class="hero-stat"><div class="k">filhos ativos</div><div class="v">${kids.length}</div></div>
         </div>
       </section>
@@ -55,7 +55,7 @@ const ParentScreen = (() => {
       ${kids.length > 1 ? `
         <div class="seg-mini mt16" role="group" aria-label="Filtrar por filho">
           <button data-kid-filter="all" aria-pressed="${childFilter === 'all'}">Todos</button>
-          ${kids.map((k) => `<button data-kid-filter="${k.id}" aria-pressed="${childFilter === k.id}">${k.emoji} ${UI.esc(k.name.split(' ')[0])}</button>`).join('')}
+          ${kids.map((k) => `<button data-kid-filter="${k.id}" aria-pressed="${childFilter === k.id}">${UI.esc(k.name.split(' ')[0])}</button>`).join('')}
         </div>` : ''}
 
       ${keys.length ? keys.map((k) => {
@@ -65,15 +65,15 @@ const ParentScreen = (() => {
         const sum = list.reduce((s, e) => s + Store.signed(e), 0);
         return `
           <div class="date-head">
-            <h4>${kid ? kid.emoji + ' ' + UI.esc(kid.name.split(' ')[0]) : 'Filho(a)'} • ${Store.labelDate(d)}</h4>
+            <h4>${kid ? UI.esc(kid.name.split(' ')[0]) : 'Filho(a)'} • ${Store.labelDate(d)}</h4>
             <span class="ln"></span>
             <span class="tiny muted">${Store.money(sum)}</span>
           </div>
           <div class="list">
             ${list.map(approvalCard).join('')}
-            <button class="btn btn-soft btn-sm" data-approve-all="${k}">✓ Validar os ${list.length} itens deste dia</button>
+            <button class="btn btn-soft btn-sm" data-approve-all="${k}">${Icons.svg('check')} Validar os ${list.length} itens deste dia</button>
           </div>`;
-      }).join('') : UI.empty('🎉', 'Nada pendente por aqui. Tudo validado!')}`;
+      }).join('') : UI.empty('check', 'Nada pendente por aqui. Tudo validado.')}`;
   }
 
   function approvalCard(e) {
@@ -81,7 +81,7 @@ const ParentScreen = (() => {
     return `
       <article class="appr">
         <div class="row">
-          <span class="em ${e.grad || 'g1'}" style="width:42px;height:42px;border-radius:15px;display:grid;place-items:center;font-size:19px">${e.emoji || '✨'}</span>
+          <span class="em ${e.grad || 'g1'}" style="width:42px;height:42px;border-radius:15px;display:grid;place-items:center">${Icons.svg(e.icon)}</span>
           <div class="grow">
             <div class="nm bold" style="font-size:14px">${UI.esc(e.name)}</div>
             <div class="mt small muted">${UI.esc(e.catName || '')} • ${kid ? UI.esc(kid.name.split(' ')[0]) : ''}</div>
@@ -90,10 +90,10 @@ const ParentScreen = (() => {
             ${e.kind === 'penalty' ? '-' : '+'}${Store.money(e.value).replace('R$ ', '')}
           </span>
         </div>
-        ${e.note ? `<div class="note">💬 ${UI.esc(e.note)}</div>` : ''}
+        ${e.note ? `<div class="note">${UI.esc(e.note)}</div>` : ''}
         <div class="acts">
-          <button class="btn btn-ghost btn-sm" data-reject="${e.id}">✕ Recusar</button>
-          <button class="btn btn-primary btn-sm" data-approve="${e.id}">✓ Validar</button>
+          <button class="btn btn-ghost btn-sm" data-reject="${e.id}">${Icons.svg('close')} Recusar</button>
+          <button class="btn btn-primary btn-sm" data-approve="${e.id}">${Icons.svg('check')} Validar</button>
         </div>
       </article>`;
   }
@@ -112,7 +112,7 @@ const ParentScreen = (() => {
           const t = Store.totals(k.id, Store.monthOf(Store.today()));
           return `
             <button class="kid-card" data-kid="${k.id}">
-              <span class="avatar">${k.emoji || '🙂'}</span>
+              <span class="avatar ${k.color || 'g1'}">${UI.esc(k.name.trim().charAt(0).toUpperCase())}</span>
               <div class="grow">
                 <div class="bold" style="font-size:15px">${UI.esc(k.name)}</div>
                 <div class="small muted">@${UI.esc(k.username)} • ${t.pendingCount} aguardando</div>
@@ -127,7 +127,7 @@ const ParentScreen = (() => {
               </div>
             </button>`;
         }).join('')}
-      </div>` : UI.empty('👶', 'Nenhum filho cadastrado. Toque em “+ adicionar”.')}`;
+      </div>` : UI.empty('users', 'Nenhum filho cadastrado. Toque em “+ adicionar”.')}`;
   }
 
   /* ---------- aba: categorias ---------- */
@@ -139,45 +139,45 @@ const ParentScreen = (() => {
         <button class="link" data-new-cat>+ categoria</button>
       </div>
       <p class="small muted" style="line-height:1.6;padding:0 2px">
-        Cada categoria tem subcategorias (as ações do dia a dia). O valor é somado quando você valida —
-        os itens marcados como <b>desconto</b> são subtraídos da mesada.
+        Cada categoria tem subcategorias (as ações do dia a dia). O valor é somado quando você valida.
+        Os itens marcados como <b>desconto</b> são subtraídos da mesada.
       </p>
       ${cats.length ? cats.map((c) => `
         <section class="card mt16">
           <div class="between">
             <div class="row">
-              <span class="em ${c.grad}" style="width:44px;height:44px;border-radius:16px;display:grid;place-items:center;font-size:21px">${c.emoji}</span>
+              <span class="em ${c.grad}" style="width:44px;height:44px;border-radius:16px;display:grid;place-items:center">${Icons.svg(c.icon)}</span>
               <div>
                 <div class="bold" style="font-size:15px">${UI.esc(c.name)}</div>
                 <div class="tiny muted">${c.items.length} ${c.items.length === 1 ? 'ação' : 'ações'}</div>
               </div>
             </div>
             <div class="row" style="gap:7px">
-              <button class="icon-btn" style="width:36px;height:36px;font-size:14px" data-edit-cat="${c.id}" aria-label="Editar categoria">✎</button>
-              <button class="icon-btn" style="width:36px;height:36px;font-size:14px" data-del-cat="${c.id}" aria-label="Excluir categoria">🗑</button>
+              <button class="icon-btn sm" data-edit-cat="${c.id}" aria-label="Editar categoria">${Icons.svg('pencil')}</button>
+              <button class="icon-btn sm" data-del-cat="${c.id}" aria-label="Excluir categoria">${Icons.svg('trash')}</button>
             </div>
           </div>
           <div class="list mt12">
             ${c.items.map((it) => `
               <div class="mini-row">
-                <span class="chip ${it.kind === 'penalty' ? 'rejected' : 'approved'}">${it.kind === 'penalty' ? '−' : '+'} ${Store.money(it.value)}</span>
+                <span class="chip ${it.kind === 'penalty' ? 'rejected' : 'approved'}">${it.kind === 'penalty' ? '-' : '+'} ${Store.money(it.value)}</span>
                 <div class="grow">
                   <div class="small bold">${UI.esc(it.name)}</div>
                   ${it.daily ? '<div class="tiny muted">obrigatória todo dia</div>' : ''}
                 </div>
-                <button class="icon-btn" style="width:32px;height:32px;font-size:13px" data-edit-item="${c.id}:${it.id}" aria-label="Editar ação">✎</button>
+                <button class="icon-btn sm" data-edit-item="${c.id}:${it.id}" aria-label="Editar ação">${Icons.svg('pencil')}</button>
               </div>`).join('')}
             <button class="btn btn-soft btn-sm" data-new-item="${c.id}">+ nova ação em ${UI.esc(c.name)}</button>
           </div>
         </section>`).join('')
-      : UI.empty('🗂️', 'Crie a primeira categoria para começar.')}`;
+      : UI.empty('folder', 'Crie a primeira categoria para começar.')}`;
   }
 
   /* ---------- aba: relatório ---------- */
   function relatorioView() {
     const kids = Store.children();
     const ym = Store.monthOf(Store.today());
-    if (!kids.length) return UI.empty('📈', 'Cadastre um filho para ver os relatórios.');
+    if (!kids.length) return UI.empty('trending', 'Cadastre um filho para ver os relatórios.');
 
     return kids.map((k) => {
       const t = Store.totals(k.id, ym);
@@ -190,7 +190,7 @@ const ParentScreen = (() => {
       });
       const max = Math.max(1, ...vals);
       return `
-        <div class="section-title"><h3>${k.emoji} ${UI.esc(k.name)}</h3>
+        <div class="section-title"><h3>${UI.esc(k.name)}</h3>
           <span class="small muted">${Store.labelMonth(ym)}</span></div>
         <section class="card">
           <div class="stat-row">
@@ -206,8 +206,8 @@ const ParentScreen = (() => {
               </div>`).join('')}
           </div>
           <div class="row mt12" style="gap:9px">
-            <button class="btn btn-ghost btn-sm grow" data-history="${k.id}">📊 Histórico</button>
-            <button class="btn btn-primary btn-sm grow" data-pay="${k.id}">💸 Pagar mesada</button>
+            <button class="btn btn-ghost btn-sm grow" data-history="${k.id}">${Icons.svg('chart')} Histórico</button>
+            <button class="btn btn-primary btn-sm grow" data-pay="${k.id}">${Icons.svg('banknote')} Pagar mesada</button>
           </div>
         </section>`;
     }).join('');
@@ -246,7 +246,7 @@ const ParentScreen = (() => {
           ${UI.field('Nome', UI.input('name', { value: editing ? kid.name : '', placeholder: 'ex.: Mariana' }))}
           ${UI.field('Usuário (login)', UI.input('username', { value: editing ? kid.username : '', placeholder: 'ex.: mariana' }))}
           ${UI.field(editing ? 'Nova senha (deixe vazio para manter)' : 'Senha', UI.input('password', { type: 'password', placeholder: '••••' }))}
-          ${UI.emojiPicker('emoji', editing ? kid.emoji : '🦄')}
+          ${UI.gradPicker('color', editing ? (kid.color || 'g1') : 'g1', 'Cor do perfil')}
           ${UI.field('Meta (opcional)', UI.input('goalName', { value: editing ? (kid.goalName || '') : '', placeholder: 'ex.: Patins novos' }))}
           ${UI.field('Valor da meta (R$)', UI.input('goalAmount', { type: 'number', value: editing ? (kid.goalAmount || '') : '', attrs: 'min="0" step="0.01"', placeholder: '150' }))}
           ${editing ? `<input type="hidden" name="id" value="${UI.esc(kid.id)}" />` : ''}
@@ -262,7 +262,7 @@ const ParentScreen = (() => {
           const res = Store.saveChild(data);
           if (!res.ok) return UI.toast(res.error, 'bad');
           UI.closeSheet();
-          UI.toast(editing ? 'Dados atualizados ✅' : `Acesso de ${res.user.name} criado 🎉`, 'ok');
+          UI.toast(editing ? 'Dados atualizados' : `Acesso de ${res.user.name} criado`, 'ok');
           App.render();
         });
       },
@@ -273,7 +273,7 @@ const ParentScreen = (() => {
     const bal = Store.balance(kid.id);
     const t = Store.totals(kid.id, Store.monthOf(Store.today()));
     UI.openSheet({
-      title: `${kid.emoji} ${kid.name}`,
+      title: kid.name,
       subtitle: `@${kid.username}`,
       body: `
         <div class="stat-row">
@@ -282,10 +282,10 @@ const ParentScreen = (() => {
           <div class="stat"><div class="k">aguardando</div><div class="v">${t.pendingCount}</div></div>
         </div>
         <div class="list">
-          <button class="mini-row" data-a="pay"><span style="font-size:19px">💸</span><span class="grow bold small" style="text-align:left">Registrar pagamento</span><span class="muted">›</span></button>
-          <button class="mini-row" data-a="history"><span style="font-size:19px">📊</span><span class="grow bold small" style="text-align:left">Ver histórico</span><span class="muted">›</span></button>
-          <button class="mini-row" data-a="edit"><span style="font-size:19px">✎</span><span class="grow bold small" style="text-align:left">Editar dados e meta</span><span class="muted">›</span></button>
-          <button class="mini-row" data-a="del"><span style="font-size:19px">🗑</span><span class="grow bold small" style="text-align:left;color:var(--bad)">Excluir filho(a)</span><span class="muted">›</span></button>
+          <button class="mini-row" data-a="pay">${Icons.svg('banknote')}<span class="grow bold small" style="text-align:left">Registrar pagamento</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-a="history">${Icons.svg('chart')}<span class="grow bold small" style="text-align:left">Ver histórico</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-a="edit">${Icons.svg('pencil')}<span class="grow bold small" style="text-align:left">Editar dados e meta</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-a="del"><span style="color:var(--bad);display:grid">${Icons.svg('trash')}</span><span class="grow bold small" style="text-align:left;color:var(--bad)">Excluir filho(a)</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
         </div>`,
       onMount(sheet) {
         sheet.querySelectorAll('[data-a]').forEach((b) => b.addEventListener('click', async () => {
@@ -311,7 +311,7 @@ const ParentScreen = (() => {
     const bal = Store.balance(kid.id);
     UI.openSheet({
       title: 'Registrar pagamento',
-      subtitle: `${kid.name} — saldo atual ${Store.money(bal)}`,
+      subtitle: `${kid.name}. Saldo atual ${Store.money(bal)}.`,
       body: `
         <form id="pay-form">
           ${UI.field('Valor pago (R$)', UI.input('amount', { type: 'number', value: bal > 0 ? bal.toFixed(2) : '', attrs: 'min="0" step="0.01"', placeholder: '0,00' }))}
@@ -329,7 +329,7 @@ const ParentScreen = (() => {
           const res = Store.addPayout(kid.id, data.amount, data.note, data.date);
           if (!res.ok) return UI.toast(res.error, 'bad');
           UI.closeSheet();
-          UI.toast('Pagamento registrado 💸', 'ok');
+          UI.toast('Pagamento registrado', 'ok');
           App.render();
         });
       },
@@ -342,7 +342,7 @@ const ParentScreen = (() => {
     list.forEach((e) => { (byDate[e.date] = byDate[e.date] || []).push(e); });
     const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
     UI.openSheet({
-      title: `Histórico — ${kid.name}`,
+      title: `Histórico de ${kid.name}`,
       subtitle: `${list.length} lançamentos nos últimos 90 dias`,
       body: dates.length ? dates.map((d) => `
         <div class="date-head"><h4>${Store.labelDate(d)}</h4><span class="ln"></span>
@@ -350,14 +350,14 @@ const ParentScreen = (() => {
         <div class="list">
           ${byDate[d].map((e) => `
             <div class="mini-row">
-              <span class="em ${e.grad || 'g1'}" style="width:34px;height:34px;border-radius:12px;display:grid;place-items:center;font-size:16px">${e.emoji || '✨'}</span>
+              <span class="em ${e.grad || 'g1'}" style="width:34px;height:34px;border-radius:12px;display:grid;place-items:center">${Icons.svg(e.icon)}</span>
               <div class="grow">
                 <div class="small bold">${UI.esc(e.name)}</div>
                 <div class="tiny muted">${UI.statusChip(e.status)}</div>
               </div>
               <span class="val ${e.kind === 'penalty' ? 'pen' : 'earn'}">${e.kind === 'penalty' ? '-' : '+'}${Store.money(e.value).replace('R$ ', '')}</span>
             </div>`).join('')}
-        </div>`).join('') : UI.empty('🗓️', 'Sem lançamentos ainda.'),
+        </div>`).join('') : UI.empty('calendar', 'Sem lançamentos ainda.'),
     });
   }
 
@@ -368,7 +368,7 @@ const ParentScreen = (() => {
       body: `
         <form id="cat-form">
           ${UI.field('Nome', UI.input('name', { value: editing ? cat.name : '', placeholder: 'ex.: Estudos' }))}
-          ${UI.emojiPicker('emoji', editing ? cat.emoji : '✨')}
+          ${UI.iconPicker('icon', editing ? cat.icon : 'star')}
           ${UI.gradPicker('grad', editing ? cat.grad : 'g1')}
           ${editing ? `<input type="hidden" name="id" value="${UI.esc(cat.id)}" />` : ''}
         </form>`,
@@ -383,7 +383,7 @@ const ParentScreen = (() => {
           const res = Store.saveCategory(data);
           if (!res.ok) return UI.toast(res.error, 'bad');
           UI.closeSheet();
-          UI.toast('Categoria salva ✅', 'ok');
+          UI.toast('Categoria salva', 'ok');
           App.render();
         });
       },
@@ -403,7 +403,7 @@ const ParentScreen = (() => {
             <label>Tipo</label>
             <div class="seg-mini" data-kind-group>
               <button type="button" data-kind="earn" aria-pressed="${!editing || item.kind !== 'penalty'}">+ Ganha</button>
-              <button type="button" data-kind="penalty" aria-pressed="${editing && item.kind === 'penalty'}">− Desconta</button>
+              <button type="button" data-kind="penalty" aria-pressed="${editing && item.kind === 'penalty'}">- Desconta</button>
             </div>
             <input type="hidden" name="kind" value="${editing && item.kind === 'penalty' ? 'penalty' : 'earn'}" />
           </div>
@@ -418,7 +418,7 @@ const ParentScreen = (() => {
           ${editing ? `<input type="hidden" name="id" value="${UI.esc(item.id)}" />` : ''}
         </form>`,
       actions: `
-        ${editing ? '<button class="btn btn-ghost" data-del>🗑 Excluir</button>' : '<button class="btn btn-ghost" data-cancel>Cancelar</button>'}
+        ${editing ? '<button class="btn btn-ghost" data-del>Excluir</button>' : '<button class="btn btn-ghost" data-cancel>Cancelar</button>'}
         <button class="btn btn-primary" data-save>Salvar</button>`,
       onMount(sheet) {
         UI.bindSwitches(sheet);
@@ -444,7 +444,7 @@ const ParentScreen = (() => {
           const res = Store.saveItem(catId, data);
           if (!res.ok) return UI.toast(res.error, 'bad');
           UI.closeSheet();
-          UI.toast('Ação salva ✅', 'ok');
+          UI.toast('Ação salva', 'ok');
           App.render();
         });
       },
@@ -456,10 +456,10 @@ const ParentScreen = (() => {
       title: 'O que você quer fazer?',
       body: `
         <div class="list">
-          <button class="mini-row" data-q="child"><span style="font-size:19px">👶</span><span class="grow bold small" style="text-align:left">Cadastrar filho(a)</span><span class="muted">›</span></button>
-          <button class="mini-row" data-q="cat"><span style="font-size:19px">🗂️</span><span class="grow bold small" style="text-align:left">Criar categoria</span><span class="muted">›</span></button>
-          <button class="mini-row" data-q="pay"><span style="font-size:19px">💸</span><span class="grow bold small" style="text-align:left">Registrar pagamento</span><span class="muted">›</span></button>
-          <button class="mini-row" data-q="approve"><span style="font-size:19px">✅</span><span class="grow bold small" style="text-align:left">Validar tudo que está pendente</span><span class="muted">›</span></button>
+          <button class="mini-row" data-q="child">${Icons.svg('users')}<span class="grow bold small" style="text-align:left">Cadastrar filho(a)</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-q="cat">${Icons.svg('folder')}<span class="grow bold small" style="text-align:left">Criar categoria</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-q="pay">${Icons.svg('banknote')}<span class="grow bold small" style="text-align:left">Registrar pagamento</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-q="approve">${Icons.svg('check')}<span class="grow bold small" style="text-align:left">Validar tudo que está pendente</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
         </div>`,
       onMount(sheet) {
         sheet.querySelectorAll('[data-q]').forEach((b) => b.addEventListener('click', async () => {
@@ -477,7 +477,7 @@ const ParentScreen = (() => {
           }
           if (q === 'approve') {
             const ids = Store.pendingEntries().map((e) => e.id);
-            if (!ids.length) return UI.toast('Não há nada pendente 🎉');
+            if (!ids.length) return UI.toast('Não há nada pendente');
             const ok = await UI.confirm({
               title: `Validar ${ids.length} ${ids.length === 1 ? 'item' : 'itens'}?`,
               text: 'Todos os lançamentos pendentes serão aprovados de uma vez.',
@@ -485,7 +485,7 @@ const ParentScreen = (() => {
             });
             if (ok) {
               Store.reviewMany(ids, 'approved', user.id);
-              UI.toast('Tudo validado ✅', 'ok');
+              UI.toast('Tudo validado', 'ok');
               App.render();
             }
           }
@@ -500,10 +500,10 @@ const ParentScreen = (() => {
       subtitle: user.name,
       body: `
         <div class="list">
-          <button class="mini-row" data-m="theme"><span style="font-size:19px">${Store.theme() === 'dark' ? '☀️' : '🌙'}</span><span class="grow bold small" style="text-align:left">Trocar tema</span><span class="muted">›</span></button>
-          <button class="mini-row" data-m="pass"><span style="font-size:19px">🔒</span><span class="grow bold small" style="text-align:left">Trocar minha senha</span><span class="muted">›</span></button>
-          <button class="mini-row" data-m="reset"><span style="font-size:19px">♻️</span><span class="grow bold small" style="text-align:left">Restaurar dados de exemplo</span><span class="muted">›</span></button>
-          <button class="mini-row" data-m="logout"><span style="font-size:19px">🚪</span><span class="grow bold small" style="text-align:left">Sair</span><span class="muted">›</span></button>
+          <button class="mini-row" data-m="theme">${Icons.svg(Store.theme() === 'dark' ? 'sun' : 'moon')}<span class="grow bold small" style="text-align:left">Trocar tema</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-m="pass">${Icons.svg('lock')}<span class="grow bold small" style="text-align:left">Trocar minha senha</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-m="reset">${Icons.svg('refresh')}<span class="grow bold small" style="text-align:left">Restaurar dados de exemplo</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-m="logout">${Icons.svg('logout')}<span class="grow bold small" style="text-align:left">Sair</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
         </div>`,
       onMount(sheet) {
         sheet.querySelectorAll('[data-m]').forEach((b) => b.addEventListener('click', async () => {
@@ -535,11 +535,11 @@ const ParentScreen = (() => {
         ${topbar(user)}
         <div class="scroll">${view}</div>
         <nav class="tabbar">
-          <button class="tab" data-tab="validar" aria-pressed="${tab === 'validar'}"><span class="em">✅</span>Validar</button>
-          <button class="tab" data-tab="filhos" aria-pressed="${tab === 'filhos'}"><span class="em">👨‍👩‍👧</span>Filhos</button>
-          <button class="fab" data-fab aria-label="Ações rápidas">+</button>
-          <button class="tab" data-tab="categorias" aria-pressed="${tab === 'categorias'}"><span class="em">🗂️</span>Ações</button>
-          <button class="tab" data-tab="relatorio" aria-pressed="${tab === 'relatorio'}"><span class="em">📈</span>Relatório</button>
+          <button class="tab" data-tab="validar" aria-pressed="${tab === 'validar'}">${Icons.svg('check')}Validar</button>
+          <button class="tab" data-tab="filhos" aria-pressed="${tab === 'filhos'}">${Icons.svg('users')}Filhos</button>
+          <button class="fab" data-fab aria-label="Ações rápidas">${Icons.svg('plus')}</button>
+          <button class="tab" data-tab="categorias" aria-pressed="${tab === 'categorias'}">${Icons.svg('folder')}Ações</button>
+          <button class="tab" data-tab="relatorio" aria-pressed="${tab === 'relatorio'}">${Icons.svg('trending')}Relatório</button>
         </nav>
       </div>`;
 
@@ -556,7 +556,7 @@ const ParentScreen = (() => {
     }));
     root.querySelectorAll('[data-approve]').forEach((b) => b.addEventListener('click', () => {
       Store.review(b.getAttribute('data-approve'), 'approved', '', user.id);
-      UI.toast('Validado ✅', 'ok');
+      UI.toast('Validado', 'ok');
       App.render();
     }));
     root.querySelectorAll('[data-reject]').forEach((b) =>
@@ -565,7 +565,7 @@ const ParentScreen = (() => {
       const [childId, d] = b.getAttribute('data-approve-all').split('|');
       const ids = Store.pendingEntries(childId).filter((e) => e.date === d).map((e) => e.id);
       Store.reviewMany(ids, 'approved', user.id);
-      UI.toast(`${ids.length} ${ids.length === 1 ? 'item validado' : 'itens validados'} ✅`, 'ok');
+      UI.toast(`${ids.length} ${ids.length === 1 ? 'item validado' : 'itens validados'}`, 'ok');
       App.render();
     }));
     root.querySelectorAll('[data-kid]').forEach((b) => b.addEventListener('click', () => {

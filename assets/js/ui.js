@@ -1,5 +1,5 @@
 /* =========================================================
-   ui.js — helpers de interface (toast, bottom-sheet, ícones)
+   ui.js: helpers de interface (toast, bottom-sheet, ícones)
    ========================================================= */
 const UI = (() => {
   const sheetRoot = () => document.getElementById('sheet-root');
@@ -59,7 +59,7 @@ const UI = (() => {
             <h3>${esc(title)}</h3>
             ${subtitle ? `<p>${esc(subtitle)}</p>` : ''}
           </div>
-          <button class="icon-btn" data-close aria-label="Fechar">✕</button>
+          <button class="icon-btn" data-close aria-label="Fechar">${Icons.svg('close')}</button>
         </header>
         <div class="sheet-body">${body}</div>
         ${actions ? `<div class="sheet-actions">${actions}</div>` : ''}
@@ -95,40 +95,37 @@ const UI = (() => {
 
   /* ---------- componentes reutilizáveis ---------- */
   const GRADS = ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8'];
-  const EMOJIS = [
-    '📚','🏠','🪥','⭐','🎯','🎨','⚽','🎸','🧹','🐶','🌱','💧','🛏️','🍎','🧠','💪',
-    '🧺','🚿','🎒','🧩','🕹️','🎹','🩰','🚲','🧽','🍽️','📝','🌈','🦄','🐣','🐱','🚀',
-  ];
 
-  const emojiPicker = (name, selected, list = EMOJIS) => `
+  const iconPicker = (name, selected) => `
     <div class="field">
       <label>Ícone</label>
-      <div class="emoji-pick" data-emoji-pick="${esc(name)}">
-        ${list.map((e) => `<button type="button" data-emoji="${esc(e)}" aria-pressed="${e === selected}">${e}</button>`).join('')}
+      <div class="pick-grid" data-pick="${esc(name)}">
+        ${Icons.CATEGORY_ICONS.map((ic) => `
+          <button type="button" data-value="${esc(ic)}" aria-pressed="${ic === selected}">${Icons.svg(ic)}</button>`).join('')}
       </div>
-      <input type="hidden" name="${esc(name)}" value="${esc(selected || list[0])}" />
+      <input type="hidden" name="${esc(name)}" value="${esc(selected || Icons.CATEGORY_ICONS[0])}" />
     </div>`;
 
-  const gradPicker = (name, selected) => `
+  const gradPicker = (name, selected, label = 'Cor') => `
     <div class="field">
-      <label>Cor</label>
-      <div class="emoji-pick" data-emoji-pick="${esc(name)}">
-        ${GRADS.map((g) => `<button type="button" class="${g}" data-emoji="${g}" aria-pressed="${g === selected}" style="color:transparent">•</button>`).join('')}
+      <label>${esc(label)}</label>
+      <div class="pick-grid swatches" data-pick="${esc(name)}">
+        ${GRADS.map((g) => `<button type="button" class="${g}" data-value="${g}" aria-pressed="${g === selected}" aria-label="Cor ${g.slice(1)}"></button>`).join('')}
       </div>
       <input type="hidden" name="${esc(name)}" value="${esc(selected || 'g1')}" />
     </div>`;
 
-  /** liga os seletores (emoji/cor) dentro de um container */
+  /** liga os seletores (ícone/cor) dentro de um container */
   function bindPickers(scope) {
-    scope.querySelectorAll('[data-emoji-pick]').forEach((box) => {
-      const field = box.getAttribute('data-emoji-pick');
+    scope.querySelectorAll('[data-pick]').forEach((box) => {
+      const field = box.getAttribute('data-pick');
       const input = scope.querySelector(`input[name="${field}"]`);
       box.addEventListener('click', (ev) => {
-        const btn = ev.target.closest('[data-emoji]');
+        const btn = ev.target.closest('[data-value]');
         if (!btn) return;
-        box.querySelectorAll('[data-emoji]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+        box.querySelectorAll('[data-value]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
         btn.setAttribute('aria-pressed', 'true');
-        if (input) input.value = btn.getAttribute('data-emoji');
+        if (input) input.value = btn.getAttribute('data-value');
       });
     });
   }
@@ -140,14 +137,14 @@ const UI = (() => {
     <input name="${esc(name)}" type="${opts.type || 'text'}" value="${esc(opts.value || '')}"
       placeholder="${esc(opts.placeholder || '')}" ${opts.attrs || ''} />`;
 
-  const empty = (emoji, text) =>
-    `<div class="empty"><span class="em">${emoji}</span><p>${esc(text)}</p></div>`;
+  const empty = (icon, text) =>
+    `<div class="empty">${Icons.svg(icon, 'ico-lg')}<p>${esc(text)}</p></div>`;
 
   const statusChip = (status) => {
     const map = {
-      pending: ['pending', '⏳ aguardando'],
-      approved: ['approved', '✓ validado'],
-      rejected: ['rejected', '✕ recusado'],
+      pending: ['pending', 'aguardando'],
+      approved: ['approved', 'validado'],
+      rejected: ['rejected', 'recusado'],
     };
     const [cls, txt] = map[status] || map.pending;
     return `<span class="chip ${cls}">${txt}</span>`;
@@ -173,8 +170,8 @@ const UI = (() => {
 
   return {
     esc, toast, openSheet, closeSheet, confirm,
-    emojiPicker, gradPicker, bindPickers, bindSwitches,
+    iconPicker, gradPicker, bindPickers, bindSwitches,
     field, input, empty, statusChip, formData,
-    GRADS, EMOJIS,
+    GRADS,
   };
 })();

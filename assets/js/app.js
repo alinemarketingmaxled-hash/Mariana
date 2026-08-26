@@ -1,5 +1,5 @@
 /* =========================================================
-   app.js — inicialização e roteamento entre as telas
+   app.js: inicialização e roteamento entre as telas
    ========================================================= */
 const App = (() => {
   const root = () => document.getElementById('app');
@@ -32,7 +32,7 @@ const App = (() => {
     ChildScreen.reset();
     ParentScreen.reset();
     UI.closeSheet();
-    UI.toast('Até logo! 👋');
+    UI.toast('Até logo!');
     render();
   }
 
@@ -55,7 +55,7 @@ const App = (() => {
           const res = Store.changePassword(user.id, data.oldPass, data.newPass);
           if (!res.ok) return UI.toast(res.error, 'bad');
           UI.closeSheet();
-          UI.toast('Senha atualizada 🔒', 'ok');
+          UI.toast('Senha atualizada', 'ok');
         });
       },
     });

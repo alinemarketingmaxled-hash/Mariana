@@ -1,8 +1,9 @@
 /* =========================================================
-   store.js — estado, persistência (localStorage) e regras
+   store.js: estado, persistência (localStorage) e regras
    ========================================================= */
 const Store = (() => {
-  const KEY = 'mesada.state.v1';
+  const KEY = 'mesada.state.v2';
+  const OLD_KEY = 'mesada.state.v1';
   const SESSION_KEY = 'mesada.session.v1';
 
   /* ---------- utilitários ---------- */
@@ -67,24 +68,24 @@ const Store = (() => {
       users: [
         {
           id: parentId, role: 'parent', name: 'Mãe / Pai',
-          username: 'pai', pass: hash('1234'), emoji: '👩‍👧',
+          username: 'pai', pass: hash('1234'), color: 'g4',
         },
         {
           id: childId, role: 'child', name: 'Mariana',
-          username: 'mariana', pass: hash('1234'), emoji: '🦄',
+          username: 'mariana', pass: hash('1234'), color: 'g1',
           goalName: 'Patins novos', goalAmount: 150,
         },
       ],
       categories: [
         {
-          id: uid('c'), name: 'Estudos', emoji: '📚', grad: 'g1', items: [
+          id: uid('c'), name: 'Estudos', icon: 'book', grad: 'g1', items: [
             { id: uid('s'), name: 'Fazer a lição de casa', value: 3, kind: 'earn', daily: true },
             { id: uid('s'), name: 'Estudar 30 minutos', value: 2, kind: 'earn', daily: true },
             { id: uid('s'), name: 'Ler um capítulo', value: 2, kind: 'earn', daily: false },
           ],
         },
         {
-          id: uid('c'), name: 'Casa', emoji: '🏠', grad: 'g2', items: [
+          id: uid('c'), name: 'Casa', icon: 'house', grad: 'g2', items: [
             { id: uid('s'), name: 'Arrumar a cama', value: 1, kind: 'earn', daily: true },
             { id: uid('s'), name: 'Organizar o quarto', value: 2, kind: 'earn', daily: false },
             { id: uid('s'), name: 'Ajudar na louça', value: 3, kind: 'earn', daily: false },
@@ -92,14 +93,14 @@ const Store = (() => {
           ],
         },
         {
-          id: uid('c'), name: 'Saúde', emoji: '🪥', grad: 'g3', items: [
+          id: uid('c'), name: 'Saúde', icon: 'heart', grad: 'g3', items: [
             { id: uid('s'), name: 'Escovar os dentes 3x', value: 1, kind: 'earn', daily: true },
             { id: uid('s'), name: 'Tomar banho', value: 1, kind: 'earn', daily: true },
             { id: uid('s'), name: 'Beber bastante água', value: 1, kind: 'earn', daily: true },
           ],
         },
         {
-          id: uid('c'), name: 'Atitude', emoji: '⭐', grad: 'g4', items: [
+          id: uid('c'), name: 'Atitude', icon: 'star', grad: 'g4', items: [
             { id: uid('s'), name: 'Ajudar sem pedirem', value: 3, kind: 'earn', daily: false },
             { id: uid('s'), name: 'Cumprir os combinados', value: 2, kind: 'earn', daily: true },
             { id: uid('s'), name: 'Faltar com respeito', value: 3, kind: 'penalty', daily: false },
@@ -107,7 +108,7 @@ const Store = (() => {
           ],
         },
         {
-          id: uid('c'), name: 'Extras', emoji: '🎯', grad: 'g5', items: [
+          id: uid('c'), name: 'Extras', icon: 'target', grad: 'g5', items: [
             { id: uid('s'), name: 'Atividade física', value: 2, kind: 'earn', daily: false },
             { id: uid('s'), name: 'Ajudar nas compras', value: 3, kind: 'earn', daily: false },
             { id: uid('s'), name: 'Cuidar do pet', value: 2, kind: 'earn', daily: true },
@@ -122,12 +123,42 @@ const Store = (() => {
   /* ---------- carga / gravação ---------- */
   let state = load();
 
+  /** de-para usado ao migrar dados salvos na versão com emoji */
+  const ICON_FROM_EMOJI = {
+    '📚': 'book', '🏠': 'house', '🪥': 'heart', '⭐': 'star', '🎯': 'target',
+    '🎨': 'palette', '⚽': 'ball', '🎸': 'music', '🧹': 'broom', '🐶': 'paw',
+    '🌱': 'leaf', '💧': 'drop', '🛏️': 'bed', '🍎': 'apple', '🧠': 'brain',
+    '💪': 'dumbbell', '🧺': 'basket', '🚿': 'shower', '🎒': 'backpack',
+    '🧩': 'puzzle', '🚲': 'bike', '🍽️': 'utensils', '📝': 'pencil', '🏆': 'trophy',
+  };
+
+  /** converte um estado salvo na v1 (com emoji) para o formato atual */
+  function migrate(old) {
+    const grads = ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8'];
+    (old.users || []).forEach((u, i) => {
+      if (!u.color) u.color = grads[i % grads.length];
+      delete u.emoji;
+    });
+    (old.categories || []).forEach((c) => {
+      if (!c.icon) c.icon = ICON_FROM_EMOJI[c.emoji] || 'star';
+      delete c.emoji;
+    });
+    (old.entries || []).forEach((e) => {
+      if (!e.icon) e.icon = ICON_FROM_EMOJI[e.emoji] || 'star';
+      delete e.emoji;
+    });
+    old.version = 2;
+    return old;
+  }
+
   function load() {
     try {
-      const raw = localStorage.getItem(KEY);
+      const raw = localStorage.getItem(KEY) || localStorage.getItem(OLD_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && Array.isArray(parsed.users)) return parsed;
+        if (parsed && Array.isArray(parsed.users)) {
+          return parsed.version === 2 ? parsed : migrate(parsed);
+        }
       }
     } catch (e) {
       console.warn('Não foi possível ler os dados salvos:', e);
@@ -208,7 +239,7 @@ const Store = (() => {
       Object.assign(u, {
         name: data.name.trim(),
         username,
-        emoji: data.emoji || u.emoji,
+        color: data.color || u.color || 'g1',
         goalName: data.goalName || '',
         goalAmount: Number(data.goalAmount) || 0,
       });
@@ -222,7 +253,7 @@ const Store = (() => {
 
     const u = {
       id: uid('u'), role: 'child', name: data.name.trim(), username,
-      pass: hash(data.password), emoji: data.emoji || '🙂',
+      pass: hash(data.password), color: data.color || 'g1',
       goalName: data.goalName || '', goalAmount: Number(data.goalAmount) || 0,
     };
     state.users.push(u);
@@ -247,13 +278,13 @@ const Store = (() => {
       const c = categoryById(data.id);
       if (!c) return { ok: false, error: 'Categoria não encontrada.' };
       c.name = data.name.trim();
-      c.emoji = data.emoji || c.emoji;
+      c.icon = data.icon || c.icon;
       c.grad = data.grad || c.grad;
       save();
       return { ok: true, category: c };
     }
     const c = {
-      id: uid('c'), name: data.name.trim(), emoji: data.emoji || '✨',
+      id: uid('c'), name: data.name.trim(), icon: data.icon || 'star',
       grad: data.grad || 'g1', items: [],
     };
     state.categories.push(c);
@@ -307,7 +338,7 @@ const Store = (() => {
     state.entries.find((e) => e.childId === childId && e.date === date && e.itemId === itemId) || null;
 
   /** marca/desmarca uma ação do dia. Só é possível desmarcar enquanto está
-   *  pendente — depois da validação do responsável o registro fica travado. */
+   *  pendente. Depois da validação do responsável o registro fica travado. */
   function toggleEntry(childId, date, catId, itemId) {
     const cat = categoryById(catId);
     const item = cat && cat.items.find((i) => i.id === itemId);
@@ -316,7 +347,7 @@ const Store = (() => {
     const existing = entryFor(childId, date, itemId);
     if (existing) {
       if (existing.status !== 'pending')
-        return { ok: false, error: 'Já validado pelo responsável — não dá para alterar.' };
+        return { ok: false, error: 'Já validado pelo responsável, não dá para alterar.' };
       state.entries = state.entries.filter((e) => e.id !== existing.id);
       save();
       return { ok: true, removed: true };
@@ -325,7 +356,7 @@ const Store = (() => {
     state.entries.push({
       id: uid('e'), childId, date, catId, itemId,
       name: item.name, value: item.value, kind: item.kind,
-      emoji: cat.emoji, grad: cat.grad, catName: cat.name,
+      icon: cat.icon, grad: cat.grad, catName: cat.name,
       note: '', status: 'pending',
       reviewNote: '', reviewedBy: null, reviewedAt: null,
       createdAt: new Date().toISOString(),

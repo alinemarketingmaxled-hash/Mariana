@@ -1,9 +1,10 @@
 /* Service worker: deixa o app abrir offline depois da primeira visita. */
-const CACHE = 'mesada-v1';
+const CACHE = 'mesada-v2';
 const ASSETS = [
   './', './index.html', './manifest.json',
   './assets/styles.css', './assets/icon.svg',
-  './assets/js/store.js', './assets/js/ui.js', './assets/js/screen-auth.js',
+  './assets/fonts/archivo-latin.woff2', './assets/fonts/archivo-italic-latin.woff2',
+  './assets/js/icons.js', './assets/js/store.js', './assets/js/ui.js', './assets/js/screen-auth.js',
   './assets/js/screen-child.js', './assets/js/screen-parent.js', './assets/js/app.js',
 ];
 

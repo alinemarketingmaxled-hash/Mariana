@@ -1,5 +1,5 @@
 /* =========================================================
-   screen-child.js — área do filho(a)
+   screen-child.js: área do filho(a)
    ========================================================= */
 const ChildScreen = (() => {
   let tab = 'home';
@@ -19,15 +19,15 @@ const ChildScreen = (() => {
     return `
       <header class="topbar">
         <div class="who">
-          <div class="avatar">${user.emoji || '🙂'}</div>
+          <div class="avatar ${user.color || 'g1'}">${UI.esc(user.name.trim().charAt(0).toUpperCase())}</div>
           <div>
             <div class="t1">${greet()}, ${UI.esc(user.name.split(' ')[0])}</div>
             <div class="t2">${Store.labelMonth(Store.monthOf(Store.today()))}</div>
           </div>
         </div>
         <div class="row" style="gap:9px">
-          <button class="icon-btn badge" data-count="${pend}" data-go="extrato" aria-label="Lançamentos aguardando">⏳</button>
-          <button class="icon-btn" data-menu aria-label="Menu">☰</button>
+          <button class="icon-btn badge" data-count="${pend}" data-go="extrato" aria-label="Lançamentos aguardando">${Icons.svg('clock')}</button>
+          <button class="icon-btn" data-menu aria-label="Menu">${Icons.svg('menu')}</button>
         </div>
       </header>`;
   }
@@ -41,7 +41,7 @@ const ChildScreen = (() => {
     return `
       <section class="hero">
         <div class="hero-top">
-          <div class="hero-ico">💰</div>
+          <div class="hero-ico">${Icons.svg('wallet')}</div>
           <div class="grow">
             <div class="label">Saldo disponível</div>
             <div class="value"><small>R$</small>${Math.abs(bal).toFixed(2).replace('.', ',')}</div>
@@ -50,7 +50,7 @@ const ChildScreen = (() => {
         ${goal > 0 ? `
           <div style="position:relative;margin-top:16px">
             <div class="between" style="margin-bottom:7px">
-              <span class="tiny" style="color:var(--panel-muted)">🎯 ${UI.esc(user.goalName || 'Meta')}</span>
+              <span class="tiny row" style="color:var(--panel-muted);gap:6px">${Icons.svg('target', 'ico-sm')} ${UI.esc(user.goalName || 'Meta')}</span>
               <span class="tiny bold">${pct.toFixed(0)}% de ${Store.money(goal)}</span>
             </div>
             <div class="bar"><i style="width:${pct}%"></i></div>
@@ -84,7 +84,7 @@ const ChildScreen = (() => {
 
   function categoryGrid(user) {
     const cats = Store.categories();
-    if (!cats.length) return UI.empty('🗂️', 'Ainda não há categorias. Peça para o responsável criar as ações da mesada.');
+    if (!cats.length) return UI.empty('folder', 'Ainda não há categorias. Peça para o responsável criar as ações da mesada.');
     return `
       <div class="grid">
         ${cats.map((c) => {
@@ -104,7 +104,7 @@ const ChildScreen = (() => {
           return `
             <button class="tile" data-cat="${c.id}">
               ${pin}
-              <span class="em ${c.grad}">${c.emoji}</span>
+              <span class="em ${c.grad}">${Icons.svg(c.icon)}</span>
               <span class="nm">${UI.esc(c.name)}</span>
               <span class="sub">${c.items.length} ${c.items.length === 1 ? 'ação' : 'ações'}</span>
             </button>`;
@@ -152,7 +152,7 @@ const ChildScreen = (() => {
 
   function dayEntriesList(user) {
     const list = Store.entriesOf(user.id, date);
-    if (!list.length) return UI.empty('📝', 'Nada marcado ainda. Escolha uma categoria acima e registre o que você fez.');
+    if (!list.length) return UI.empty('pencil', 'Nada marcado ainda. Escolha uma categoria acima e registre o que você fez.');
     return `<div class="list">${list.map(entryRow).join('')}</div>`;
   }
 
@@ -160,20 +160,20 @@ const ChildScreen = (() => {
     const sign = e.kind === 'penalty' ? '-' : '+';
     return `
       <div class="task">
-        <span class="em ${e.grad || 'g1'}">${e.emoji || '✨'}</span>
+        <span class="em ${e.grad || 'g1'}">${Icons.svg(e.icon)}</span>
         <div class="grow">
           <div class="nm">${UI.esc(e.name)}</div>
           <div class="mt">
             ${UI.statusChip(e.status)}
             <span>${UI.esc(e.catName || '')}</span>
-            ${e.note ? `<span>• 💬 ${UI.esc(e.note)}</span>` : ''}
+            ${e.note ? `<span>• ${UI.esc(e.note)}</span>` : ''}
           </div>
-          ${e.reviewNote ? `<div class="note mt8">💬 ${UI.esc(e.reviewNote)}</div>` : ''}
+          ${e.reviewNote ? `<div class="note mt8">${UI.esc(e.reviewNote)}</div>` : ''}
         </div>
         <div class="col" style="align-items:flex-end;gap:6px">
           <span class="val ${e.kind === 'penalty' ? 'pen' : 'earn'}">${sign}${Store.money(e.value).replace('R$ ', '')}</span>
           ${e.status === 'pending'
-            ? `<button class="btn btn-soft btn-sm" data-note="${e.id}">💬</button>` : ''}
+            ? `<button class="btn btn-soft btn-sm" data-note="${e.id}" aria-label="Comentar">${Icons.svg('chat')}</button>` : ''}
         </div>
       </div>`;
   }
@@ -199,7 +199,7 @@ const ChildScreen = (() => {
         <div class="list">
           ${payouts.slice(0, 4).map((p) => `
             <div class="mini-row">
-              <span class="em" style="font-size:20px">💸</span>
+              <span class="em g3" style="width:34px;height:34px;border-radius:12px;display:grid;place-items:center">${Icons.svg('banknote')}</span>
               <div class="grow">
                 <div class="bold small">${UI.esc(p.note || 'Mesada paga')}</div>
                 <div class="tiny muted">${Store.labelDate(p.date)}</div>
@@ -214,7 +214,7 @@ const ChildScreen = (() => {
           <span class="tiny muted">${Store.money(byDate[d].filter((e) => e.status !== 'rejected').reduce((s, e) => s + Store.signed(e), 0))}</span>
         </div>
         <div class="list">${byDate[d].map(entryRow).join('')}</div>`).join('')
-        : UI.empty('🗓️', 'Nenhum lançamento por aqui ainda.')}`;
+        : UI.empty('calendar', 'Nenhum lançamento por aqui ainda.')}`;
   }
 
   /* ---------- aba: perfil ---------- */
@@ -223,7 +223,7 @@ const ChildScreen = (() => {
     const bal = Store.balance(user.id);
     return `
       <section class="card mt8" style="display:flex;align-items:center;gap:14px">
-        <div class="avatar" style="width:58px;height:58px;font-size:27px">${user.emoji || '🙂'}</div>
+        <div class="avatar ${user.color || 'g1'}" style="width:58px;height:58px;font-size:24px">${UI.esc(user.name.trim().charAt(0).toUpperCase())}</div>
         <div class="grow">
           <div class="bold" style="font-size:17px">${UI.esc(user.name)}</div>
           <div class="small muted">@${UI.esc(user.username)}</div>
@@ -240,7 +240,7 @@ const ChildScreen = (() => {
         <div class="section-title"><h3>Minha meta</h3></div>
         <div class="card">
           <div class="between">
-            <div class="row"><span style="font-size:22px">🎯</span>
+            <div class="row"><span class="em g4" style="width:38px;height:38px;border-radius:13px;display:grid;place-items:center">${Icons.svg('target')}</span>
               <div><div class="bold small">${UI.esc(user.goalName || 'Meta')}</div>
               <div class="tiny muted">falta ${Store.money(Math.max(0, user.goalAmount - bal))}</div></div>
             </div>
@@ -254,14 +254,14 @@ const ChildScreen = (() => {
       <div class="section-title"><h3>Conta</h3></div>
       <div class="list">
         <button class="mini-row" data-change-pass>
-          <span style="font-size:19px">🔒</span><span class="grow bold small" style="text-align:left">Trocar minha senha</span><span class="muted">›</span>
+          ${Icons.svg('lock')}<span class="grow bold small" style="text-align:left">Trocar minha senha</span>${Icons.svg('chevron', 'ico-sm dim')}
         </button>
         <button class="mini-row" data-theme-toggle>
-          <span style="font-size:19px">${Store.theme() === 'dark' ? '☀️' : '🌙'}</span>
-          <span class="grow bold small" style="text-align:left">Tema ${Store.theme() === 'dark' ? 'claro' : 'escuro'}</span><span class="muted">›</span>
+          ${Icons.svg(Store.theme() === 'dark' ? 'sun' : 'moon')}
+          <span class="grow bold small" style="text-align:left">Tema ${Store.theme() === 'dark' ? 'claro' : 'escuro'}</span>${Icons.svg('chevron', 'ico-sm dim')}
         </button>
         <button class="mini-row" data-logout>
-          <span style="font-size:19px">🚪</span><span class="grow bold small" style="text-align:left">Sair da conta</span><span class="muted">›</span>
+          ${Icons.svg('logout')}<span class="grow bold small" style="text-align:left">Sair da conta</span>${Icons.svg('chevron', 'ico-sm dim')}
         </button>
       </div>`;
   }
@@ -271,7 +271,7 @@ const ChildScreen = (() => {
     const cat = Store.categoryById(catId);
     if (!cat) return;
     const body = () => {
-      if (!cat.items.length) return UI.empty('✨', 'Nenhuma ação nesta categoria ainda.');
+      if (!cat.items.length) return UI.empty('star', 'Nenhuma ação nesta categoria ainda.');
       return `<div class="list">
         ${cat.items.map((it) => {
           const e = Store.entryFor(user.id, date, it.id);
@@ -279,13 +279,13 @@ const ChildScreen = (() => {
           const locked = e && e.status !== 'pending';
           return `
             <button class="task ${marked ? 'done' : ''}" data-item="${it.id}" ${locked ? 'data-locked="1"' : ''}>
-              <span class="check ${marked ? 'on' : ''}">✓</span>
+              <span class="check ${marked ? 'on' : ''}">${Icons.svg('check')}</span>
               <div class="grow">
                 <div class="nm">${UI.esc(it.name)}</div>
                 <div class="mt">
                   ${it.daily ? '<span class="chip neutral">todo dia</span>' : ''}
                   ${e ? UI.statusChip(e.status) : ''}
-                  ${locked ? '<span>🔒</span>' : ''}
+                  ${locked ? Icons.svg('lock', 'ico-sm dim') : ''}
                 </div>
               </div>
               <span class="val ${it.kind === 'penalty' ? 'pen' : 'earn'}">
@@ -301,11 +301,11 @@ const ChildScreen = (() => {
       sheet.querySelectorAll('[data-item]').forEach((btn) => {
         btn.addEventListener('click', () => {
           if (btn.getAttribute('data-locked')) {
-            return UI.toast('Esse item já foi validado pelo responsável 🔒');
+            return UI.toast('Esse item já foi validado pelo responsável');
           }
           const res = Store.toggleEntry(user.id, date, cat.id, btn.getAttribute('data-item'));
           if (!res.ok) return UI.toast(res.error, 'bad');
-          UI.toast(res.added ? 'Marcado! Aguardando validação ⏳' : 'Desmarcado');
+          UI.toast(res.added ? 'Marcado. Aguardando validação.' : 'Desmarcado');
           App.render();                                  // atualiza a tela ao fundo
           sheet.querySelector('.sheet-body').innerHTML = body();
           bindItems(sheet);
@@ -314,8 +314,8 @@ const ChildScreen = (() => {
     }
 
     UI.openSheet({
-      title: `${cat.emoji} ${cat.name}`,
-      subtitle: `${Store.labelDate(date)} — toque para marcar o que você fez`,
+      title: cat.name,
+      subtitle: `${Store.labelDate(date)}. Toque para marcar o que você fez.`,
       body: body(),
       actions: '<button class="btn btn-primary btn-block" data-done>Pronto</button>',
       onMount(sheet) {
@@ -346,7 +346,7 @@ const ChildScreen = (() => {
           const data = UI.formData(sheet.querySelector('#note-form'));
           Store.setEntryNote(entryId, data.note);
           UI.closeSheet();
-          UI.toast('Comentário salvo ✍️', 'ok');
+          UI.toast('Comentário salvo', 'ok');
           App.render();
         });
       },
@@ -366,14 +366,14 @@ const ChildScreen = (() => {
           <div class="stat"><div class="k">total do dia</div><div class="v">${Store.money(st.value)}</div></div>
         </div>
         ${st.required && !st.complete
-          ? `<div class="note">Ainda faltam ${st.required - st.filled} tarefa(s) do dia. Elas contam para a sua mesada!</div>`
-          : '<div class="note">🎉 Tudo que era obrigatório do dia está preenchido!</div>'}
-        ${list.length ? `<div class="list">${list.map(entryRow).join('')}</div>` : UI.empty('📝', 'Nada marcado neste dia.')}`,
+          ? `<div class="note">Ainda faltam ${st.required - st.filled} tarefa(s) do dia. Elas contam para a sua mesada.</div>`
+          : '<div class="note">Tudo que era obrigatório do dia está preenchido.</div>'}
+        ${list.length ? `<div class="list">${list.map(entryRow).join('')}</div>` : UI.empty('pencil', 'Nada marcado neste dia.')}`,
       actions: '<button class="btn btn-primary btn-block" data-ok>Enviar para validação</button>',
       onMount(sheet) {
         sheet.querySelector('[data-ok]').addEventListener('click', () => {
           UI.closeSheet();
-          UI.toast(list.length ? 'Enviado! O responsável já pode validar ✅' : 'Marque alguma tarefa primeiro 🙂',
+          UI.toast(list.length ? 'Enviado. O responsável já pode validar.' : 'Marque alguma tarefa primeiro.',
             list.length ? 'ok' : '');
         });
       },
@@ -386,10 +386,10 @@ const ChildScreen = (() => {
       subtitle: user.name,
       body: `
         <div class="list">
-          <button class="mini-row" data-m="perfil"><span style="font-size:19px">👤</span><span class="grow bold small" style="text-align:left">Meu perfil</span><span class="muted">›</span></button>
-          <button class="mini-row" data-m="extrato"><span style="font-size:19px">📊</span><span class="grow bold small" style="text-align:left">Extrato completo</span><span class="muted">›</span></button>
-          <button class="mini-row" data-m="theme"><span style="font-size:19px">${Store.theme() === 'dark' ? '☀️' : '🌙'}</span><span class="grow bold small" style="text-align:left">Trocar tema</span><span class="muted">›</span></button>
-          <button class="mini-row" data-m="logout"><span style="font-size:19px">🚪</span><span class="grow bold small" style="text-align:left">Sair</span><span class="muted">›</span></button>
+          <button class="mini-row" data-m="perfil">${Icons.svg('user')}<span class="grow bold small" style="text-align:left">Meu perfil</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-m="extrato">${Icons.svg('chart')}<span class="grow bold small" style="text-align:left">Extrato completo</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-m="theme">${Icons.svg(Store.theme() === 'dark' ? 'sun' : 'moon')}<span class="grow bold small" style="text-align:left">Trocar tema</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-m="logout">${Icons.svg('logout')}<span class="grow bold small" style="text-align:left">Sair</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
         </div>`,
       onMount(sheet) {
         sheet.querySelectorAll('[data-m]').forEach((b) => b.addEventListener('click', () => {
@@ -414,11 +414,11 @@ const ChildScreen = (() => {
         ${topbar(user)}
         <div class="scroll">${view}</div>
         <nav class="tabbar">
-          <button class="tab" data-tab="home" aria-pressed="${tab === 'home'}"><span class="em">🏠</span>Hoje</button>
-          <button class="tab" data-tab="extrato" aria-pressed="${tab === 'extrato'}"><span class="em">📊</span>Extrato</button>
-          <button class="fab" data-fab aria-label="Resumo do dia">✓</button>
-          <button class="tab" data-tab="perfil" aria-pressed="${tab === 'perfil'}"><span class="em">👤</span>Perfil</button>
-          <button class="tab" data-menu><span class="em">☰</span>Menu</button>
+          <button class="tab" data-tab="home" aria-pressed="${tab === 'home'}">${Icons.svg('home')}Hoje</button>
+          <button class="tab" data-tab="extrato" aria-pressed="${tab === 'extrato'}">${Icons.svg('chart')}Extrato</button>
+          <button class="fab" data-fab aria-label="Resumo do dia">${Icons.svg('check')}</button>
+          <button class="tab" data-tab="perfil" aria-pressed="${tab === 'perfil'}">${Icons.svg('user')}Perfil</button>
+          <button class="tab" data-menu>${Icons.svg('menu')}Menu</button>
         </nav>
       </div>`;
 
