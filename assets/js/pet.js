@@ -663,7 +663,7 @@ const Pet = (() => {
   const ABAS = [
     { id: 'bichinho', label: 'Bichinho', icone: 'paw' },
     { id: 'quarto', label: 'Quarto', icone: 'house' },
-    { id: 'roupas', label: 'Roupas e cama', icone: 'basket' },
+    { id: 'roupas', label: 'Roupas', icone: 'basket' },
   ];
 
   function openSheet(child, abaInicial) {
@@ -1539,7 +1539,10 @@ const Pet = (() => {
       ball.hidden = true;
       document.body.appendChild(ball);
 
-      pos.x = Math.min(limiteX(), window.innerWidth / 2 - SIZE / 2);
+      // no celular ele começa encostado na direita, para não tapar o conteúdo
+      pos.x = window.innerWidth < 1000
+        ? limiteX() - 4
+        : Math.min(limiteX(), window.innerWidth / 2 - SIZE / 2);
       pos.y = chaoY();
       aplicar();
 

@@ -136,7 +136,8 @@ quantos filhos quiser, cada um com o próprio login e senha.
 - **Carteira**: além do extrato, o filho registra **o que comprou** (lanche, brinquedo, jogo,
   presente, roupa ou outro) com valor, data, observação e foto. O app mostra quanto recebeu,
   quanto gastou e quanto sobrou.
-- **Meu dinheiro**: um painel só de números, com o quanto ela **já ganhou** (validado),
+- **Meu dinheiro**: dentro da *Carteira*, na aba **Meu dinheiro**, um painel só de números,
+  com o quanto ela **já ganhou** (validado),
   **já recebeu** (mesada paga), **já gastou** e **tem agora** na carteira, mais o que está
   a receber, o que está aguardando validação e as médias por mês. Tem um **gráfico de barras
   mês a mês** comparando ganhou, recebeu e gastou nos últimos 6 meses, um **anel** com quanto
@@ -183,6 +184,31 @@ na carteira    = (pagamentos recebidos) - (gastos anotados pelo filho)
 Lançamentos pendentes aparecem separados, em “aguardando”, e não entram no saldo.
 
 ---
+
+## No celular
+
+O app foi ajustado para ser usado principalmente no celular:
+
+- **Barra de baixo com cinco abas** (Hoje, Diário, Jogos, Agenda, Carteira), com ícone e nome
+  legível. Carteira reúne os lançamentos e o painel *Meu dinheiro* em um seletor no topo da página.
+- **Alvos grandes para o dedo**: todo botão, link, chip e opção de quiz tem pelo menos 40px de
+  altura, com a área de toque maior que o desenho.
+- **Campos com letra de 16px**, que é o tamanho a partir do qual o iPhone não dá zoom sozinho
+  ao tocar em um campo.
+- **Folhas (as janelas que sobem de baixo)** ocupam quase a tela toda, com o **título fixo no
+  topo** e os **botões fixos embaixo**: dá para rolar uma lista longa sem perder o Salvar de vista.
+- **Avisos aparecem embaixo**, acima da barra de navegação, e sobem mais quando há uma folha
+  aberta, para não taparem os botões.
+- **O bichinho começa encostado na direita** para não cobrir o conteúdo, e continua podendo ser
+  arrastado, sacudido e jogado para qualquer canto.
+- **Tira de dias com deslize** e o dia de hoje já centralizado.
+- **Sem atraso no toque** e sem o retângulo cinza que alguns navegadores desenham ao tocar.
+- **Celular deitado**: a barra e o botão flutuante encolhem para sobrar tela.
+- Instalável na tela inicial (PWA) com nome, ícone, cor da barra de status clara e escura,
+  e funcionando offline.
+
+Testado em 320, 360, 375, 390 e 412 pixels de largura, em pé e deitado, sem rolagem horizontal
+e sem nada estourando a tela.
 
 ## Estrutura
 

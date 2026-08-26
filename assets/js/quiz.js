@@ -536,7 +536,7 @@ const Quiz = (() => {
           <label>Submatérias estudadas</label>
           <div class="input-wrap" data-box-top>${listaTopicos()}</div>
           <div class="input-wrap">
-            <input data-extra placeholder="Outra submatéria que a professora passou" />
+            <input data-extra placeholder="Outra submatéria" />
             <button type="button" class="chip-btn" data-add-extra>incluir</button>
           </div>
           <div class="chip-row" data-chips-top>${chipsTopicos()}</div>

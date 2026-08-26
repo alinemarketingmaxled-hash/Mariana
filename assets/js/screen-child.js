@@ -6,6 +6,7 @@ const ChildScreen = (() => {
   let date = Store.today();
   let filter = 'all';
   let diaryFilter = 'all';
+  let moneyTab = 'carteira';   // dentro da Carteira: lançamentos ou painel
 
   const greet = () => {
     const h = new Date().getHours();
@@ -289,6 +290,20 @@ const ChildScreen = (() => {
 
   /* ---------- aba: extrato ---------- */
   function extratoView(user) {
+    const abas = `
+      <div class="seg-tabs" data-money>
+        <button type="button" data-money-tab="carteira" aria-pressed="${moneyTab === 'carteira'}">
+          ${Icons.svg('wallet')} Carteira
+        </button>
+        <button type="button" data-money-tab="painel" aria-pressed="${moneyTab === 'painel'}">
+          ${Icons.svg('chart')} Meu dinheiro
+        </button>
+      </div>`;
+    if (moneyTab === 'painel') return abas + Dash.view(user);
+    return abas + lancamentosView(user);
+  }
+
+  function lancamentosView(user) {
     const all = Store.historyOf(user.id, 90);
     const list = all.filter((e) => filter === 'all' || e.status === filter);
     const payouts = Store.payoutsOf(user.id);
@@ -740,12 +755,12 @@ const ChildScreen = (() => {
     agenda: { title: 'Agenda', subtitle: 'Provas, trabalhos e eventos' },
     jogos: { title: 'Jogos e estudo', subtitle: 'Brinque com o bichinho e treine as matérias da escola' },
     extrato: { title: 'Carteira', subtitle: 'O que entrou, o que você gastou e o que sobrou' },
-    painel: { title: 'Meu dinheiro', subtitle: 'Quanto você ganhou, recebeu e gastou' },
+    extratoPainel: { title: 'Meu dinheiro', subtitle: 'Quanto você ganhou, recebeu e gastou' },
     perfil: { title: 'Perfil', subtitle: 'Sua conta e sua meta' },
   };
 
   function render(root, user) {
-    const page = PAGES[tab] || PAGES.home;
+    const page = (tab === 'extrato' && moneyTab === 'painel' ? PAGES.extratoPainel : PAGES[tab]) || PAGES.home;
     const pending = Store.pendingEntries(user.id).length;
     const proximos = Store.upcomingEvents(user.id).filter((e) => !e.done).length;
 
@@ -754,10 +769,11 @@ const ChildScreen = (() => {
       : tab === 'agenda' ? Agenda.view(user, user.id, false)
       : tab === 'jogos' ? Games.view(user)
       : tab === 'extrato' ? extratoView(user)
-      : tab === 'painel' ? Dash.view(user)
       : perfilView(user);
 
-    const aside = tab === 'agenda' || tab === 'jogos' || tab === 'painel' ? ''
+    const semColuna = tab === 'agenda' || tab === 'jogos'
+      || (tab === 'extrato' && moneyTab === 'painel');
+    const aside = semColuna ? ''
       : `${metaPanel(user)}${Agenda.upcoming(user.id, false)}` +
         `${tab === 'home' ? resumoPanel(user) : ''}${Pet.panel(user)}`;
 
@@ -782,7 +798,6 @@ const ChildScreen = (() => {
         : tab === 'agenda' ? { icon: 'plus', label: 'Novo compromisso' }
         : tab === 'jogos' ? { icon: 'ball', label: 'Jogar agora' }
         : tab === 'extrato' ? { icon: 'coins', label: 'Registrar gasto' }
-        : tab === 'painel' ? { icon: 'coins', label: 'Registrar gasto' }
         : { icon: 'check', label: 'Resumo do dia' },
       nav: [
         { id: 'home', label: 'Hoje', icon: 'home' },
@@ -790,7 +805,6 @@ const ChildScreen = (() => {
         { id: 'jogos', label: 'Jogos', icon: 'ball' },
         { id: 'agenda', label: 'Agenda', icon: 'calendar', count: proximos },
         { id: 'extrato', label: 'Carteira', icon: 'wallet', count: pending },
-        { id: 'painel', label: 'Dinheiro', icon: 'chart' },
       ],
     });
 
@@ -806,13 +820,18 @@ const ChildScreen = (() => {
           const sorteio = Games.LISTA[Math.floor(Math.random() * Games.LISTA.length)];
           return Games.abrir(user, sorteio.id);
         }
-        if (tab === 'extrato' || tab === 'painel') return openPurchaseForm(user, null);
+        if (tab === 'extrato') return openPurchaseForm(user, null);
         return openDaySummary(user);
       },
     });
     Agenda.bind(root, user, rerender);
     Pet.bind(root, user, rerender);
     Games.bind(root, user, rerender);
+
+    root.querySelectorAll('[data-money-tab]').forEach((b) => b.addEventListener('click', () => {
+      moneyTab = b.getAttribute('data-money-tab');
+      rerender();
+    }));
 
     root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
       tab = b.getAttribute('data-go');
@@ -823,8 +842,13 @@ const ChildScreen = (() => {
       rerender();
     }));
 
+    // centraliza o dia escolhido na tira, sem mexer na rolagem da página
+    const strip = root.querySelector('.days');
     const selectedDay = root.querySelector(`.days [data-day="${date}"]`);
-    if (selectedDay) selectedDay.scrollIntoView({ inline: 'center', block: 'nearest' });
+    if (strip && selectedDay) {
+      strip.scrollLeft = Math.max(0,
+        selectedDay.offsetLeft - (strip.clientWidth - selectedDay.offsetWidth) / 2);
+    }
     root.querySelectorAll('.days [data-day]').forEach((b) => b.addEventListener('click', () => {
       date = b.getAttribute('data-day');
       rerender();

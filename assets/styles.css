@@ -106,6 +106,11 @@ body{
 }
 button,input,select,textarea{font:inherit;color:inherit}
 button{border:0;background:none;cursor:pointer}
+/* no celular: sem atraso de toque, sem o quadrado cinza do toque */
+button,a,select,label,.seg,.tab,.tile,.day,.quiz-op{
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation
+}
+button,.tab,.seg,.day{-webkit-user-select:none;user-select:none}
 h1,h2,h3,h4,p{margin:0}
 ul{margin:0;padding:0;list-style:none}
 
@@ -378,12 +383,16 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
   transition:width .6s var(--ease)
 }
 .hero-stats{display:flex;gap:10px;position:relative}
-.hero-stat{flex:1;padding:11px 12px;border-radius:16px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.09)}
+.hero-stat{flex:1 1 0;min-width:0;padding:11px 12px;border-radius:16px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.09)}
 .hero-stat .k{font-size:9.5px;color:var(--panel-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hero-stat .v{font-size:15px;font-weight:750;margin-top:2px}
+.hero-stat .v{font-size:15px;font-weight:750;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ---------- tira de dias ---------- */
-.days{display:flex;gap:9px;overflow-x:auto;padding:4px 2px 6px;scrollbar-width:none}
+.days{
+  display:flex;gap:9px;overflow-x:auto;padding:4px 2px 6px;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;overscroll-behavior-x:contain
+}
+.days .day{scroll-snap-align:center}
 .days::-webkit-scrollbar{display:none}
 .day{
   flex:0 0 auto;width:56px;padding:11px 0;border-radius:20px;text-align:center;
@@ -679,7 +688,7 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 .sheet-body{display:flex;flex-direction:column;gap:14px}
 .sheet-body form{display:flex;flex-direction:column;gap:14px}
 .sheet-actions{display:flex;gap:10px;margin-top:6px}
-.sheet-actions .btn{flex:1}
+.sheet-actions .btn{flex:1;min-width:0}
 @keyframes up{from{transform:translateY(26px);opacity:0}to{transform:none;opacity:1}}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @keyframes down{from{transform:translateY(-16px);opacity:0}to{transform:none;opacity:1}}
@@ -1227,11 +1236,135 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 @media (max-width:1100px){
   .dash-grid,.dash-grid.dois{grid-template-columns:repeat(2,1fr)}
 }
-@media (max-width:520px){
-  .dash-anel{justify-content:center}
-  .dash-anel .grow{min-width:100%}
+@media (max-width:560px){
+  .dash-anel{flex-direction:column;align-items:stretch}
+  .dash-anel .pet-ring{align-self:center}
+  .dash-anel .grow{width:100%;min-width:0}
   .dash-grid,.dash-grid.dois{grid-template-columns:1fr 1fr;gap:9px}
   .dash-card{padding:13px;border-radius:20px}
   .dash-v{font-size:19px}
   .dash-chart{height:140px;gap:6px}
+}
+
+/* =========================================================
+   Celular: alvos maiores, texto legível e folhas com o botão
+   sempre à mão. Tudo abaixo de 1000px de largura.
+   ========================================================= */
+@media (max-width:999px){
+  /* ----- alvos de toque confortáveis para o dedo ----- */
+  .btn{min-height:50px;white-space:normal;line-height:1.25;text-align:center}
+  .btn-sm{min-height:42px;padding:11px 16px;font-size:12px}
+  .btn-block{width:100%}
+  .icon-btn{width:46px;height:46px}
+  .icon-btn.sm{width:40px;height:40px}
+  .icon-btn.sm .ico{width:18px;height:18px}
+  .eye{width:42px;height:42px;display:grid;place-items:center}
+  .chip-btn{min-height:40px;padding:0 15px;display:inline-flex;align-items:center;font-size:12.5px}
+  .chip-tag{min-height:38px;padding:0 14px;font-size:12.5px}
+  .seg-mini button{min-height:42px;font-size:12.5px}
+  .seg{min-height:50px}
+  .link{
+    display:inline-flex;align-items:center;min-height:36px;padding:0 4px;margin:0 -4px;
+    font-size:12.5px;
+  }
+  .section-title .link{margin-right:-4px}
+  .quiz-op{min-height:56px}
+  .pick-grid button{min-height:48px}
+  .day{min-height:74px}
+
+  /* ----- formulários: 16px evita o zoom automático do iPhone ----- */
+  .input-wrap{padding:0 14px}
+  .input-wrap input,.input-wrap select,.input-wrap textarea{font-size:16px;padding:15px 0}
+  .input-wrap textarea{padding:14px 0}
+  .field > label{font-size:12px}
+  .note{font-size:12.5px;line-height:1.55}
+
+  /* ----- barra de navegação de baixo ----- */
+  .side{width:min(calc(100% - 20px),470px);height:72px;padding:0 6px}
+  .tab{height:58px;font-size:10.5px;letter-spacing:.01em}
+  .tab .ico{width:21px;height:21px}
+  .tab-label{white-space:nowrap}
+  .nav-count{
+    position:absolute;top:1px;left:calc(50% + 6px);min-width:17px;height:17px;
+    padding:0 4px;font-size:9.5px;box-shadow:0 0 0 2px var(--panel)
+  }
+  .content{padding:0 16px calc(132px + var(--safe-b))}
+  .fab{right:16px;bottom:calc(100px + var(--safe-b));width:60px;height:60px;border-radius:21px}
+  .fab .ico{width:24px;height:24px}
+
+  /* ----- folhas: cabeçalho e botões sempre visíveis ----- */
+  .sheet{max-height:94dvh;padding:0 18px}
+  .sheet.larga{max-height:94dvh}
+  .grabber{display:none}
+  .sheet-head{
+    position:sticky;top:0;z-index:4;background:var(--surface);
+    margin:0 -18px 14px;padding:18px 18px 12px;border-radius:30px 30px 0 0
+  }
+  .sheet-head h3{font-size:19px}
+
+  /* aviso rápido embaixo, longe do cabeçalho da folha */
+  .toast-root{
+    top:auto;bottom:calc(104px + var(--safe-b));justify-content:flex-end
+  }
+  /* com uma folha aberta ele sobe para não tapar os botões dela */
+  body:has(.sheet) .toast-root{bottom:calc(210px + var(--safe-b))}
+  .toast{animation:up .3s var(--ease)}
+  .sheet-actions{
+    position:sticky;bottom:0;z-index:4;flex-wrap:wrap;gap:9px;
+    margin:18px -18px 0;padding:12px 18px calc(16px + var(--safe-b));
+    background:var(--surface);box-shadow:0 -10px 18px var(--surface)
+  }
+  .sheet-actions .btn{flex:1 1 46%;font-size:13px;padding:14px 12px}
+  .sheet-actions .btn-block{flex:1 1 100%}
+
+  /* ----- conteúdo mais folgado ----- */
+  .page-head{padding-top:calc(16px + env(safe-area-inset-top,0px))}
+  .panel{padding:16px}
+  .hero{padding:20px}
+  .hero-stat .k{letter-spacing:.03em}
+  .stat-row{gap:9px}
+  .seg-tabs button{padding:12px 8px;font-size:11.5px;min-height:46px}
+  .seg-tabs button svg{width:16px;height:16px}
+  .pick-grid.shape,.pick-grid.outfit,.pick-grid.accessory,
+  .pick-grid.color,.pick-grid.parede,.pick-grid.piso{grid-template-columns:repeat(4,1fr)}
+  .pick-grid.bed,.pick-grid.temas,.pick-grid.movel{grid-template-columns:repeat(3,1fr)}
+  .pick-grid.movel button svg,.pick-grid.temas button svg,.pick-grid.bed button svg{height:82px}
+  /* cartão do bichinho compacto: bonequinho e anel lado a lado */
+  .pet-atualiza{gap:12px;padding:12px;flex-wrap:nowrap;align-items:center}
+  .pet-atualiza-art{flex:0 0 46%}
+  .pet-atualiza-art svg{width:100%;height:auto}
+  .pet-atualiza-side{min-width:0;gap:6px}
+  .pet-atualiza-side .pet-ring{width:96px;height:96px}
+  .pet-ring-mid b{font-size:27px}
+  .pet-ring-mid i{font-size:9px}
+  .pet-atualiza-side .center{font-size:10.5px;line-height:1.4}
+  .pet-atualiza-tags{gap:5px}
+  .pet-atualiza-tags .chip{font-size:10px;padding:5px 9px}
+  .mat-grid{grid-template-columns:1fr}
+}
+
+/* telas bem estreitas */
+@media (max-width:400px){
+  .content{padding:0 13px calc(132px + var(--safe-b))}
+  .hero-stats{gap:7px}
+  .hero-stat{padding:10px 9px}
+  .hero-stat .v{font-size:13px}
+  .hero-stat .k{font-size:9px;letter-spacing:.05em}
+  .tab{font-size:10px}
+  .tab .ico{width:20px;height:20px}
+  .sheet{padding:0 15px}
+  .sheet-head{margin:0 -15px 14px;padding:18px 15px 12px}
+  .sheet-actions{margin:18px -15px 0;padding:12px 15px calc(16px + var(--safe-b))}
+  .pick-grid.shape,.pick-grid.outfit,.pick-grid.accessory,
+  .pick-grid.color,.pick-grid.parede,.pick-grid.piso{grid-template-columns:repeat(4,1fr)}
+  .pick-grid.movel button svg,.pick-grid.temas button svg,.pick-grid.bed button svg{height:70px}
+}
+
+/* celular deitado: barra e conteúdo mais baixos para sobrar tela */
+@media (max-width:999px) and (max-height:520px){
+  .side{height:60px;bottom:calc(8px + var(--safe-b))}
+  .tab{height:48px;font-size:9.5px}
+  .content{padding-bottom:calc(104px + var(--safe-b))}
+  .fab{bottom:calc(78px + var(--safe-b));width:52px;height:52px}
+  .sheet{max-height:96dvh}
 }
