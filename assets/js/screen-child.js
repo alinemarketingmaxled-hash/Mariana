@@ -739,7 +739,7 @@ const ChildScreen = (() => {
     home: { title: 'Hoje', subtitle: 'Marque o que você fez e envie para validação' },
     diario: { title: 'Diário', subtitle: 'Livros, lições e atividades do dia' },
     agenda: { title: 'Agenda', subtitle: 'Provas, trabalhos e eventos' },
-    jogos: { title: 'Joguinhos', subtitle: 'Brinque com o seu bichinho e ganhe pontos de amizade' },
+    jogos: { title: 'Jogos e estudo', subtitle: 'Brinque com o bichinho e treine as matérias da escola' },
     extrato: { title: 'Carteira', subtitle: 'O que entrou, o que você gastou e o que sobrou' },
     perfil: { title: 'Perfil', subtitle: 'Sua conta e sua meta' },
   };
@@ -808,7 +808,7 @@ const ChildScreen = (() => {
     });
     Agenda.bind(root, user, rerender);
     Pet.bind(root, user, rerender);
-    Games.bind(root, user);
+    Games.bind(root, user, rerender);
 
     root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
       tab = b.getAttribute('data-go');

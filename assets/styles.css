@@ -847,6 +847,58 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 .simon-pad{height:96px;border-radius:24px;opacity:.55;transition:.15s var(--ease)}
 .simon-pad.on{opacity:1;transform:scale(1.04);box-shadow:0 0 0 4px rgba(19,19,56,.18)}
 
+/* ---------- quiz e estudo ---------- */
+.quiz-pet-row{display:flex;align-items:center;gap:12px}
+.quiz-pet{display:grid;place-items:center;margin-top:10px}
+.quiz-pet-row .pet-bubble{align-self:center;font-size:12.5px}
+.quiz-pet-row .pet-bubble::after{left:-7px;bottom:14px;border-radius:0 0 0 6px;transform:rotate(45deg)}
+.quiz-q{
+  padding:20px 18px;border-radius:24px;background:var(--panel);color:#fff;
+  font-size:19px;font-weight:800;line-height:1.35;text-align:center
+}
+.quiz-q.conta{font-size:32px;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.quiz-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.quiz-op{
+  padding:16px 12px;border-radius:20px;background:var(--surface);box-shadow:var(--neu-in-sm);
+  font-size:15px;font-weight:750;color:var(--ink);transition:.16s var(--ease);
+  text-transform:none;font-variation-settings:'wdth' 104
+}
+.quiz-op:active{transform:translateY(2px)}
+.quiz-op.certa{background:var(--lime);color:var(--panel);box-shadow:0 4px 0 var(--panel)}
+.quiz-op.errada{background:var(--pink);color:var(--panel);box-shadow:0 4px 0 var(--panel)}
+.card-add{display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:22px;background:var(--surface-2)}
+.flash-card{
+  width:100%;min-height:190px;border-radius:26px;position:relative;perspective:800px;background:none;margin:10px 0
+}
+.flash-face{
+  position:absolute;inset:0;display:grid;place-items:center;padding:22px;border-radius:26px;
+  font-size:19px;font-weight:750;text-align:center;line-height:1.4;
+  text-transform:none;font-variation-settings:'wdth' 104;
+  transition:transform .4s var(--ease);backface-visibility:hidden
+}
+.flash-q{background:var(--blue);color:#fff}
+.flash-a{background:var(--lime);color:var(--panel);transform:rotateY(180deg)}
+.flash-card.virada .flash-q{transform:rotateY(-180deg)}
+.flash-card.virada .flash-a{transform:rotateY(0)}
+
+/* ---------- lojinha ---------- */
+.shop-preview{display:grid;place-items:center;padding:14px;border-radius:26px;background:var(--surface-2)}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.shop-item{
+  position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;
+  padding:13px;border-radius:20px;background:var(--surface);box-shadow:var(--neu-out-sm);text-align:left
+}
+.shop-chip{width:30px;height:30px;border-radius:10px;border:2.5px solid var(--panel)}
+.shop-nome{font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.shop-tag{font-size:10.5px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.05em}
+.shop-item.usando{background:var(--lime)}
+.shop-item.usando .shop-tag{color:var(--panel)}
+.shop-item.locked{opacity:.55;background:var(--surface-2);box-shadow:none}
+.shop-item.locked .shop-tag{color:var(--muted)}
+.shop-lock{position:absolute;top:10px;right:10px;color:var(--muted)}
+.shop-lock .ico{width:15px;height:15px}
+.pet-bed{transform-origin:100px 180px}
+
 /* ---------- animações de resposta ---------- */
 .fx-layer{position:fixed;inset:0;z-index:80;pointer-events:none;overflow:hidden}
 .fx-piece{

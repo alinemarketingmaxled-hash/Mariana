@@ -6,6 +6,13 @@
 const Games = (() => {
   const LISTA = [
     {
+      id: 'matematica',
+      nome: 'Conta rápida',
+      desc: 'Contas de somar, subtrair, multiplicar e dividir. Acertou seguido, fica mais difícil.',
+      icon: 'brain',
+      grad: 'g8',
+    },
+    {
       id: 'bola',
       nome: 'Pega a bola',
       desc: 'As bolinhas caem do céu. Toque em todas antes que cheguem no chão.',
@@ -31,7 +38,18 @@ const Games = (() => {
   const jogo = (id) => LISTA.find((g) => g.id === id) || LISTA[0];
 
   /* ---------- tela da aba ---------- */
+  let aba = 'jogos';
+
   function view(child) {
+    return `
+      <div class="seg-mini" role="group" aria-label="Jogos ou estudo">
+        <button data-play-tab="jogos" aria-pressed="${aba === 'jogos'}">Joguinhos</button>
+        <button data-play-tab="quiz" aria-pressed="${aba === 'quiz'}">Quiz das matérias</button>
+      </div>
+      <div class="mt16">${aba === 'quiz' ? Quiz.view(child) : jogosView(child)}</div>`;
+  }
+
+  function jogosView(child) {
     const pet = Store.petOf(child.id);
     const recordes = pet.best || {};
     const ganhos = Store.petGamesToday(child.id);
@@ -205,6 +223,116 @@ const Games = (() => {
     });
   }
 
+  /* ---------- jogo: conta rápida ---------- */
+  function matematica(child) {
+    const DURACAO = 60;
+    let pontos = 0;
+    let sequencia = 0;
+    let erros = 0;
+    let restante = DURACAO;
+    let relogio = null;
+    let travado = false;
+    let atual = null;
+
+    const sortear = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
+
+    /** a dificuldade sobe conforme a criança acerta seguido */
+    function novaConta() {
+      const nivel = Math.min(4, Math.floor(sequencia / 3));
+      let a, b, op, r;
+      if (nivel === 0) { a = sortear(2, 20); b = sortear(2, 20); op = '+'; r = a + b; }
+      else if (nivel === 1) { a = sortear(10, 40); b = sortear(2, a); op = '-'; r = a - b; }
+      else if (nivel === 2) { a = sortear(2, 10); b = sortear(2, 10); op = '×'; r = a * b; }
+      else if (nivel === 3) { b = sortear(2, 10); r = sortear(2, 10); a = b * r; op = '÷'; }
+      else {
+        a = sortear(11, 25); b = sortear(3, 12);
+        if (Math.random() > 0.5) { op = '×'; r = a * b; } else { op = '+'; r = a + b; }
+      }
+      const certo = op === '÷' ? r : r;
+      const alternativas = new Set([certo]);
+      while (alternativas.size < 4) {
+        const desvio = sortear(1, Math.max(4, Math.round(certo * 0.25)));
+        const cand = Math.random() > 0.5 ? certo + desvio : certo - desvio;
+        if (cand >= 0) alternativas.add(cand);
+      }
+      return {
+        texto: `${a} ${op} ${b}`,
+        certo,
+        opcoes: Array.from(alternativas).sort(() => Math.random() - 0.5),
+      };
+    }
+
+    UI.openSheet({
+      title: 'Conta rápida',
+      subtitle: 'Responda o máximo de contas em 60 segundos.',
+      body: `
+        <div class="game-hud">
+          <span class="chip lime" data-pontos>0 acertos</span>
+          <span class="chip neutral" data-tempo>${DURACAO}s</span>
+          <span class="chip pending" data-seq>sequência 0</span>
+        </div>
+        <div class="quiz-pet-row">
+          ${Pet.svg(child, 72, 'estudando')}
+          <span class="pet-bubble" data-fala>Vamos treinar as contas!</span>
+        </div>
+        <div class="quiz-q conta" data-conta></div>
+        <div class="quiz-options" data-opcoes></div>`,
+      actions: '<button class="btn btn-ghost btn-block" data-sair>Sair do jogo</button>',
+      onMount(sheet) {
+        const elConta = sheet.querySelector('[data-conta]');
+        const elOpcoes = sheet.querySelector('[data-opcoes]');
+        const elPontos = sheet.querySelector('[data-pontos]');
+        const elTempo = sheet.querySelector('[data-tempo]');
+        const elSeq = sheet.querySelector('[data-seq]');
+        const elFala = sheet.querySelector('[data-fala]');
+        sheet.querySelector('[data-sair]').addEventListener('click', UI.closeSheet);
+
+        function mostrar() {
+          travado = false;
+          atual = novaConta();
+          elConta.textContent = `${atual.texto} = ?`;
+          elOpcoes.innerHTML = atual.opcoes
+            .map((n) => `<button class="quiz-op" data-op="${n}">${n}</button>`).join('');
+          elOpcoes.querySelectorAll('[data-op]').forEach((b) => b.addEventListener('click', () => {
+            if (travado) return;
+            travado = true;
+            const certo = Number(b.getAttribute('data-op')) === atual.certo;
+            b.classList.add(certo ? 'certa' : 'errada');
+            if (certo) {
+              pontos += 1;
+              sequencia += 1;
+              elPontos.textContent = `${pontos} acertos`;
+              elSeq.textContent = `sequência ${sequencia}`;
+              if (sequencia && sequencia % 3 === 0) elFala.textContent = 'Uau, ficou mais difícil agora!';
+              Effects.burst('book', b);
+            } else {
+              erros += 1;
+              sequencia = 0;
+              elSeq.textContent = 'sequência 0';
+              elFala.textContent = `Era ${atual.certo}. Respira e vem a próxima.`;
+              elOpcoes.querySelectorAll('[data-op]').forEach((x) => {
+                if (Number(x.getAttribute('data-op')) === atual.certo) x.classList.add('certa');
+              });
+            }
+            setTimeout(mostrar, certo ? 420 : 1100);
+          }));
+        }
+
+        relogio = setInterval(() => {
+          restante -= 1;
+          elTempo.textContent = `${restante}s`;
+          if (restante <= 0) {
+            clearInterval(relogio);
+            terminar(child, 'matematica', pontos, Math.floor(pontos / 2),
+              `${pontos} acertos e ${erros} erro(s)`);
+          }
+        }, 1000);
+        mostrar();
+      },
+      onClose() { clearInterval(relogio); },
+    });
+  }
+
   /* ---------- jogo 2: memória ---------- */
   function memoria(child) {
     const icones = ['book', 'house', 'heart', 'star', 'ball', 'music', 'leaf', 'drop'];
@@ -364,15 +492,21 @@ const Games = (() => {
   }
 
   function abrir(child, id) {
+    if (id === 'matematica') return matematica(child);
     if (id === 'memoria') return memoria(child);
     if (id === 'sequencia') return sequencia(child);
     return bola(child);
   }
 
-  function bind(root, child) {
+  function bind(root, child, rerender) {
+    root.querySelectorAll('[data-play-tab]').forEach((b) => b.addEventListener('click', () => {
+      aba = b.getAttribute('data-play-tab');
+      if (rerender) rerender(); else App.render();
+    }));
     root.querySelectorAll('[data-game]').forEach((b) =>
       b.addEventListener('click', () => abrir(child, b.getAttribute('data-game'))));
+    Quiz.bind(root, child);
   }
 
-  return { view, bind, abrir, LISTA };
+  return { view, bind, abrir, LISTA, aba: () => aba };
 })();

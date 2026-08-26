@@ -120,6 +120,7 @@ const Store = (() => {
       diary: [],
       events: [],
       purchases: [],
+      decks: [],
     };
   }
 
@@ -164,6 +165,7 @@ const Store = (() => {
           if (!Array.isArray(st.diary)) st.diary = [];
           if (!Array.isArray(st.events)) st.events = [];
           if (!Array.isArray(st.purchases)) st.purchases = [];
+          if (!Array.isArray(st.decks)) st.decks = [];
           return st;
         }
       }
@@ -299,6 +301,7 @@ const Store = (() => {
     state.diary = state.diary.filter((d) => d.childId !== id);
     state.events = state.events.filter((e) => e.childId !== id);
     state.purchases = state.purchases.filter((p) => p.childId !== id);
+    state.decks = state.decks.filter((d) => d.childId !== id);
     save();
   }
 
@@ -585,7 +588,10 @@ const Store = (() => {
   }
 
   /* ---------- bichinho do filho ---------- */
-  const PET_DEFAULT = { name: 'Pip', shape: 'blob', color: 'lime', accessory: '', xp: 0 };
+  const PET_DEFAULT = {
+    name: 'Pip', shape: 'blob', color: 'lime', accessory: '',
+    outfit: 'camiseta', bed: 'colchonete', xp: 0,
+  };
   const XP_NIVEL = 60;
   const CARINHOS_DIA = 5;
 
@@ -598,6 +604,8 @@ const Store = (() => {
       save();
     }
     if (!u.pet.care) u.pet.care = { date: today(), count: 0 };
+    if (!u.pet.outfit) u.pet.outfit = 'camiseta';
+    if (!u.pet.bed) u.pet.bed = 'colchonete';
     return u.pet;
   }
 
@@ -611,6 +619,8 @@ const Store = (() => {
     pet.shape = data.shape || pet.shape;
     pet.color = data.color || pet.color;
     pet.accessory = data.accessory === undefined ? pet.accessory : data.accessory;
+    if (data.outfit) pet.outfit = data.outfit;
+    if (data.bed) pet.bed = data.bed;
     save();
     return { ok: true, pet };
   }
@@ -642,6 +652,111 @@ const Store = (() => {
     const res = petAddXp(childId, 3) || {};
     save();
     return { ok: true, count: pet.care.count, levelUp: !!res.levelUp };
+  }
+
+  /* ---------- quizzes das matérias ---------- */
+  const SUBJECTS = [
+    { id: 'matematica', label: 'Matemática', icon: 'brain', grad: 'g4' },
+    { id: 'portugues', label: 'Português', icon: 'book', grad: 'g5' },
+    { id: 'ciencias', label: 'Ciências', icon: 'leaf', grad: 'g3' },
+    { id: 'historia', label: 'História', icon: 'trophy', grad: 'g2' },
+    { id: 'geografia', label: 'Geografia', icon: 'target', grad: 'g6' },
+    { id: 'ingles', label: 'Inglês', icon: 'chat', grad: 'g1' },
+    { id: 'outra', label: 'Outra matéria', icon: 'star', grad: 'g7' },
+  ];
+
+  const subject = (id) => SUBJECTS.find((s2) => s2.id === id) || SUBJECTS[6];
+
+  /** transforma o que a criança escreveu em cartas de pergunta e resposta */
+  function parseCards(texto) {
+    return String(texto || '')
+      .split(/\r?\n/)
+      .map((linha) => linha.trim())
+      .filter(Boolean)
+      .map((linha) => {
+        const m = linha.match(/^(.+?)\s*(?:=|\||\t|:| - | -- | > )\s*(.+)$/);
+        if (!m) return null;
+        const q = m[1].trim();
+        const a = m[2].trim();
+        if (!q || !a) return null;
+        return { id: uid('c'), q: q.slice(0, 160), a: a.slice(0, 160) };
+      })
+      .filter(Boolean);
+  }
+
+  function saveDeck(childId, data) {
+    const name = String(data.name || '').trim();
+    if (!name) return { ok: false, error: 'Dê um nome para o assunto.' };
+    const novas = parseCards(data.bulk);
+    const fields = {
+      subject: subject(data.subject).id,
+      name: name.slice(0, 60),
+      notes: String(data.notes || '').trim().slice(0, 800),
+    };
+    if (data.id) {
+      const d = state.decks.find((x) => x.id === data.id);
+      if (!d) return { ok: false, error: 'Assunto não encontrado.' };
+      Object.assign(d, fields);
+      d.cards = d.cards.concat(novas).slice(0, 120);
+      save();
+      return { ok: true, deck: d, novas: novas.length };
+    }
+    const deck = Object.assign({
+      id: uid('dk'), childId, cards: novas.slice(0, 120),
+      plays: 0, best: 0, createdAt: new Date().toISOString(),
+    }, fields);
+    state.decks.push(deck);
+    save();
+    return { ok: true, deck, novas: novas.length };
+  }
+
+  function addCard(deckId, q, a) {
+    const d = deckById(deckId);
+    if (!d) return { ok: false, error: 'Assunto não encontrado.' };
+    const pergunta = String(q || '').trim();
+    const resposta = String(a || '').trim();
+    if (!pergunta || !resposta) return { ok: false, error: 'Escreva a pergunta e a resposta.' };
+    if (d.cards.length >= 120) return { ok: false, error: 'Esse assunto já tem 120 perguntas.' };
+    d.cards.push({ id: uid('c'), q: pergunta.slice(0, 160), a: resposta.slice(0, 160) });
+    save();
+    return { ok: true, deck: d };
+  }
+
+  function removeCard(deckId, cardId) {
+    const d = deckById(deckId);
+    if (!d) return;
+    d.cards = d.cards.filter((c) => c.id !== cardId);
+    save();
+  }
+
+  function removeDeck(id) {
+    state.decks = state.decks.filter((d) => d.id !== id);
+    save();
+  }
+
+  const deckById = (id) => state.decks.find((d) => d.id === id) || null;
+  const decksOf = (childId) =>
+    state.decks.filter((d) => d.childId === childId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  /** todas as cartas do filho, usadas nas perguntas surpresa do bichinho */
+  const allCards = (childId) =>
+    decksOf(childId).flatMap((d) => d.cards.map((c) => Object.assign({ deck: d.name, subject: d.subject }, c)));
+
+  /** guarda o resultado do quiz e devolve os pontos ganhos */
+  function quizResult(childId, deckId, acertos, total) {
+    const d = deckById(deckId);
+    if (d) {
+      d.plays = (d.plays || 0) + 1;
+      d.best = Math.max(d.best || 0, acertos);
+      d.lastPlayed = new Date().toISOString();
+    }
+    const hoje = petGamesToday(childId);
+    const xp = Math.max(0, Math.min(acertos * 2, hoje.left));
+    const pet = petOf(childId);
+    pet.games.xp += xp;
+    const res = xp ? petAddXp(childId, xp) : null;
+    save();
+    return { xp, levelUp: !!(res && res.levelUp), acertos, total };
   }
 
   const XP_JOGOS_DIA = 20;
@@ -954,6 +1069,9 @@ const Store = (() => {
     saveDiary, removeDiary, diaryOf, diaryById, pendingDiary, reviewDiary, diaryKind, DIARY_KINDS,
     // bichinho
     petOf, savePet, petAddXp, petCare, petCareLeft, petGamesToday, petGameResult,
+    // estudos
+    saveDeck, removeDeck, deckById, decksOf, addCard, removeCard, allCards, quizResult,
+    parseCards, subject, SUBJECTS,
     // gastos
     savePurchase, removePurchase, purchaseById, purchasesOf, cash, purchaseKind, PURCHASE_KINDS,
     // agenda

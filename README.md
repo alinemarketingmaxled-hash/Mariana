@@ -60,14 +60,24 @@ quantos filhos quiser, cada um com o próprio login e senha.
 ### Filho(a)
 
 - **Bichinho solto na tela**: ele fica acima da barra de navegação e vive sozinho: pula, brinca de
-  bola, anda de um lado para o outro e dorme quando o dia está parado. **Um toque** abre o painel
+  bola, anda, estuda e só **dorme de madrugada** (das 22h às 6h) ou depois de muito tempo sem
+  ninguém por perto, e quando dorme aparece na **cama** dele. **Um toque** abre o painel
   para cuidar dele; **segurar por 4 segundos** faz ele derreter e ficar tonto; **sacudir** deixa ele
   zonzo; e dá para **arrastar e jogar de qualquer altura** (ele cai, quica no chão, bate no teto e,
   se a queda for feia, fica vendo estrelinhas).
-- **Joguinhos**: aba com três jogos para brincar com o bichinho, *Pega a bola* (bolinhas caem e você
-  toca antes que cheguem no chão), *Jogo da memória* (seis pares de ícones) e *Repete comigo*
-  (sequência de cores). Cada partida rende pontos de amizade, com teto de 20 por dia e recorde
-  guardado por jogo.
+- **Jogos e estudo**: uma aba com dois espaços.
+  - *Joguinhos*: **Conta rápida** (contas de somar, subtrair, multiplicar e dividir, com
+    dificuldade que sobe conforme a criança acerta seguido), *Pega a bola*, *Jogo da memória* e
+    *Repete comigo*. Cada partida rende pontos de amizade, com teto de 20 por dia e recorde por jogo.
+  - *Quiz das matérias*: a criança cria um assunto (matéria, nome, o que aconteceu na aula) e
+    escreve as perguntas, uma por linha no formato `pergunta = resposta`; o app monta as cartas.
+    Há atalho para gerar a tabuada de qualquer número. Cada assunto pode ser estudado como
+    **cartas para virar** ou como **quiz de múltipla escolha** (as alternativas erradas saem das
+    respostas das outras cartas). O bichinho estuda junto, comenta e ainda faz **perguntas
+    surpresa** sozinho enquanto ela usa o app.
+
+  > O app funciona sem internet e sem servidor, então ele não inventa perguntas a partir de um texto
+  > livre: as perguntas são as que a criança escreve, cola do caderno ou gera pelos atalhos.
 - **Bichinho**: o mesmo personagem também aparece no cartão da tela inicial, reage ao que acontece no dia (dorme quando
   nada foi feito, fica animado quando tem tarefa marcada, comemora quando o dia está completo,
   fica preocupado com compromisso atrasado) e fala frases ligadas ao que está pendente. Recebe

@@ -32,6 +32,26 @@ const Pet = (() => {
     { id: 'fone', label: 'Fone', level: 6 },
   ];
 
+  /** roupinhas: a primeira já vem com o bichinho, o resto abre por nível */
+  const OUTFITS = [
+    { id: 'camiseta', label: 'Camiseta', level: 1, cor: '#ffffff' },
+    { id: 'moletom', label: 'Moletom', level: 2, cor: '#ff8fc8' },
+    { id: 'listrada', label: 'Listrada', level: 3, cor: '#6fd3ff' },
+    { id: 'vestido', label: 'Vestido', level: 4, cor: '#ffd84b' },
+    { id: 'uniforme', label: 'Uniforme', level: 5, cor: '#3b4fe4' },
+    { id: 'capa', label: 'Capa de herói', level: 6, cor: '#e0447a' },
+    { id: 'pijama', label: 'Pijama', level: 7, cor: '#a98cff' },
+    { id: 'espacial', label: 'Traje espacial', level: 8, cor: '#79e3b5' },
+  ];
+
+  /** camas: onde ele dorme quando bate o sono */
+  const BEDS = [
+    { id: 'colchonete', label: 'Colchonete', level: 1, cor: '#ffa24b' },
+    { id: 'caminha', label: 'Caminha', level: 3, cor: '#79e3b5' },
+    { id: 'nuvem', label: 'Nuvem', level: 5, cor: '#6fd3ff' },
+    { id: 'realeza', label: 'Cama de realeza', level: 7, cor: '#ffd84b' },
+  ];
+
   const XP_POR_NIVEL = 60;
   const CARINHOS_POR_DIA = 5;
 
@@ -40,6 +60,15 @@ const Pet = (() => {
   const level = (xp) => Math.floor((xp || 0) / XP_POR_NIVEL) + 1;
   const progress = (xp) => ((xp || 0) % XP_POR_NIVEL) / XP_POR_NIVEL;
   const unlocked = (lv) => ACCESSORIES.filter((a) => a.level <= lv);
+  const outfit = (id) => OUTFITS.find((o) => o.id === id) || OUTFITS[0];
+  const bed = (id) => BEDS.find((b) => b.id === id) || BEDS[0];
+
+  /** tudo o que a lojinha oferece, com o nível que abre cada item */
+  const catalogo = () => [
+    ...OUTFITS.map((o) => ({ ...o, tipo: 'outfit', tipoLabel: 'Roupinha' })),
+    ...BEDS.map((b) => ({ ...b, tipo: 'bed', tipoLabel: 'Cama' })),
+    ...ACCESSORIES.filter((a) => a.id).map((a) => ({ ...a, tipo: 'accessory', tipoLabel: 'Acessório', cor: '#a98cff' })),
+  ];
 
   /* ---------- humor ---------- */
   /** o humor sai do que aconteceu hoje, não de um contador escondido */
@@ -50,11 +79,14 @@ const Pet = (() => {
     const recusados = doDia.filter((e) => e.status === 'rejected').length;
     const atrasados = Store.upcomingEvents(child.id).filter((e) => !e.done && Store.daysUntil(e.date) < 0).length;
 
+    const hora = new Date().getHours();
     if (recusados) return { id: 'triste', label: 'meio triste' };
     if (st.required && st.complete) return { id: 'festa', label: 'muito feliz' };
     if (atrasados) return { id: 'preocupado', label: 'preocupado' };
     if (doDia.length) return { id: 'feliz', label: 'animado' };
-    return { id: 'dormindo', label: 'com sono' };
+    // só dorme de madrugada; no resto do dia fica acordado esperando
+    if (hora >= 22 || hora < 6) return { id: 'dormindo', label: 'dormindo' };
+    return { id: 'feliz', label: 'acordado' };
   }
 
   /** frase que o bichinho fala, sempre ligada ao que está acontecendo */
@@ -106,6 +138,60 @@ const Pet = (() => {
     return '';
   }
 
+  /** roupinha desenhada na barriga, abaixo da boca */
+  function outfitSvg(id) {
+    const o = outfit(id);
+    const base = `<path d="M52 150h96v20a54 42 0 0 1-96 0z" fill="${o.cor}" stroke="#131338" stroke-width="5" stroke-linejoin="round"/>`;
+    if (id === 'moletom') {
+      return base + `<path d="M66 152v32M134 152v32" stroke="#131338" stroke-width="4" opacity=".5"/>
+        <path d="M86 150h28v10a14 12 0 0 1-28 0z" fill="#131338" opacity=".2"/>`;
+    }
+    if (id === 'listrada') {
+      return base + `<path d="M55 160h90M58 170h84M66 180h68" stroke="#131338" stroke-width="5" stroke-linecap="round" opacity=".5"/>`;
+    }
+    if (id === 'vestido') {
+      return `<path d="M58 150h84l14 30a60 42 0 0 1-112 0z" fill="${o.cor}" stroke="#131338" stroke-width="5" stroke-linejoin="round"/>
+        <circle cx="100" cy="164" r="5" fill="#131338"/>`;
+    }
+    if (id === 'uniforme') {
+      return base + `<path d="M88 150l12 14 12-14" fill="#fff" stroke="#131338" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M96 164h8v16h-8z" fill="#e0447a" stroke="#131338" stroke-width="3"/>`;
+    }
+    if (id === 'capa') {
+      return `<path d="M48 142c-14 24-12 44 6 58 12 9 80 9 92 0 18-14 20-34 6-58-14 16-90 16-104 0z" fill="${o.cor}" stroke="#131338" stroke-width="5" stroke-linejoin="round"/>` + base;
+    }
+    if (id === 'pijama') {
+      return base + `<g fill="#131338" opacity=".4">
+        <circle cx="74" cy="164" r="4"/><circle cx="100" cy="176" r="4"/><circle cx="126" cy="163" r="4"/></g>`;
+    }
+    if (id === 'espacial') {
+      return base + `<circle cx="100" cy="168" r="12" fill="#fff" stroke="#131338" stroke-width="4"/>
+        <path d="M95 168h10M100 163v10" stroke="#131338" stroke-width="3"/>`;
+    }
+    return base;
+  }
+
+  /** cama, desenhada atrás do bichinho quando ele dorme */
+  function bedSvg(id) {
+    const b = bed(id);
+    if (id === 'nuvem') {
+      return `<g><path d="M18 176c-12 0-18-8-18-16s8-16 18-14c4-14 20-18 30-10 8-10 26-10 34 2 12-6 28 0 30 12 12 0 18 8 18 16s-8 12-18 12z" fill="#fff" stroke="#131338" stroke-width="5" stroke-linejoin="round" transform="translate(24,10) scale(1.05)"/></g>`;
+    }
+    if (id === 'realeza') {
+      return `<g>
+        <rect x="8" y="150" width="184" height="44" rx="16" fill="${b.cor}" stroke="#131338" stroke-width="5"/>
+        <rect x="20" y="132" width="60" height="26" rx="12" fill="#fff" stroke="#131338" stroke-width="5"/>
+        <path d="M8 150v-34M192 150v-34" stroke="#131338" stroke-width="6" stroke-linecap="round"/>
+        <path d="M0 116h200" stroke="${b.cor}" stroke-width="10" stroke-linecap="round"/></g>`;
+    }
+    if (id === 'caminha') {
+      return `<g>
+        <rect x="14" y="152" width="172" height="40" rx="18" fill="${b.cor}" stroke="#131338" stroke-width="5"/>
+        <rect x="26" y="138" width="54" height="24" rx="11" fill="#fff" stroke="#131338" stroke-width="5"/></g>`;
+    }
+    return `<rect x="18" y="162" width="164" height="30" rx="14" fill="${b.cor}" stroke="#131338" stroke-width="5"/>`;
+  }
+
   function face(moodId) {
     if (moodId === 'tonto') {
       return `
@@ -138,6 +224,16 @@ const Pet = (() => {
       dormindo: '<ellipse cx="100" cy="136" rx="11" ry="13" fill="#131338"/>',
     }[moodId] || '<path d="M76 134q24 24 48 0" stroke="#131338" stroke-width="8" fill="none" stroke-linecap="round"/>';
 
+    if (moodId === 'estudando') {
+      return `
+        <g class="pet-eye">
+          <ellipse cx="74" cy="98" rx="16" ry="17" fill="#fff"/>
+          <ellipse cx="126" cy="98" rx="16" ry="17" fill="#fff"/>
+          <circle cx="74" cy="104" r="8" fill="#131338"/><circle cx="126" cy="104" r="8" fill="#131338"/>
+        </g>
+        <path d="M56 78q16-10 32-2M112 76q16-8 32 2" stroke="#131338" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <path d="M84 136h32" stroke="#131338" stroke-width="8" stroke-linecap="round"/>`;
+    }
     const extra = moodId === 'dormindo'
       ? `<g class="pet-zzz" fill="#131338" font-family="Archivo,Arial" font-weight="900">
            <text x="150" y="52" font-size="26">z</text>
@@ -159,12 +255,14 @@ const Pet = (() => {
     return `
       <svg class="pet-svg mood-${m}" viewBox="0 0 200 200" width="${size}" height="${size}"
            role="img" aria-label="${UI.esc(pet.name)}, ${UI.esc(mood(child).label)}">
+        ${m === 'dormindo' ? `<g class="pet-bed">${bedSvg(pet.bed)}</g>` : ''}
         <g class="pet-body">
           <ellipse class="pet-foot" cx="74" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
           <ellipse class="pet-foot" cx="126" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
           <path d="${sh.path}" fill="${c.hex}" stroke="#131338" stroke-width="6" stroke-linejoin="round"/>
-          <ellipse cx="52" cy="126" rx="11" ry="7" fill="#131338" opacity=".16"/>
-          <ellipse cx="148" cy="126" rx="11" ry="7" fill="#131338" opacity=".16"/>
+          ${outfitSvg(pet.outfit)}
+          <ellipse cx="52" cy="120" rx="11" ry="7" fill="#131338" opacity=".16"/>
+          <ellipse cx="148" cy="120" rx="11" ry="7" fill="#131338" opacity=".16"/>
           ${face(m)}
           ${accessorySvg(pet.accessory, c.hex)}
         </g>
@@ -248,7 +346,7 @@ const Pet = (() => {
             </div>` : ''}
         </form>`,
       actions: `
-        <button class="btn btn-ghost" data-cancel>Fechar</button>
+        <button class="btn btn-ghost" data-loja>${Icons.svg('coins')} Lojinha</button>
         <button class="btn btn-primary" data-save>Salvar</button>`,
       onMount(sheet) {
         const preview = sheet.querySelector('[data-pet-preview]');
@@ -262,6 +360,7 @@ const Pet = (() => {
                 <ellipse cx="74" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
                 <ellipse cx="126" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
                 <path d="${sh.path}" fill="${c.hex}" stroke="#131338" stroke-width="6" stroke-linejoin="round"/>
+                ${outfitSvg(data.outfit || Store.petOf(child.id).outfit)}
                 ${face('feliz')}
                 ${accessorySvg(data.accessory, c.hex)}
               </g>
@@ -278,7 +377,10 @@ const Pet = (() => {
             repaint();
           });
         });
-        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-loja]').addEventListener('click', () => {
+          UI.closeSheet();
+          openShop(child);
+        });
         sheet.querySelector('[data-save]').addEventListener('click', () => {
           const data = UI.formData(sheet.querySelector('#pet-form'));
           const res = Store.savePet(child.id, data);
@@ -287,6 +389,64 @@ const Pet = (() => {
           UI.toast(`${res.pet.name} adorou o visual novo`, 'ok');
           App.render();
         });
+      },
+    });
+  }
+
+  /* ---------- lojinha de roupinhas ---------- */
+  function openShop(child) {
+    const pet = Store.petOf(child.id);
+    const lv = level(pet.xp);
+    const itens = catalogo();
+    const grupos = [
+      { tipo: 'outfit', titulo: 'Roupinhas', atual: pet.outfit },
+      { tipo: 'bed', titulo: 'Camas', atual: pet.bed },
+      { tipo: 'accessory', titulo: 'Acessórios', atual: pet.accessory },
+    ];
+
+    UI.openSheet({
+      title: 'Lojinha do bichinho',
+      subtitle: `Nível ${lv} • cada nível libera peças novas`,
+      body: `
+        <div class="shop-preview" data-shop-preview>${svg(child, 140, 'feliz')}</div>
+        ${grupos.map((g) => `
+          <div class="section-title"><h3>${g.titulo}</h3></div>
+          <div class="shop-grid">
+            ${itens.filter((i) => i.tipo === g.tipo).map((i) => {
+              const aberto = i.level <= lv;
+              const usando = i.id === g.atual;
+              return `
+                <button class="shop-item ${aberto ? '' : 'locked'} ${usando ? 'usando' : ''}"
+                        data-shop="${i.tipo}:${i.id}" ${aberto ? '' : 'disabled'}>
+                  <span class="shop-chip" style="background:${i.cor}"></span>
+                  <span class="shop-nome">${UI.esc(i.label)}</span>
+                  <span class="shop-tag">${aberto ? (usando ? 'em uso' : 'usar') : `nível ${i.level}`}</span>
+                  ${aberto ? '' : `<span class="shop-lock">${Icons.svg('lock')}</span>`}
+                </button>`;
+            }).join('')}
+          </div>`).join('')}
+        <div class="note">
+          Ganhe pontos de amizade fazendo tarefas, estudando e jogando. A cada ${XP_POR_NIVEL} pontos
+          o bichinho sobe de nível e abre peças novas.
+        </div>`,
+      actions: '<button class="btn btn-primary btn-block" data-ok>Pronto</button>',
+      onMount(sheet) {
+        sheet.querySelector('[data-ok]').addEventListener('click', () => { UI.closeSheet(); App.render(); });
+        sheet.querySelectorAll('[data-shop]').forEach((b) => b.addEventListener('click', () => {
+          const [tipo, id] = b.getAttribute('data-shop').split(':');
+          Store.savePet(child.id, { name: Store.petOf(child.id).name, [tipo]: id });
+          sheet.querySelectorAll(`[data-shop^="${tipo}:"]`).forEach((x) => {
+            x.classList.remove('usando');
+            const tag = x.querySelector('.shop-tag');
+            if (tag && !x.classList.contains('locked')) tag.textContent = 'usar';
+          });
+          b.classList.add('usando');
+          const tag = b.querySelector('.shop-tag');
+          if (tag) tag.textContent = 'em uso';
+          sheet.querySelector('[data-shop-preview]').innerHTML =
+            svg(child, 140, tipo === 'bed' ? 'dormindo' : 'feliz');
+          UI.toast(`${Store.petOf(child.id).name} vestiu isso`, 'ok');
+        }));
       },
     });
   }
@@ -357,6 +517,8 @@ const Pet = (() => {
     let quedaMax = 0;
     let shake = { dirs: 0, lastSign: 0, dist: 0, since: 0 };
     let estado = 'parado';
+    let ultimaInteracao = Date.now();
+    const registrarInteracao = () => { ultimaInteracao = Date.now(); };
 
     const reduced = () =>
       window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -380,6 +542,7 @@ const Pet = (() => {
       el.className = `pet-buddy is-${novo}`;
       const m = novo === 'dormindo' ? 'dormindo'
         : novo === 'tonto' || novo === 'derretendo' ? 'tonto'
+        : novo === 'estudando' ? 'estudando'
         : novo === 'brincando' || novo === 'pulando' ? 'festa'
         : mood(child).id;
       el.querySelector('.pet-buddy-art').innerHTML = svg(child, SIZE, m);
@@ -465,12 +628,34 @@ const Pet = (() => {
       idleTimer = setTimeout(() => {
         if (!el || dragging || estado === 'tonto' || estado === 'derretendo') return agendarBrincadeira();
         const hora = new Date().getHours();
-        const semAtividade = child && Store.entriesOf(child.id, Store.today()).length === 0;
-        const opcoes = (hora >= 21 || hora < 6 || semAtividade)
-          ? ['dormindo', 'dormindo', 'parado', 'pulando']
-          : ['pulando', 'brincando', 'parado', 'andando'];
+        const madrugada = hora >= 22 || hora < 6;
+        const paradoHaMuito = Date.now() - ultimaInteracao > 12 * 60 * 1000;
+        const temEstudo = child && Store.allCards(child.id).length >= 2;
+        // ele só cochila de madrugada ou depois de muito tempo sem ninguém por perto
+        const opcoes = madrugada
+          ? ['dormindo', 'dormindo', 'parado']
+          : paradoHaMuito
+            ? ['parado', 'dormindo', 'andando', 'pulando']
+            : temEstudo
+              ? ['pulando', 'brincando', 'parado', 'andando', 'estudando', 'pergunta']
+              : ['pulando', 'brincando', 'parado', 'andando', 'estudando'];
         const escolha = opcoes[Math.floor(Math.random() * opcoes.length)];
 
+        if (escolha === 'pergunta') {
+          setEstado('estudando');
+          if (Quiz.surpresa(child)) {
+            registrarInteracao();
+          }
+          agendarBrincadeira();
+          return;
+        }
+        if (escolha === 'estudando') {
+          setEstado('estudando');
+          fala('Bora revisar uma matéria?');
+          setTimeout(() => { if (estado === 'estudando') setEstado('parado'); }, 3200);
+          agendarBrincadeira();
+          return;
+        }
         if (escolha === 'andando') {
           setEstado('parado');
           pos.vx = Math.random() > 0.5 ? 2.4 : -2.4;
@@ -490,6 +675,7 @@ const Pet = (() => {
 
     /* ---------- toque ---------- */
     function onDown(ev) {
+      registrarInteracao();
       pressed = true;
       dragging = false;
       pointerId = ev.pointerId;
@@ -621,12 +807,14 @@ const Pet = (() => {
       estado = 'parado';
     }
 
-    return { mount, unmount, fala, setEstado };
+    return { mount, unmount, fala, setEstado, registrarInteracao };
   })();
 
   return {
     svg, card, bind, openSheet, touch, mood, phrase,
     mountBuddy: Buddy.mount, unmountBuddy: Buddy.unmount, buddySay: Buddy.fala,
-    level, progress, COLORS, SHAPES, ACCESSORIES, XP_POR_NIVEL, CARINHOS_POR_DIA,
+    openShop, outfit, bed,
+    level, progress, COLORS, SHAPES, ACCESSORIES, OUTFITS, BEDS, catalogo,
+    XP_POR_NIVEL, CARINHOS_POR_DIA,
   };
 })();
