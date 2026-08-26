@@ -66,9 +66,10 @@ quantos filhos quiser, cada um com o próprio login e senha.
   zonzo; e dá para **arrastar e jogar de qualquer altura** (ele cai, quica no chão, bate no teto e,
   se a queda for feia, fica vendo estrelinhas).
 - **Jogos e estudo**: uma aba com dois espaços.
-  - *Joguinhos*: **Conta rápida** (contas de somar, subtrair, multiplicar e dividir, com
-    dificuldade que sobe conforme a criança acerta seguido), *Pega a bola*, *Jogo da memória* e
-    *Repete comigo*. Cada partida rende pontos de amizade, com teto de 20 por dia e recorde por jogo.
+  - *Joguinhos*: **Conta rápida**, com **níveis por série** (até o 5º ano, 6º, 7º, 8º e 9º) e
+    questões próprias de cada ano: quatro operações, frações, porcentagem, MMC e MDC, números
+    negativos, **equações do 1º grau**, potências e raízes, regra de três, **equações do 2º grau**,
+    funções e Pitágoras. Também *Pega a bola*, *Jogo da memória* e *Repete comigo*. Cada partida rende pontos de amizade, com teto de 20 por dia e recorde por jogo.
   - *Quiz das matérias*: a criança cria um assunto (matéria, nome, o que aconteceu na aula) e
     escreve as perguntas, uma por linha no formato `pergunta = resposta`; o app monta as cartas.
     Há atalho para gerar a tabuada de qualquer número. Cada assunto pode ser estudado como

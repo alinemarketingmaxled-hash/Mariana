@@ -99,7 +99,6 @@ const ChildScreen = (() => {
   function homeView(user) {
     const st = Store.dayStatus(user.id, date);
     return `
-      ${Pet.card(user)}
       ${heroCard(user)}
       ${daysStrip(user)}
       <div class="card mt8">
@@ -757,7 +756,8 @@ const ChildScreen = (() => {
       : perfilView(user);
 
     const aside = tab === 'agenda' || tab === 'jogos' ? ''
-      : `${metaPanel(user)}${Agenda.upcoming(user.id, false)}${tab === 'home' ? resumoPanel(user) : ''}`;
+      : `${metaPanel(user)}${Agenda.upcoming(user.id, false)}` +
+        `${tab === 'home' ? resumoPanel(user) : ''}${Pet.panel(user)}`;
 
     const actions = tab === 'agenda'
       ? `<button class="btn btn-primary btn-sm" data-new-event>${Icons.svg('plus')} Compromisso</button>`

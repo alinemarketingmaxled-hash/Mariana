@@ -620,9 +620,39 @@ const Store = (() => {
     pet.color = data.color || pet.color;
     pet.accessory = data.accessory === undefined ? pet.accessory : data.accessory;
     if (data.outfit) pet.outfit = data.outfit;
+    if (data.serie) pet.serie = data.serie;
     if (data.bed) pet.bed = data.bed;
     save();
     return { ok: true, pet };
+  }
+
+  /** coloca o bichinho para dormir por um tempo (ou acorda) */
+  function petNap(childId, minutos) {
+    const pet = petOf(childId);
+    pet.nap = minutos ? Date.now() + minutos * 60000 : 0;
+    save();
+    return pet;
+  }
+
+  const petSleeping = (childId) => {
+    const pet = petOf(childId);
+    return !!(pet.nap && Date.now() < pet.nap);
+  };
+
+  /** conversa entre a criança e o bichinho, guardada no aparelho */
+  function petChat(childId) {
+    const pet = petOf(childId);
+    if (!Array.isArray(pet.chat)) pet.chat = [];
+    return pet.chat;
+  }
+
+  function petSay(childId, from, text) {
+    const pet = petOf(childId);
+    const chat = petChat(childId);
+    chat.push({ from, text: String(text || '').slice(0, 200), at: new Date().toISOString() });
+    if (chat.length > 40) pet.chat = chat.slice(-40);
+    save();
+    return pet.chat;
   }
 
   /** pontos de amizade: cada ação do filho alimenta o bichinho */
@@ -1069,6 +1099,7 @@ const Store = (() => {
     saveDiary, removeDiary, diaryOf, diaryById, pendingDiary, reviewDiary, diaryKind, DIARY_KINDS,
     // bichinho
     petOf, savePet, petAddXp, petCare, petCareLeft, petGamesToday, petGameResult,
+    petNap, petSleeping, petChat, petSay,
     // estudos
     saveDeck, removeDeck, deckById, decksOf, addCard, removeCard, allCards, quizResult,
     parseCards, subject, SUBJECTS,

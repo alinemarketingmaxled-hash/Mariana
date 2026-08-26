@@ -8,7 +8,7 @@ const Games = (() => {
     {
       id: 'matematica',
       nome: 'Conta rápida',
-      desc: 'Contas de somar, subtrair, multiplicar e dividir. Acertou seguido, fica mais difícil.',
+      desc: 'Contas e equações no nível da sua série, do 5º ao 9º ano, em 60 segundos.',
       icon: 'brain',
       grad: 'g8',
     },
@@ -35,7 +35,7 @@ const Games = (() => {
     },
   ];
 
-  const jogo = (id) => LISTA.find((g) => g.id === id) || LISTA[0];
+  const jogo = (id) => LISTA.find((g) => g.id === String(id).split('_')[0]) || LISTA[0];
 
   /* ---------- tela da aba ---------- */
   let aba = 'jogos';
@@ -77,7 +77,11 @@ const Games = (() => {
               <span class="nm block">${UI.esc(g.nome)}</span>
               <span class="tiny block game-desc">${UI.esc(g.desc)}</span>
               <span class="tiny block game-best">
-                ${recordes[g.id] ? `Seu recorde: ${recordes[g.id]}` : 'Ainda sem recorde'}
+                ${(() => {
+                  const chaves = Object.keys(recordes).filter((k) => k.split('_')[0] === g.id);
+                  const melhor = chaves.reduce((m, k) => Math.max(m, recordes[k]), 0);
+                  return melhor ? `Seu recorde: ${melhor}` : 'Ainda sem recorde';
+                })()}
               </span>
             </span>
             <span class="game-play">${Icons.svg('chevron')}</span>
@@ -223,9 +227,131 @@ const Games = (() => {
     });
   }
 
-  /* ---------- jogo: conta rápida ---------- */
+  /* ---------- jogo: conta rápida, com níveis por série ---------- */
+  const SERIES = [
+    { id: 'basico', label: 'Até o 5º ano', desc: 'as quatro operações' },
+    { id: '6', label: '6º ano', desc: 'frações, porcentagem, MMC e MDC' },
+    { id: '7', label: '7º ano', desc: 'números negativos e equações simples' },
+    { id: '8', label: '8º ano', desc: 'equações com x dos dois lados, potências e raízes' },
+    { id: '9', label: '9º ano', desc: 'equações do 2º grau, funções e Pitágoras' },
+  ];
+
+  const rnd = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
+  const escolher = (lista) => lista[Math.floor(Math.random() * lista.length)];
+
+  /** cada série tem seus próprios tipos de questão, todas de resposta inteira */
+  const GERADORES = {
+    basico: [
+      () => { const a = rnd(5, 40), b = rnd(2, 40); return { t: `${a} + ${b}`, r: a + b }; },
+      () => { const a = rnd(12, 60), b = rnd(2, a); return { t: `${a} - ${b}`, r: a - b }; },
+      () => { const a = rnd(2, 10), b = rnd(2, 10); return { t: `${a} × ${b}`, r: a * b }; },
+      () => { const b = rnd(2, 10), r = rnd(2, 10); return { t: `${b * r} ÷ ${b}`, r }; },
+    ],
+    6: [
+      () => { const p = escolher([10, 20, 25, 30, 50]), n = rnd(2, 20) * 10; return { t: `${p}% de ${n}`, r: (n * p) / 100 }; },
+      () => { const d = escolher([2, 3, 4, 5]), r = rnd(3, 15); return { t: `1/${d} de ${d * r}`, r }; },
+      () => { const a = escolher([12, 18, 24, 30, 36]), b = escolher([8, 9, 15, 20, 27]);
+              const mdc = (x, y) => (y ? mdc(y, x % y) : x); return { t: `MDC de ${a} e ${b}`, r: mdc(a, b) }; },
+      () => { const a = escolher([4, 6, 8, 9]), b = escolher([3, 5, 6, 10]);
+              const mdc = (x, y) => (y ? mdc(y, x % y) : x); return { t: `MMC de ${a} e ${b}`, r: (a * b) / mdc(a, b) }; },
+      () => { const a = rnd(4, 13); return { t: `${a}²`, r: a * a }; },
+      () => { const b = rnd(3, 12), r = rnd(4, 12); return { t: `${b * r} ÷ ${b}`, r }; },
+    ],
+    7: [
+      () => { const a = rnd(3, 20), b = rnd(3, 25); return { t: `(-${a}) + ${b}`, r: b - a }; },
+      () => { const a = rnd(2, 12), b = rnd(2, 12); return { t: `(-${a}) × (-${b})`, r: a * b }; },
+      () => { const a = rnd(8, 30), b = rnd(2, 12), c = rnd(2, 12); return { t: `${a} - (${b} - ${c})`, r: a - (b - c) }; },
+      () => { const x = rnd(2, 20), b = rnd(2, 30); return { t: `x + ${b} = ${x + b}\nx = ?`, r: x }; },
+      () => { const a = rnd(2, 9), x = rnd(2, 12); return { t: `${a}x = ${a * x}\nx = ?`, r: x }; },
+      () => { const p = escolher([15, 20, 40, 60]), n = rnd(2, 12) * 5; return { t: `${p}% de ${n}`, r: (n * p) / 100 }; },
+    ],
+    8: [
+      () => { const x = rnd(2, 12), a = rnd(2, 6), b = rnd(1, 9);
+              return { t: `${a + 1}x + ${b} = ${a}x + ${x + b}\nx = ?`, r: x }; },
+      () => { const x = rnd(2, 12), a = rnd(3, 7), c = rnd(1, 9);
+              return { t: `${a}x - ${c} = ${a - 1}x + ${x - c}\nx = ?`, r: x }; },
+      () => { const a = escolher([4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144]); return { t: `√${a}`, r: Math.sqrt(a) }; },
+      () => { const b = rnd(2, 3), e1 = rnd(2, 3), e2 = rnd(2, 3);
+              return { t: `${b}${sup(e1)} × ${b}${sup(e2)}`, r: Math.pow(b, e1 + e2) }; },
+      () => { const un = rnd(2, 9), q1 = rnd(2, 6), q2 = rnd(2, 8);
+              return { t: `${q1} cadernos custam ${q1 * un} reais.\nQuanto custam ${q2}?`, r: q2 * un }; },
+    ],
+    9: [
+      () => { const x = rnd(2, 15); return { t: `x² = ${x * x}\nx positivo = ?`, r: x }; },
+      () => { const r1 = rnd(1, 6), r2 = r1 + rnd(1, 5);
+              return { t: `x² - ${r1 + r2}x + ${r1 * r2} = 0\nmaior raiz = ?`, r: r2 }; },
+      () => { const par = escolher([[3, 4, 5], [6, 8, 10], [5, 12, 13], [9, 12, 15], [8, 15, 17]]);
+              return { t: `Triângulo retângulo\ncatetos ${par[0]} e ${par[1]}, hipotenusa = ?`, r: par[2] }; },
+      () => { const a = rnd(2, 6), b = rnd(1, 9), x = rnd(2, 9);
+              return { t: `f(x) = ${a}x + ${b}\nf(${x}) = ?`, r: a * x + b }; },
+      () => { const a = rnd(2, 6), b = rnd(2, 9); return { t: `Δ de x² - ${2 * a}x + ${a * a - b}`, r: 4 * b }; },
+      () => { const e = rnd(2, 4); return { t: `10${sup(e)} ÷ 10`, r: Math.pow(10, e - 1) }; },
+    ],
+  };
+
+  function sup(n) {
+    return String(n).replace(/[0-9]/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[Number(d)]);
+  }
+
+  /** monta as alternativas em volta da resposta certa */
+  function alternativas(certo) {
+    const set = new Set([certo]);
+    let volta = 0;
+    while (set.size < 4 && volta < 40) {
+      volta += 1;
+      const passo = rnd(1, Math.max(3, Math.round(Math.abs(certo) * 0.3)) || 3);
+      const cand = Math.random() > 0.5 ? certo + passo : certo - passo;
+      if (cand >= 0 && cand !== certo) set.add(cand);
+    }
+    while (set.size < 4) set.add(certo + set.size);
+    return Array.from(set).sort(() => Math.random() - 0.5);
+  }
+
+  /** escolhe a série antes de começar */
   function matematica(child) {
+    const pet = Store.petOf(child.id);
+    const atual = pet.serie || 'basico';
+    UI.openSheet({
+      title: 'Conta rápida',
+      subtitle: 'Escolha o nível para as contas ficarem na sua medida',
+      body: `
+        <div class="quiz-pet-row">
+          ${Pet.svg(child, 76, 'estudando')}
+          <span class="pet-bubble">Em que ano você está? Eu treino junto!</span>
+        </div>
+        <div class="list">
+          ${SERIES.map((s2) => `
+            <button class="game-card ${s2.id === atual ? 'g8' : 'g6'}" data-serie="${s2.id}">
+              <span class="game-ico">${Icons.svg('brain')}</span>
+              <span class="grow">
+                <span class="nm block">${UI.esc(s2.label)}</span>
+                <span class="tiny block game-desc">${UI.esc(s2.desc)}</span>
+                <span class="tiny block game-best">
+                  ${(pet.best || {})['matematica_' + s2.id]
+                    ? `Seu recorde: ${(pet.best || {})['matematica_' + s2.id]}`
+                    : 'Ainda sem recorde'}
+                </span>
+              </span>
+              <span class="game-play">${Icons.svg('chevron')}</span>
+            </button>`).join('')}
+        </div>`,
+      actions: '<button class="btn btn-ghost btn-block" data-sair>Agora não</button>',
+      onMount(sheet) {
+        sheet.querySelector('[data-sair]').addEventListener('click', UI.closeSheet);
+        sheet.querySelectorAll('[data-serie]').forEach((b) => b.addEventListener('click', () => {
+          const serie = b.getAttribute('data-serie');
+          Store.savePet(child.id, { name: pet.name, serie });
+          UI.closeSheet();
+          rodarMatematica(child, serie);
+        }));
+      },
+    });
+  }
+
+  function rodarMatematica(child, serie) {
     const DURACAO = 60;
+    const info = SERIES.find((s2) => s2.id === serie) || SERIES[0];
+    const geradores = GERADORES[serie] || GERADORES.basico;
     let pontos = 0;
     let sequencia = 0;
     let erros = 0;
@@ -234,37 +360,9 @@ const Games = (() => {
     let travado = false;
     let atual = null;
 
-    const sortear = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
-
-    /** a dificuldade sobe conforme a criança acerta seguido */
-    function novaConta() {
-      const nivel = Math.min(4, Math.floor(sequencia / 3));
-      let a, b, op, r;
-      if (nivel === 0) { a = sortear(2, 20); b = sortear(2, 20); op = '+'; r = a + b; }
-      else if (nivel === 1) { a = sortear(10, 40); b = sortear(2, a); op = '-'; r = a - b; }
-      else if (nivel === 2) { a = sortear(2, 10); b = sortear(2, 10); op = '×'; r = a * b; }
-      else if (nivel === 3) { b = sortear(2, 10); r = sortear(2, 10); a = b * r; op = '÷'; }
-      else {
-        a = sortear(11, 25); b = sortear(3, 12);
-        if (Math.random() > 0.5) { op = '×'; r = a * b; } else { op = '+'; r = a + b; }
-      }
-      const certo = op === '÷' ? r : r;
-      const alternativas = new Set([certo]);
-      while (alternativas.size < 4) {
-        const desvio = sortear(1, Math.max(4, Math.round(certo * 0.25)));
-        const cand = Math.random() > 0.5 ? certo + desvio : certo - desvio;
-        if (cand >= 0) alternativas.add(cand);
-      }
-      return {
-        texto: `${a} ${op} ${b}`,
-        certo,
-        opcoes: Array.from(alternativas).sort(() => Math.random() - 0.5),
-      };
-    }
-
     UI.openSheet({
-      title: 'Conta rápida',
-      subtitle: 'Responda o máximo de contas em 60 segundos.',
+      title: `Conta rápida • ${info.label}`,
+      subtitle: `${info.desc}. Você tem 60 segundos.`,
       body: `
         <div class="game-hud">
           <span class="chip lime" data-pontos>0 acertos</span>
@@ -273,7 +371,7 @@ const Games = (() => {
         </div>
         <div class="quiz-pet-row">
           ${Pet.svg(child, 72, 'estudando')}
-          <span class="pet-bubble" data-fala>Vamos treinar as contas!</span>
+          <span class="pet-bubble" data-fala>Vamos nessa!</span>
         </div>
         <div class="quiz-q conta" data-conta></div>
         <div class="quiz-options" data-opcoes></div>`,
@@ -289,8 +387,12 @@ const Games = (() => {
 
         function mostrar() {
           travado = false;
-          atual = novaConta();
-          elConta.textContent = `${atual.texto} = ?`;
+          const q = escolher(geradores)();
+          atual = { texto: q.t, certo: q.r, opcoes: alternativas(q.r) };
+          elConta.textContent = atual.texto.includes('=') || atual.texto.includes('\n')
+            ? atual.texto
+            : `${atual.texto} = ?`;
+          elConta.classList.toggle('longa', atual.texto.length > 16);
           elOpcoes.innerHTML = atual.opcoes
             .map((n) => `<button class="quiz-op" data-op="${n}">${n}</button>`).join('');
           elOpcoes.querySelectorAll('[data-op]').forEach((b) => b.addEventListener('click', () => {
@@ -303,18 +405,18 @@ const Games = (() => {
               sequencia += 1;
               elPontos.textContent = `${pontos} acertos`;
               elSeq.textContent = `sequência ${sequencia}`;
-              if (sequencia && sequencia % 3 === 0) elFala.textContent = 'Uau, ficou mais difícil agora!';
+              if (sequencia && sequencia % 5 === 0) elFala.textContent = `${sequencia} seguidas! Você tá voando.`;
               Effects.burst('book', b);
             } else {
               erros += 1;
               sequencia = 0;
               elSeq.textContent = 'sequência 0';
-              elFala.textContent = `Era ${atual.certo}. Respira e vem a próxima.`;
+              elFala.textContent = `Era ${atual.certo}. Bora para a próxima.`;
               elOpcoes.querySelectorAll('[data-op]').forEach((x) => {
                 if (Number(x.getAttribute('data-op')) === atual.certo) x.classList.add('certa');
               });
             }
-            setTimeout(mostrar, certo ? 420 : 1100);
+            setTimeout(mostrar, certo ? 450 : 1300);
           }));
         }
 
@@ -323,8 +425,8 @@ const Games = (() => {
           elTempo.textContent = `${restante}s`;
           if (restante <= 0) {
             clearInterval(relogio);
-            terminar(child, 'matematica', pontos, Math.floor(pontos / 2),
-              `${pontos} acertos e ${erros} erro(s)`);
+            terminar(child, `matematica_${serie}`, pontos, Math.floor(pontos / 2),
+              `${info.label} • ${pontos} acertos e ${erros} erro(s)`);
           }
         }, 1000);
         mostrar();
