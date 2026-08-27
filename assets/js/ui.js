@@ -297,7 +297,7 @@ const UI = (() => {
    * Liga o campo de fotos. Devolve { ids, commit, discard }: as fotos novas
    * só ficam definitivas quando o formulário é salvo (commit).
    */
-  function bindPhotos(scope) {
+  function bindPhotos(scope, aoMudar) {
     const box = scope.querySelector('[data-photo-picker]');
     if (!box) return { ids: () => [], commit() {}, discard() {} };
 
@@ -320,6 +320,7 @@ const UI = (() => {
         </div>`).join('');
       Photos.hydrate(thumbs);
       box.querySelector('.photo-add').classList.toggle('hidden', ids.length >= Photos.MAX_PER_RECORD);
+      if (aoMudar) aoMudar(ids.length);
     }
 
     thumbs.addEventListener('click', (ev) => {

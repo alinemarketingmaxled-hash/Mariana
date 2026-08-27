@@ -402,16 +402,17 @@ const Store = (() => {
     }
 
     petAddXp(childId, 2);
-    state.entries.push({
+    const nova = {
       id: uid('e'), childId, date, catId, itemId,
-      name: item.name, value: item.value, kind: item.kind,
+      name: item.name, value: item.value, kind: item.kind, daily: !!item.daily,
       icon: cat.icon, grad: cat.grad, catName: cat.name,
       note: '', photos: [], status: 'pending',
       reviewNote: '', reviewedBy: null, reviewedAt: null,
       createdAt: new Date().toISOString(),
-    });
+    };
+    state.entries.push(nova);
     save();
-    return { ok: true, added: true };
+    return { ok: true, added: true, entry: nova };
   }
 
   function setEntryNote(entryId, note, photos) {
@@ -1301,17 +1302,55 @@ const Store = (() => {
   function dayStatus(childId, date) {
     const required = state.categories.flatMap((c) => c.items.filter((i) => i.daily).map((i) => i.id));
     const entries = entriesOf(childId, date);
-    const filled = entries.filter((e) => required.includes(e.itemId)).length;
+    const marcadas = entries.filter((e) => required.includes(e.itemId));
+    // uma tarefa de todo dia só conta como feita quando tem a foto
+    const filled = marcadas.filter((e) => !entryNeedsPhoto(e)).length;
+    const semFoto = marcadas.filter(entryNeedsPhoto).length;
     const pending = entries.filter((e) => e.status === 'pending').length;
     return {
       required: required.length,
       filled,
+      marcadas: marcadas.length,
+      semFoto,
       complete: required.length > 0 && filled >= required.length,
       total: entries.length,
       pending,
       value: entries.filter((e) => e.status !== 'rejected').reduce((s, e) => s + signed(e), 0),
     };
   }
+
+  /* ---------- foto obrigatória nas tarefas de todo dia ---------- */
+  /** liga ou desliga a exigência de foto (o responsável decide) */
+  function setPhotoRequired(valor) {
+    state.settings = state.settings || {};
+    state.settings.photoRequired = !!valor;
+    save();
+    return state.settings.photoRequired;
+  }
+
+  /** por padrão a foto é obrigatória nas atividades diárias */
+  const photoRequired = () =>
+    !state.settings || state.settings.photoRequired === undefined
+      ? true
+      : !!state.settings.photoRequired;
+
+  /** essa tarefa é das de todo dia? (entradas antigas não guardavam o campo) */
+  function entryIsDaily(e) {
+    if (!e) return false;
+    if (e.daily !== undefined) return !!e.daily;
+    const cat = categoryById(e.catId);
+    const item = cat && cat.items.find((i) => i.id === e.itemId);
+    return !!(item && item.daily);
+  }
+
+  /** a tarefa está marcada mas ainda sem a foto que ela exige */
+  const entryNeedsPhoto = (e) =>
+    !!e && photoRequired() && entryIsDaily(e) && e.status === 'pending'
+    && !(e.photos && e.photos.length);
+
+  /** quantas tarefas do dia ainda estão sem foto */
+  const missingPhotos = (childId, date) =>
+    entriesOf(childId, date).filter(entryNeedsPhoto).length;
 
   /* ---------- tema ---------- */
   function setTheme(theme) {
@@ -1351,8 +1390,8 @@ const Store = (() => {
     totals, balance, dashboard, savePayout,
     // tempo de uso e histórico de estudo
     trackUse, usageOf, usageToday, logQuiz, quizStats, duracao, area, quizKind, AREAS, QUIZ_KINDS, removePayout, payoutById, payoutsOf,
-    // tema
-    setTheme, theme,
+    // tema e regras
+    setTheme, theme, setPhotoRequired, photoRequired, entryIsDaily, entryNeedsPhoto, missingPhotos,
     // helpers
     uid, today, toISO, fromISO, addDays, monthOf, labelDate, labelMonth, money,
     WEEKDAYS, MONTHS,

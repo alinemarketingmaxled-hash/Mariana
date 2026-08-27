@@ -73,14 +73,19 @@ const ChildScreen = (() => {
         ${cats.map((c) => {
           const entries = Store.entriesOf(user.id, date).filter((e) => e.catId === c.id);
           const daily = c.items.filter((i) => i.daily).length;
-          const doneDaily = entries.filter((e) => {
+          const marcadasDoDia = entries.filter((e) => {
             const it = c.items.find((i) => i.id === e.itemId);
             return it && it.daily;
-          }).length;
+          });
+          // uma tarefa de todo dia só conta como feita depois da foto
+          const doneDaily = marcadasDoDia.filter((e) => !Store.entryNeedsPhoto(e)).length;
+          const semFoto = marcadasDoDia.filter(Store.entryNeedsPhoto).length;
           let pin = '';
           if (daily > 0) {
-            const cls = doneDaily >= daily ? 'ok' : (doneDaily > 0 ? 'warn' : 'todo');
-            pin = `<span class="pin ${cls}">${doneDaily}/${daily}</span>`;
+            const cls = semFoto ? 'foto' : doneDaily >= daily ? 'ok' : (doneDaily > 0 ? 'warn' : 'todo');
+            pin = `<span class="pin ${cls}">${semFoto
+              ? Icons.svg('camera', 'ico-sm') + ' ' + doneDaily + '/' + daily
+              : doneDaily + '/' + daily}</span>`;
           } else if (entries.length) {
             pin = `<span class="pin ok">${entries.length}</span>`;
           }
@@ -151,6 +156,7 @@ const ChildScreen = (() => {
           <div class="mt">
             ${UI.statusChip(e.status)}
             <span>${UI.esc(e.catName || '')}</span>
+            ${Store.entryNeedsPhoto(e) ? '<span class="chip warn">falta a foto</span>' : ''}
             ${e.note ? `<span>• ${UI.esc(e.note)}</span>` : ''}
           </div>
           ${UI.photoStrip(e.photos, 'small-thumbs')}
@@ -159,7 +165,8 @@ const ChildScreen = (() => {
         <div class="col" style="align-items:flex-end;gap:6px">
           <span class="val ${e.kind === 'penalty' ? 'pen' : 'earn'}">${sign}${Store.money(e.value).replace('R$ ', '')}</span>
           ${e.status === 'pending'
-            ? `<button class="btn btn-soft btn-sm" data-note="${e.id}" aria-label="Comentar e enviar foto">
+            ? `<button class="btn ${Store.entryNeedsPhoto(e) ? 'btn-primary' : 'btn-soft'} btn-sm"
+                 data-note="${e.id}" aria-label="Comentar e enviar foto">
                  ${Icons.svg('camera')}</button>` : ''}
         </div>
       </div>`;
@@ -573,14 +580,17 @@ const ChildScreen = (() => {
           const e = Store.entryFor(user.id, date, it.id);
           const marked = !!e;
           const locked = e && e.status !== 'pending';
+          const semFoto = Store.entryNeedsPhoto(e);
           return `
-            <button class="task ${marked ? 'done' : ''}" data-item="${it.id}" ${locked ? 'data-locked="1"' : ''}>
+            <button class="task ${marked ? 'done' : ''} ${semFoto ? 'sem-foto' : ''}" data-item="${it.id}" ${locked ? 'data-locked="1"' : ''}>
               <span class="check ${marked ? 'on' : ''}">${Icons.svg('check')}</span>
               <div class="grow">
                 <div class="nm">${UI.esc(it.name)}</div>
                 <div class="mt">
-                  ${it.daily ? '<span class="chip neutral">todo dia</span>' : ''}
+                  ${it.daily ? `<span class="chip ${Store.photoRequired() ? 'sun' : 'neutral'}">
+                    todo dia${Store.photoRequired() ? ' com foto' : ''}</span>` : ''}
                   ${e ? UI.statusChip(e.status) : ''}
+                  ${semFoto ? '<span class="chip warn">falta a foto</span>' : ''}
                   ${locked ? Icons.svg('lock', 'ico-sm dim') : ''}
                 </div>
               </div>
@@ -601,7 +611,9 @@ const ChildScreen = (() => {
           }
           const res = Store.toggleEntry(user.id, date, cat.id, btn.getAttribute('data-item'));
           if (!res.ok) return UI.toast(res.error, 'bad');
-          UI.toast(res.added ? 'Marcado. Aguardando validação.' : 'Desmarcado');
+          const pedeFoto = res.added && res.entry && Store.entryNeedsPhoto(res.entry);
+          UI.toast(!res.added ? 'Desmarcado'
+            : pedeFoto ? 'Agora mande a foto desta tarefa' : 'Marcado. Aguardando validação.');
           if (res.added) {
             const item = cat.items.find((i) => i.id === btn.getAttribute('data-item'));
             const cena = item && item.kind === 'penalty' ? 'spend'
@@ -618,6 +630,14 @@ const ChildScreen = (() => {
           App.render();                                  // atualiza a tela ao fundo
           sheet.querySelector('.sheet-body').innerHTML = body();
           bindItems(sheet);
+
+          // tarefa de todo dia recém-marcada: a foto vem já
+          if (pedeFoto) {
+            openNote(res.entry.id, {
+              novaMarca: true, exigeFoto: true,
+              voltarPara: { user, catId: cat.id },
+            });
+          }
         });
       });
     }
@@ -634,37 +654,65 @@ const ChildScreen = (() => {
     });
   }
 
-  function openNote(entryId) {
+  /**
+   * Comentário e fotos de um lançamento.
+   * Nas tarefas de todo dia a foto é obrigatória: sem foto o botão não
+   * libera, e se ela desistir a tarefa volta a ficar desmarcada.
+   */
+  function openNote(entryId, opcoes = {}) {
     const state = Store.get();
     const e = state.entries.find((x) => x.id === entryId);
     if (!e) return;
+    const exige = Store.entryNeedsPhoto(e) || (opcoes.exigeFoto && Store.photoRequired());
+    const novaMarca = !!opcoes.novaMarca;
     let picker = null;
+    let salvo = false;
+
     UI.openSheet({
-      title: 'Comentário e fotos',
+      title: exige ? 'Mande a foto da tarefa' : 'Comentário e fotos',
       subtitle: e.name,
       body: `
+        ${exige ? `<div class="note aviso">
+          Esta é uma tarefa de <b>todo dia</b>: ela só conta com uma foto mostrando o que foi feito.
+        </div>` : ''}
         <form id="note-form">
+          ${UI.photoField(exige ? 'Foto da tarefa (obrigatória)' : 'Fotos (opcional)', e.photos || [])}
           ${UI.field('Conte como foi (opcional)', `
             <textarea name="note" rows="3" placeholder="ex.: terminei toda a lição de matemática">${UI.esc(e.note)}</textarea>`)}
-          ${UI.photoField('Fotos (opcional)', e.photos || [])}
         </form>`,
       actions: `
-        <button class="btn btn-ghost" data-cancel>Cancelar</button>
-        <button class="btn btn-primary" data-save>Salvar</button>`,
+        <button class="btn btn-ghost" data-cancel>${novaMarca ? 'Desmarcar' : 'Cancelar'}</button>
+        <button class="btn btn-primary" data-save ${exige ? 'disabled' : ''}>Salvar</button>`,
       onMount(sheet) {
-        picker = UI.bindPhotos(sheet);
+        const btnSalvar = sheet.querySelector('[data-save]');
+        picker = UI.bindPhotos(sheet, (quantas) => {
+          if (exige) btnSalvar.disabled = quantas < 1;
+        });
         sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
-        sheet.querySelector('[data-save]').addEventListener('click', () => {
+        btnSalvar.addEventListener('click', () => {
           const data = UI.formData(sheet.querySelector('#note-form'));
+          if (exige && !picker.ids().length) return UI.toast('Falta a foto desta tarefa', 'bad');
           Store.setEntryNote(entryId, data.note, picker.ids());
           picker.commit();
+          salvo = true;
           UI.closeSheet();
-          UI.toast('Comentário salvo', 'ok');
+          UI.toast(exige ? 'Foto enviada. Tarefa marcada!' : 'Comentário salvo', 'ok');
           App.render();
           if (picker.ids().length) Effects.burst('photo');
+          // volta para a lista da categoria para ela seguir marcando
+          if (opcoes.voltarPara) openCategory(opcoes.voltarPara.user, opcoes.voltarPara.catId);
         });
       },
-      onClose() { if (picker) picker.discard(); },
+      onClose() {
+        if (picker) picker.discard();
+        // desistiu de mandar a foto de uma tarefa recém-marcada: desmarca
+        if (!salvo && novaMarca && exige) {
+          Store.removeEntry(entryId);
+          UI.toast('Tarefa desmarcada: sem foto ela não conta');
+          App.render();
+          if (opcoes.voltarPara) openCategory(opcoes.voltarPara.user, opcoes.voltarPara.catId);
+        }
+      },
     });
   }
 
@@ -680,12 +728,23 @@ const ChildScreen = (() => {
           <div class="stat"><div class="k">aguardando</div><div class="v">${st.pending}</div></div>
           <div class="stat"><div class="k">total do dia</div><div class="v">${Store.money(st.value)}</div></div>
         </div>
-        ${st.required && !st.complete
-          ? `<div class="note">Ainda faltam ${st.required - st.filled} tarefa(s) do dia. Elas contam para a sua mesada.</div>`
-          : '<div class="note">Tudo que era obrigatório do dia está preenchido.</div>'}
+        ${st.semFoto ? `<div class="note aviso">
+            ${st.semFoto === 1
+              ? 'Uma tarefa de todo dia ainda está <b>sem foto</b>.'
+              : `${st.semFoto} tarefas de todo dia ainda estão <b>sem foto</b>.`}
+            Toque na câmera para mandar a foto: sem ela a tarefa não conta.
+          </div>`
+          : st.required && !st.complete
+            ? `<div class="note">Ainda faltam ${st.required - st.filled} tarefa(s) do dia. Elas contam para a sua mesada.</div>`
+            : '<div class="note">Tudo que era obrigatório do dia está preenchido.</div>'}
         ${list.length ? `<div class="list">${list.map(entryRow).join('')}</div>` : UI.empty('pencil', 'Nada marcado neste dia.')}`,
-      actions: '<button class="btn btn-primary btn-block" data-ok>Enviar para validação</button>',
+      actions: `<button class="btn btn-primary btn-block" data-ok ${st.semFoto ? 'disabled' : ''}>
+        ${st.semFoto ? (st.semFoto === 1 ? 'Falta 1 foto' : `Faltam ${st.semFoto} fotos`) : 'Enviar para validação'}</button>`,
       onMount(sheet) {
+        sheet.querySelectorAll('[data-note]').forEach((b) => b.addEventListener('click', () => {
+          UI.closeSheet();
+          openNote(b.getAttribute('data-note'));
+        }));
         sheet.querySelector('[data-ok]').addEventListener('click', () => {
           UI.closeSheet();
           UI.toast(list.length ? 'Enviado. O responsável já pode validar.' : 'Marque alguma tarefa primeiro.',

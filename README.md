@@ -125,6 +125,12 @@ quantos filhos quiser, cada um com o próprio login e senha.
   o texto do que fez e **até 4 fotos**. Enquanto está aguardando, dá para editar ou apagar.
 - **Categorias**: toca na categoria (Estudos, Casa, Saúde, Atitude, Extras) e marca as ações feitas.
   Cada marcação vira um lançamento **aguardando validação**.
+- **Foto obrigatória nas atividades diárias**: ao marcar uma tarefa de **todo dia**, o app já
+  abre a câmera e só libera o *Salvar* depois que ela manda a foto do que foi feito. Se
+  desistir, a tarefa volta a ficar desmarcada. Enquanto faltar foto, a tarefa aparece com a
+  etiqueta *falta a foto*, não conta no progresso do dia e o botão *Enviar para validação*
+  fica travado. O responsável vê o aviso no cartão de validação e pode desligar a regra em
+  **Ações > Regra das fotos**.
 - **Comentário e fotos**: cada lançamento pendente tem um botão de câmera para escrever um
   comentário e anexar fotos (tiradas na hora ou escolhidas da galeria).
 - **Foto do perfil**: em *Perfil* dá para colocar ou trocar a própria foto.

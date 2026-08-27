@@ -109,6 +109,7 @@ const ParentScreen = (() => {
           <div class="grow">
             <div class="nm bold" style="font-size:14px">${UI.esc(e.name)}</div>
             <div class="mt small muted">${UI.esc(e.catName || '')} • ${kid ? UI.esc(kid.name.split(' ')[0]) : ''}</div>
+            ${Store.entryNeedsPhoto(e) ? '<div class="mt"><span class="chip warn">sem a foto obrigatória</span></div>' : ''}
           </div>
           <span class="val ${e.kind === 'penalty' ? 'pen' : 'earn'}">
             ${e.kind === 'penalty' ? '-' : '+'}${Store.money(e.value).replace('R$ ', '')}
@@ -162,7 +163,23 @@ const ParentScreen = (() => {
   /* ---------- aba: categorias ---------- */
   function categoriasView() {
     const cats = Store.categories();
+    const exigeFoto = Store.photoRequired();
     return `
+      <section class="panel">
+        <header class="panel-head"><h3>${Icons.svg('camera')} Regra das fotos</h3></header>
+        <button class="up-row" data-toggle-photo aria-pressed="${exigeFoto}">
+          <span class="grow" style="text-align:left">
+            <span class="bold small block">Foto obrigatória nas atividades diárias</span>
+            <span class="tiny muted block">
+              ${exigeFoto
+                ? 'Ligado: as tarefas de todo dia só contam quando o filho manda uma foto.'
+                : 'Desligado: a foto continua disponível, mas não é exigida.'}
+            </span>
+          </span>
+          <span class="switch" aria-hidden="true"></span>
+        </button>
+      </section>
+
       <div class="section-title">
         <h3>Ações da mesada</h3>
         <button class="link" data-new-cat>+ categoria</button>
@@ -1018,6 +1035,13 @@ const ParentScreen = (() => {
     root.querySelectorAll('[data-kid]').forEach((b) => b.addEventListener('click', () => {
       const kid = Store.userById(b.getAttribute('data-kid'));
       if (kid) openChildDetail(kid);
+    }));
+    root.querySelectorAll('[data-toggle-photo]').forEach((b) => b.addEventListener('click', () => {
+      const novo = !Store.photoRequired();
+      Store.setPhotoRequired(novo);
+      UI.toast(novo ? 'Foto passou a ser obrigatória nas tarefas de todo dia'
+        : 'Foto deixou de ser obrigatória');
+      App.render();
     }));
     root.querySelectorAll('[data-rel-tab]').forEach((b) => b.addEventListener('click', () => {
       relTab = b.getAttribute('data-rel-tab');
