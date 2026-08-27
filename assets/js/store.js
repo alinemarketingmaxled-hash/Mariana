@@ -121,6 +121,8 @@ const Store = (() => {
       events: [],
       purchases: [],
       decks: [],
+      usage: [],
+      quizLog: [],
     };
   }
 
@@ -166,6 +168,8 @@ const Store = (() => {
           if (!Array.isArray(st.events)) st.events = [];
           if (!Array.isArray(st.purchases)) st.purchases = [];
           if (!Array.isArray(st.decks)) st.decks = [];
+          if (!Array.isArray(st.usage)) st.usage = [];
+          if (!Array.isArray(st.quizLog)) st.quizLog = [];
           return st;
         }
       }
@@ -690,6 +694,153 @@ const Store = (() => {
     return { ok: true, count: pet.care.count, levelUp: !!res.levelUp };
   }
 
+  /* =========================================================
+     Tempo de uso: quanto tempo o filho passa no app e em quê.
+     Guardamos um total por dia e por área, para o registro não
+     crescer sem parar.
+     ========================================================= */
+  const AREAS = [
+    { id: 'tarefas', label: 'Tarefas do dia', icon: 'home', grad: 'g1' },
+    { id: 'diario', label: 'Diário', icon: 'book', grad: 'g5' },
+    { id: 'jogos', label: 'Joguinhos', icon: 'ball', grad: 'g2' },
+    { id: 'estudo', label: 'Estudo e provas', icon: 'brain', grad: 'g4' },
+    { id: 'bichinho', label: 'Bichinho', icon: 'heart', grad: 'g3' },
+    { id: 'agenda', label: 'Agenda', icon: 'calendar', grad: 'g6' },
+    { id: 'carteira', label: 'Carteira', icon: 'wallet', grad: 'g7' },
+  ];
+  const area = (id) => AREAS.find((a) => a.id === id) || AREAS[0];
+
+  /** soma um tempinho de uso na área, no dia de hoje */
+  function trackUse(childId, areaId, ms) {
+    if (!childId || !ms || ms < 400) return;
+    if (ms > 5 * 60000) ms = 5 * 60000;          // nada de saltos absurdos
+    const hoje = today();
+    const id = area(areaId).id;
+    let linha = state.usage.find((u) => u.childId === childId && u.date === hoje && u.area === id);
+    if (!linha) {
+      linha = { childId, date: hoje, area: id, ms: 0 };
+      state.usage.push(linha);
+    }
+    linha.ms += Math.round(ms);
+    // guarda no máximo 120 dias de registro
+    const limite = addDays(hoje, -120);
+    if (state.usage.length > 900) state.usage = state.usage.filter((u) => u.date >= limite);
+    save();
+  }
+
+  /** resumo do tempo de uso dos últimos dias */
+  function usageOf(childId, dias = 7) {
+    const inicio = addDays(today(), -(dias - 1));
+    const linhas = state.usage.filter((u) => u.childId === childId && u.date >= inicio);
+    const porDia = [];
+    for (let i = dias - 1; i >= 0; i--) {
+      const d = addDays(today(), -i);
+      porDia.push({ date: d, ms: linhas.filter((u) => u.date === d).reduce((s2, u) => s2 + u.ms, 0) });
+    }
+    // menos de meio minuto numa área é só passagem, não conta na divisão
+    const porArea = AREAS.map((a) => ({
+      ...a, ms: linhas.filter((u) => u.area === a.id).reduce((s2, u) => s2 + u.ms, 0),
+    })).filter((a) => a.ms >= 30000).sort((a, b) => b.ms - a.ms);
+    const total = linhas.reduce((s2, u) => s2 + u.ms, 0);
+    const diasComUso = porDia.filter((d) => d.ms > 0).length;
+    const hoje = porDia[porDia.length - 1] ? porDia[porDia.length - 1].ms : 0;
+    const pega = (id) => (porArea.find((a) => a.id === id) || { ms: 0 }).ms;
+    return {
+      total, hoje, porDia, porArea,
+      media: diasComUso ? total / diasComUso : 0,
+      jogos: pega('jogos'),
+      estudo: pega('estudo'),
+      telaMaior: porArea[0] || null,
+      totalGeral: state.usage.filter((u) => u.childId === childId).reduce((s2, u) => s2 + u.ms, 0),
+    };
+  }
+
+  /** o tempo de uso do dia inteiro, somando todas as áreas */
+  const usageToday = (childId) =>
+    state.usage.filter((u) => u.childId === childId && u.date === today())
+      .reduce((s2, u) => s2 + u.ms, 0);
+
+  /* ---------- histórico de quizzes, provas e jogos ---------- */
+  const QUIZ_KINDS = [
+    { id: 'prova', label: 'Prova da escola', icon: 'brain', grad: 'g4' },
+    { id: 'assunto', label: 'Quiz de assunto', icon: 'book', grad: 'g5' },
+    { id: 'cartas', label: 'Cartas de revisão', icon: 'book', grad: 'g1' },
+    { id: 'surpresa', label: 'Pergunta surpresa', icon: 'star', grad: 'g2' },
+    { id: 'jogo', label: 'Joguinho', icon: 'ball', grad: 'g6' },
+  ];
+  const quizKind = (id) => QUIZ_KINDS.find((k) => k.id === id) || QUIZ_KINDS[0];
+
+  /** anota uma partida ou prova terminada */
+  function logQuiz(childId, dados) {
+    if (!childId) return null;
+    const item = {
+      id: uid('q'),
+      childId,
+      date: today(),
+      at: new Date().toISOString(),
+      kind: quizKind(dados.kind).id,
+      name: String(dados.name || '').slice(0, 60),
+      subjects: Array.isArray(dados.subjects) ? dados.subjects.slice(0, 6) : [],
+      acertos: Number(dados.acertos) || 0,
+      total: Number(dados.total) || 0,
+      ms: Math.max(0, Math.round(Number(dados.ms) || 0)),
+    };
+    state.quizLog.unshift(item);
+    if (state.quizLog.length > 400) state.quizLog.length = 400;
+    save();
+    return item;
+  }
+
+  /** resumo do que já foi estudado e jogado */
+  function quizStats(childId, dias = 30) {
+    const inicio = addDays(today(), -(dias - 1));
+    const todos = state.quizLog.filter((q) => q.childId === childId);
+    const periodo = todos.filter((q) => q.date >= inicio);
+    const estudo = periodo.filter((q) => q.kind !== 'jogo');
+    const jogos = periodo.filter((q) => q.kind === 'jogo');
+    // cartas de revisão não têm pergunta respondida, então contam à parte
+    const respondidos = estudo.filter((q) => q.total > 0);
+    const revisoes = estudo.filter((q) => q.total === 0);
+    const soma = (lista, campo) => lista.reduce((s2, q) => s2 + (q[campo] || 0), 0);
+    const perguntas = soma(respondidos, 'total');
+    const acertos = soma(respondidos, 'acertos');
+    const porMateria = {};
+    respondidos.forEach((q) => {
+      (q.subjects.length ? q.subjects : ['Outros']).forEach((m) => {
+        const atual = porMateria[m] || { nome: m, feitos: 0, acertos: 0, total: 0 };
+        atual.feitos += 1;
+        atual.acertos += q.acertos;
+        atual.total += q.total;
+        porMateria[m] = atual;
+      });
+    });
+    return {
+      lista: periodo,
+      ultimos: todos.slice(0, 12),
+      quizzes: respondidos.length,
+      revisoes: revisoes.length,
+      jogosCount: jogos.length,
+      perguntas,
+      acertos,
+      aproveitamento: perguntas ? (acertos / perguntas) * 100 : 0,
+      tempoEstudo: soma(estudo, 'ms'),
+      tempoJogos: soma(jogos, 'ms'),
+      porMateria: Object.values(porMateria).sort((a, b) => b.total - a.total),
+      totalGeral: todos.length,
+    };
+  }
+
+  /** 1h 12min, 45min, 30s */
+  function duracao(ms) {
+    const seg = Math.round((ms || 0) / 1000);
+    if (seg < 60) return `${seg}s`;
+    const min = Math.round(seg / 60);
+    if (min < 60) return `${min} min`;
+    const h = Math.floor(min / 60);
+    const resto = min % 60;
+    return resto ? `${h}h ${resto}min` : `${h}h`;
+  }
+
   /* ---------- quizzes das matérias ---------- */
   const SUBJECTS = [
     { id: 'matematica', label: 'Matemática', icon: 'brain', grad: 'g4' },
@@ -1197,7 +1348,9 @@ const Store = (() => {
     saveEvent, removeEvent, toggleEventDone, eventById, eventsOf, eventsOfMonth,
     eventsOfDay, upcomingEvents, daysUntil, eventKind, EVENT_KINDS,
     // dinheiro
-    totals, balance, dashboard, savePayout, removePayout, payoutById, payoutsOf,
+    totals, balance, dashboard, savePayout,
+    // tempo de uso e histórico de estudo
+    trackUse, usageOf, usageToday, logQuiz, quizStats, duracao, area, quizKind, AREAS, QUIZ_KINDS, removePayout, payoutById, payoutsOf,
     // tema
     setTheme, theme,
     // helpers

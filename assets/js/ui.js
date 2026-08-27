@@ -49,6 +49,8 @@ const UI = (() => {
    */
   function openSheet({ title = '', subtitle = '', body = '', actions = '', size = '', onMount, onClose } = {}) {
     const root = sheetRoot();
+    // se já havia uma folha aberta, avisa que ela fechou antes de trocar
+    if (onCloseHook) { const f = onCloseHook; onCloseHook = null; f(); }
     root.hidden = false;
     onCloseHook = onClose || null;
     root.innerHTML = `

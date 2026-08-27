@@ -234,6 +234,8 @@ const Quiz = (() => {
         ev.currentTarget.classList.toggle('virada'));
     };
 
+    Uso.entrar('estudo');
+    const cronoCartas = Uso.cronometro();
     UI.openSheet({
       title: `Cartas de ${deck.name}`,
       subtitle: 'Toque na carta para ver a resposta',
@@ -244,6 +246,18 @@ const Quiz = (() => {
       actions: `
         <button class="btn btn-ghost" data-prev>Anterior</button>
         <button class="btn btn-primary" data-next>Próxima</button>`,
+      onClose() {
+        const gasto = cronoCartas();
+        // uma espiada de poucos segundos não vira registro
+        if (gasto > 5000) {
+          Store.logQuiz(child.id, {
+            kind: 'cartas', name: deck.name,
+            subjects: [Store.subject(deck.subject).label],
+            acertos: 0, total: 0, ms: gasto,
+          });
+        }
+        Uso.sair();
+      },
       onMount(sheet) {
         pintar(sheet);
         sheet.querySelector('[data-next]').addEventListener('click', () => {
@@ -271,6 +285,8 @@ const Quiz = (() => {
   function startQuiz(child, deckId) {
     const deck = Store.deckById(deckId);
     if (!deck || deck.cards.length < 2) return;
+    Uso.entrar('estudo');
+    const cronometro = Uso.cronometro();
     const rodada = deck.cards.slice().sort(() => Math.random() - 0.5).slice(0, 10);
     const pet = Store.petOf(child.id);
     let i = 0;
@@ -297,6 +313,7 @@ const Quiz = (() => {
         <div class="quiz-q" data-pergunta></div>
         <div class="quiz-options" data-opcoes></div>`,
       actions: '<button class="btn btn-ghost btn-block" data-sair>Sair do quiz</button>',
+      onClose() { Uso.sair(); },
       onMount(sheet) {
         const elPergunta = sheet.querySelector('[data-pergunta]');
         const elOpcoes = sheet.querySelector('[data-opcoes]');
@@ -342,6 +359,11 @@ const Quiz = (() => {
 
         function fim() {
           const res = Store.quizResult(child.id, deckId, acertos, rodada.length);
+          Store.logQuiz(child.id, {
+            kind: 'assunto', name: deck.name,
+            subjects: [Store.subject(deck.subject).label],
+            acertos, total: rodada.length, ms: cronometro(),
+          });
           UI.closeSheet();
           UI.openSheet({
             title: acertos === rodada.length ? 'Gabaritou!' : 'Fim do quiz',
@@ -384,6 +406,8 @@ const Quiz = (() => {
     const c = cards[Math.floor(Math.random() * cards.length)];
     const pet = Store.petOf(child.id);
     const alternativas = opcoes(cards, c.a);
+    const cronoSurpresa = Uso.cronometro();
+    let acertouSurpresa = false;
 
     UI.openSheet({
       title: 'Pergunta surpresa',
@@ -398,6 +422,12 @@ const Quiz = (() => {
           ${alternativas.map((op) => `<button class="quiz-op" data-op="${UI.esc(op)}">${UI.esc(op)}</button>`).join('')}
         </div>`,
       actions: '<button class="btn btn-ghost btn-block" data-depois>Agora não</button>',
+      onClose() {
+        Store.logQuiz(child.id, {
+          kind: 'surpresa', name: c.deck || 'Pergunta surpresa',
+          acertos: acertouSurpresa ? 1 : 0, total: 1, ms: cronoSurpresa(),
+        });
+      },
       onMount(sheet) {
         let respondido = false;
         // a pergunta surpresa é falada assim que aparece
@@ -409,6 +439,7 @@ const Quiz = (() => {
           const certo = b.getAttribute('data-op').toLowerCase() === c.a.toLowerCase();
           b.classList.add(certo ? 'certa' : 'errada');
           if (certo) {
+            acertouSurpresa = true;
             Store.petAddXp(child.id, 2);
             Effects.burst('book', b);
             Pet.Voz.falar('Acertou!', child, sheet);
@@ -720,6 +751,8 @@ const Quiz = (() => {
   /* ---------- a prova rodando ---------- */
   function runProva(child, cfg, questoes) {
     const pet = Store.petOf(child.id);
+    Uso.entrar('estudo');
+    const cronometro = Uso.cronometro();
     const rodada = questoes.map((q, idx) => Object.assign({}, q, {
       modo: cfg.tipo === 'mistas' ? (idx % 2 ? 'discursiva' : 'alternativa') : (cfg.tipo === 'discursivas' ? 'discursiva' : 'alternativa'),
     }));
@@ -746,6 +779,7 @@ const Quiz = (() => {
         <div class="quiz-q" data-pergunta></div>
         <div data-area></div>`,
       actions: '<button class="btn btn-ghost btn-block" data-sair>Sair da prova</button>',
+      onClose() { Uso.sair(); },
       onMount(sheet) {
         const elPergunta = sheet.querySelector('[data-pergunta]');
         const elArea = sheet.querySelector('[data-area]');
@@ -861,6 +895,11 @@ const Quiz = (() => {
 
         function fim() {
           const res = Store.quizResult(child.id, null, acertos, rodada.length);
+          Store.logQuiz(child.id, {
+            kind: 'prova', name: `Prova de ${materias}`,
+            subjects: Array.from(new Set(rodada.map((q) => q.materia))),
+            acertos, total: rodada.length, ms: cronometro(),
+          });
           UI.closeSheet();
           UI.openSheet({
             title: acertos === rodada.length ? 'Gabaritou a prova!' : 'Prova terminada',

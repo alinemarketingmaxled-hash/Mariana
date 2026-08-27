@@ -791,8 +791,10 @@ const Pet = (() => {
         modelos do bonequinho, roupinhas, camas, acessórios, cores de parede e chão e móveis.
       </div>`;
 
+    Uso.entrar('bichinho');
     UI.openSheet({
       size: 'larga',
+      onClose() { Uso.sair(); },
       title: 'Atualizar o bichinho',
       subtitle: `${pet.name} • ${pet.xp} pontos de amizade`,
       body: `
@@ -934,8 +936,10 @@ const Pet = (() => {
       .filter((i) => (i.level || 1) > lv)
       .sort((a, b) => a.level - b.level)[0];
 
+    Uso.entrar('bichinho');
     UI.openSheet({
       size: 'larga',
+      onClose() { Uso.sair(); },
       title: 'Tudo do bichinho',
       subtitle: `Nível ${lv} • ${abertos} de ${total} peças já liberadas`,
       body: `
@@ -1056,6 +1060,7 @@ const Pet = (() => {
         <span class="chat-bubble">${UI.esc(m.text)}</span>
       </div>`).join('');
 
+    Uso.entrar('bichinho');
     UI.openSheet({
       title: `Conversar com ${pet.name}`,
       subtitle: 'Escolha uma resposta ou escreva o que quiser contar',
@@ -1112,7 +1117,7 @@ const Pet = (() => {
         });
         sheet.querySelector('[data-ok]').addEventListener('click', () => { UI.closeSheet(); App.render(); });
       },
-      onClose() { App.render(); },
+      onClose() { Uso.sair(); App.render(); },
     });
   }
 

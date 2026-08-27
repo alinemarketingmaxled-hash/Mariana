@@ -144,6 +144,9 @@ quantos filhos quiser, cada um com o próprio login e senha.
   por cento do recebido ainda está guardado, a divisão de **onde o dinheiro foi** (por tipo de
   gasto) e **de onde veio** (por categoria de tarefa), os cinco maiores gastos e o progresso
   da meta.
+- **Meu tempo no app**: no *Perfil* aparece quanto tempo ela passou no app hoje e nos últimos
+  7 dias, a média por dia, quanto foi em joguinho e quanto foi estudando, um gráfico por dia,
+  a divisão por área e a lista dos últimos quizzes, provas e partidas com a nota e a duração.
 - **Perfil**: meta, estatísticas, foto, troca de senha e tema.
 
 Cada ação do filho responde com uma animação: tarefa marcada solta estrelas, registro de livro
@@ -173,6 +176,27 @@ Depois que o responsável valida ou recusa, o item fica **travado**: a criança 
   **foto de capa**, marca quais são **obrigatórias todo dia** e cadastra **descontos**
   (valores que saem da mesada). Qualquer valor pode ser alterado depois.
 - **Relatório**: validado no mês, pago, saldo e um gráfico dos últimos 7 dias por filho.
+
+### Tempo de uso e estudo
+
+O app tem um relógio próprio que mede quanto tempo o filho realmente passa nele:
+
+- Conta a cada 10 segundos, separando por área: **tarefas do dia, diário, joguinhos,
+  estudo e provas, bichinho, agenda e carteira**.
+- **Para de contar** quando o app vai para segundo plano ou quando ninguém mexe em nada
+  por 3 minutos, e ignora buracos grandes (aparelho que dormiu com o app aberto).
+- Guarda um total por dia e por área, então o registro não cresce sem parar: são 120 dias
+  de histórico.
+- Cada **quiz, prova, revisão de cartas, pergunta surpresa e partida de joguinho** que termina
+  vira um registro com a data, o nome, as matérias, o número de acertos e quanto tempo levou.
+
+O responsável vê tudo em **Relatório > Tempo de uso**: por filho, o tempo de hoje, dos 7 dias
+e a média por dia, quanto foi em joguinho e quanto em estudo, quantos quizzes fez, o gráfico
+dia a dia e a divisão por área. O botão *Ver tudo* abre o relatório completo, com o
+aproveitamento por matéria e a lista das últimas atividades. Na aba **Filhos**, cada cartão
+mostra o tempo de app do dia.
+
+O filho vê o mesmo resumo do seu próprio uso no **Perfil**.
 
 ### Como o saldo é calculado
 
@@ -232,7 +256,8 @@ assets/
     effects.js        # animações de resposta (moedas, livros, estrelas)
     agenda.js         # calendário compartilhado de provas, trabalhos e eventos
     bank.js           # banco de conteúdo da escola (matérias, submatérias e questões)
-    dash.js           # painel de ganhos e gastos
+    dash.js           # painel de ganhos, gastos e tempo de uso
+    usage.js          # relógio de uso: conta o tempo em cada parte do app
     pet.js            # o bichinho: desenho, quartos, menu em bolinhas, voz e lojinha
     quiz.js           # montar prova, assuntos escritos por ela, cartas e quizzes
     games.js          # joguinhos e a aba de estudo

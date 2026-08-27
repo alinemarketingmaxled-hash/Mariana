@@ -92,6 +92,12 @@ const Games = (() => {
   /* ---------- fim de partida ---------- */
   function terminar(child, gameId, pontos, xpBruto, resumo) {
     const res = Store.petGameResult(child.id, gameId, pontos, xpBruto);
+    Store.logQuiz(child.id, {
+      kind: 'jogo', name: jogo(gameId).nome,
+      acertos: pontos, total: pontos, ms: jogoDesde ? jogoDesde() : 0,
+    });
+    jogoDesde = null;
+    Uso.sair();
     UI.closeSheet();
     const pet = Store.petOf(child.id);
     UI.openSheet({
@@ -593,12 +599,18 @@ const Games = (() => {
     });
   }
 
+  let jogoDesde = null;
+
   function abrir(child, id) {
+    Uso.entrar('jogos');
+    jogoDesde = Uso.cronometro();
     if (id === 'matematica') return matematica(child);
     if (id === 'memoria') return memoria(child);
     if (id === 'sequencia') return sequencia(child);
     return bola(child);
   }
+
+  const abaAtual = () => aba;
 
   function bind(root, child, rerender) {
     root.querySelectorAll('[data-play-tab]').forEach((b) => b.addEventListener('click', () => {
@@ -610,5 +622,5 @@ const Games = (() => {
     Quiz.bind(root, child);
   }
 
-  return { view, bind, abrir, LISTA, aba: () => aba };
+  return { view, bind, abrir, abaAtual, LISTA, aba: () => aba };
 })();

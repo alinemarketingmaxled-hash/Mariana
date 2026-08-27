@@ -4,6 +4,7 @@
 const ParentScreen = (() => {
   let tab = 'validar';
   let childFilter = 'all';
+  let relTab = 'dinheiro';   // dentro do relatório: dinheiro ou tempo de uso
 
   /* ---------- aba: validar ---------- */
   function validarView() {
@@ -143,6 +144,7 @@ const ParentScreen = (() => {
                 <div class="bold" style="font-size:15px">${UI.esc(k.name)}</div>
                 <div class="small muted">@${UI.esc(k.username)} • ${t.pendingCount} aguardando •
                   ${UI.esc(Store.petOf(k.id).name)} nível ${Pet.level(Store.petOf(k.id).xp)}</div>
+                <div class="tiny muted">${Icons.svg('clock', 'ico-sm dim')} ${Store.duracao(Store.usageToday(k.id))} no app hoje</div>
                 ${Number(k.goalAmount) > 0 ? `
                   <div class="bar mt8" style="background:var(--surface-2);height:6px">
                     <i style="width:${Math.max(0, Math.min(100, (bal / k.goalAmount) * 100))}%"></i>
@@ -203,9 +205,60 @@ const ParentScreen = (() => {
   /* ---------- aba: relatório ---------- */
   function relatorioView() {
     const kids = Store.children();
-    const ym = Store.monthOf(Store.today());
     if (!kids.length) return UI.empty('trending', 'Cadastre um filho para ver os relatórios.');
+    const abas = `
+      <div class="seg-tabs" data-rel>
+        <button type="button" data-rel-tab="dinheiro" aria-pressed="${relTab === 'dinheiro'}">
+          ${Icons.svg('coins')} Dinheiro
+        </button>
+        <button type="button" data-rel-tab="tempo" aria-pressed="${relTab === 'tempo'}">
+          ${Icons.svg('clock')} Tempo de uso
+        </button>
+      </div>`;
+    return abas + (relTab === 'tempo' ? tempoView(kids) : dinheiroView(kids));
+  }
 
+  /* ---------- relatório: quanto tempo cada filho usa o app ---------- */
+  function tempoView(kids) {
+    return kids.map((k) => {
+      const u = Store.usageOf(k.id, 7);
+      const q = Store.quizStats(k.id, 30);
+      return `
+        <div class="section-title"><h3>${UI.esc(k.name)}</h3>
+          <span class="small muted">${Store.duracao(u.hoje)} hoje</span></div>
+        <section class="card">
+          <div class="stat-row">
+            <div class="stat"><div class="k">hoje</div><div class="v">${Store.duracao(u.hoje)}</div></div>
+            <div class="stat"><div class="k">7 dias</div><div class="v">${Store.duracao(u.total)}</div></div>
+            <div class="stat"><div class="k">por dia</div><div class="v">${Store.duracao(u.media)}</div></div>
+          </div>
+          <div class="stat-row mt12">
+            <div class="stat"><div class="k">joguinhos</div><div class="v">${Store.duracao(u.jogos)}</div></div>
+            <div class="stat"><div class="k">estudo</div><div class="v">${Store.duracao(u.estudo)}</div></div>
+            <div class="stat"><div class="k">quizzes</div><div class="v">${q.quizzes}</div></div>
+          </div>
+          ${u.total ? `
+            <div class="chart mt16">
+              ${u.porDia.map((d) => `
+                <div class="cb" title="${Store.labelDate(d.date)}: ${Store.duracao(d.ms)}">
+                  <i style="height:${Math.max(2, (d.ms / Math.max(1, ...u.porDia.map((x) => x.ms))) * 100)}%"></i>
+                  <span>${Store.WEEKDAYS[Store.fromISO(d.date).getDay()]}</span>
+                </div>`).join('')}
+            </div>` : '<p class="tiny muted mt12">Ainda não há tempo de uso registrado nesta semana.</p>'}
+          ${u.porArea.length ? `
+            <div class="chip-row mt16">
+              ${u.porArea.map((a) => `
+                <span class="chip neutral">${UI.esc(a.label)}: ${Store.duracao(a.ms)}</span>`).join('')}
+            </div>` : ''}
+          <button class="btn btn-ghost btn-sm btn-block mt16" data-tempo="${k.id}">
+            ${Icons.svg('chart')} Ver tudo de ${UI.esc(k.name)}
+          </button>
+        </section>`;
+    }).join('');
+  }
+
+  function dinheiroView(kids) {
+    const ym = Store.monthOf(Store.today());
     return kids.map((k) => {
       const t = Store.totals(k.id, ym);
       const bal = Store.balance(k.id);
@@ -239,6 +292,21 @@ const ParentScreen = (() => {
           </div>
         </section>`;
     }).join('');
+  }
+
+  /* ---------- folha com o tempo de uso completo de um filho ---------- */
+  function openTempo(kid) {
+    const u = Store.usageOf(kid.id, 7);
+    UI.openSheet({
+      size: 'larga',
+      title: `Tempo de ${kid.name}`,
+      subtitle: `${Store.duracao(u.hoje)} hoje • ${Store.duracao(u.total)} nos últimos 7 dias`,
+      body: Dash.tempo(kid),
+      actions: '<button class="btn btn-primary btn-block" data-ok>Pronto</button>',
+      onMount(sheet) {
+        sheet.querySelector('[data-ok]').addEventListener('click', UI.closeSheet);
+      },
+    });
   }
 
   /* ---------- sheets ---------- */
@@ -855,10 +923,11 @@ const ParentScreen = (() => {
     agenda: { title: 'Agenda', subtitle: 'Provas, trabalhos e eventos da família' },
     categorias: { title: 'Ações da mesada', subtitle: 'Categorias, valores e descontos' },
     relatorio: { title: 'Relatório', subtitle: 'Como está o mês de cada filho' },
+    relatorioTempo: { title: 'Relatório', subtitle: 'Quanto tempo cada filho usa o app' },
   };
 
   function render(root, user) {
-    const page = PAGES[tab] || PAGES.validar;
+    const page = (tab === 'relatorio' && relTab === 'tempo' ? PAGES.relatorioTempo : PAGES[tab]) || PAGES.validar;
     const pend = Store.pendingEntries().length + Store.pendingDiary().length;
     const proximos = Store.upcomingEvents(null).filter((e) => !e.done).length;
     const agendaChild = childFilter === 'all' ? null : childFilter;
@@ -949,6 +1018,14 @@ const ParentScreen = (() => {
     root.querySelectorAll('[data-kid]').forEach((b) => b.addEventListener('click', () => {
       const kid = Store.userById(b.getAttribute('data-kid'));
       if (kid) openChildDetail(kid);
+    }));
+    root.querySelectorAll('[data-rel-tab]').forEach((b) => b.addEventListener('click', () => {
+      relTab = b.getAttribute('data-rel-tab');
+      App.render();
+    }));
+    root.querySelectorAll('[data-tempo]').forEach((b) => b.addEventListener('click', () => {
+      const kid = Store.userById(b.getAttribute('data-tempo'));
+      if (kid) openTempo(kid);
     }));
     root.querySelectorAll('[data-pay]').forEach((b) => b.addEventListener('click', () => {
       const kid = Store.userById(b.getAttribute('data-pay'));

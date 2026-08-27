@@ -510,7 +510,7 @@ const ChildScreen = (() => {
     return `
       <section class="card mt8" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
         ${UI.avatar(user, '', 'width:64px;height:64px;font-size:26px')}
-        <div class="grow">
+        <div class="grow" style="min-width:150px">
           <div class="bold" style="font-size:17px">${UI.esc(user.name)}</div>
           <div class="small muted">@${UI.esc(user.username)}</div>
         </div>
@@ -539,6 +539,10 @@ const ChildScreen = (() => {
             <i style="width:${Math.max(0, Math.min(100, (bal / user.goalAmount) * 100))}%"></i>
           </div>
         </div>` : ''}
+
+      <div class="section-title"><h3>Meu tempo no app</h3>
+        <span class="small muted">${Store.duracao(Store.usageToday(user.id))} hoje</span></div>
+      ${Dash.tempo(user, { compacto: true })}
 
       <div class="section-title"><h3>Conta</h3></div>
       <div class="list">
@@ -759,7 +763,14 @@ const ChildScreen = (() => {
     perfil: { title: 'Perfil', subtitle: 'Sua conta e sua meta' },
   };
 
+  /** cada aba é uma área de uso diferente no relógio */
+  const AREA_DA_ABA = {
+    home: 'tarefas', diario: 'diario', jogos: 'jogos',
+    agenda: 'agenda', extrato: 'carteira', perfil: 'carteira',
+  };
+
   function render(root, user) {
+    Uso.aba(tab === 'jogos' && Games.abaAtual() === 'quiz' ? 'estudo' : (AREA_DA_ABA[tab] || 'tarefas'));
     const page = (tab === 'extrato' && moneyTab === 'painel' ? PAGES.extratoPainel : PAGES[tab]) || PAGES.home;
     const pending = Store.pendingEntries(user.id).length;
     const proximos = Store.upcomingEvents(user.id).filter((e) => !e.done).length;

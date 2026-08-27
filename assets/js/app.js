@@ -20,21 +20,25 @@ const App = (() => {
     const user = Store.currentUser();
     if (!user) {
       Pet.unmountBuddy();
+      Uso.parar();
       AuthScreen.render(el);
       return;
     }
     if (user.role === 'parent') {
       ParentScreen.render(el, user);
       Pet.unmountBuddy();
+      Uso.parar();
     } else {
       ChildScreen.render(el, user);
       Pet.mountBuddy(user);
+      Uso.iniciar(user);
     }
     Photos.hydrate(el);
     UI.bindPhotoViewers(el);
   }
 
   function logout() {
+    Uso.parar();
     Pet.unmountBuddy();
     Store.logout();
     AuthScreen.reset();

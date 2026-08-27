@@ -106,6 +106,127 @@ const Dash = (() => {
       </section>`;
   }
 
+  /* ---------- tempo de uso e estudo ---------- */
+  /**
+   * Painel de tempo: quanto tempo no app, em quê, e o que ela
+   * fez de quiz, prova e joguinho.
+   */
+  function tempo(user, { compacto = false } = {}) {
+    const u = Store.usageOf(user.id, 7);
+    const q = Store.quizStats(user.id, 30);
+    const teto = Math.max(1, ...u.porDia.map((d) => d.ms));
+
+    return `
+      <div class="dash-grid">
+        ${cartao({ titulo: 'Hoje no app', valor: Store.duracao(u.hoje), icone: 'clock', classe: 'g1',
+          detalhe: 'tempo de tela de hoje' })}
+        ${cartao({ titulo: 'Nos 7 dias', valor: Store.duracao(u.total), icone: 'chart', classe: 'g4',
+          detalhe: `média de ${Store.duracao(u.media)} por dia` })}
+        ${cartao({ titulo: 'Em joguinhos', valor: Store.duracao(u.jogos), icone: 'ball', classe: 'g2',
+          detalhe: `${q.jogosCount} partida(s) no mês` })}
+        ${cartao({ titulo: 'Estudando', valor: Store.duracao(u.estudo), icone: 'brain', classe: 'g3',
+          detalhe: `${q.quizzes} quiz(zes) e prova(s) no mês` })}
+      </div>
+
+      <section class="panel">
+        <header class="panel-head">
+          <h3>${Icons.svg('clock')} Tempo por dia</h3>
+          <span class="tiny muted">últimos 7 dias</span>
+        </header>
+        <div class="dash-chart">
+          ${u.porDia.map((d) => `
+            <div class="dash-col">
+              <div class="dash-bars">
+                <i class="tempo" style="height:${pct(d.ms, teto)}%" title="${Store.labelDate(d.date)}: ${Store.duracao(d.ms)}"></i>
+              </div>
+              <span class="dash-mes">${Store.WEEKDAYS[Store.fromISO(d.date).getDay()]}</span>
+            </div>`).join('')}
+        </div>
+        <p class="tiny muted center mt8">
+          ${u.total ? `Somando tudo desde o começo: <b>${Store.duracao(u.totalGeral)}</b>.`
+            : 'Ainda não há tempo registrado nesta semana.'}
+        </p>
+      </section>
+
+      ${u.porArea.length ? `
+        <section class="panel">
+          <header class="panel-head"><h3>${Icons.svg('target')} Onde passa o tempo</h3>
+            <span class="tiny muted">${Store.duracao(u.total)}</span>
+          </header>
+          <div class="dash-fatias">
+            ${u.porArea.map((a) => `
+              <div class="dash-fatia">
+                <span class="em ${a.grad}">${Icons.svg(a.icon)}</span>
+                <span class="grow">
+                  <span class="between">
+                    <b class="small">${UI.esc(a.label)}</b>
+                    <b class="small">${Store.duracao(a.ms)}</b>
+                  </span>
+                  <span class="bar mini"><i style="width:${pct(a.ms, u.total)}%;background:${cor(a.grad)}"></i></span>
+                  <span class="tiny muted">${Math.round(pct(a.ms, u.total))}% do tempo</span>
+                </span>
+              </div>`).join('')}
+          </div>
+        </section>` : ''}
+
+      <section class="panel">
+        <header class="panel-head"><h3>${Icons.svg('brain')} Quizzes e provas</h3>
+          <span class="tiny muted">últimos 30 dias</span>
+        </header>
+        <div class="stat-row">
+          <div class="stat"><div class="k">feitos</div><div class="v">${q.quizzes}</div></div>
+          <div class="stat"><div class="k">questões</div><div class="v">${q.perguntas}</div></div>
+          <div class="stat"><div class="k">acertos</div><div class="v">${q.perguntas ? Math.round(q.aproveitamento) + '%' : '-'}</div></div>
+        </div>
+        ${q.revisoes ? `<p class="tiny muted mt8">
+          Mais ${q.revisoes} vez(es) revisando as cartas de estudo, sem quiz.</p>` : ''}
+        ${q.porMateria.length ? `
+          <div class="dash-fatias mt16">
+            ${q.porMateria.slice(0, 8).map((m) => `
+              <div class="dash-fatia">
+                <span class="em g4">${Icons.svg('book')}</span>
+                <span class="grow">
+                  <span class="between">
+                    <b class="small">${UI.esc(m.nome)}</b>
+                    <b class="small">${m.total ? Math.round((m.acertos / m.total) * 100) : 0}%</b>
+                  </span>
+                  <span class="bar mini"><i style="width:${m.total ? (m.acertos / m.total) * 100 : 0}%;background:${cor('g3')}"></i></span>
+                  <span class="tiny muted">${m.feitos} vez(es) • ${m.acertos} de ${m.total} questões</span>
+                </span>
+              </div>`).join('')}
+          </div>` : '<p class="tiny muted mt12">Nenhum quiz ou prova feito ainda.</p>'}
+      </section>
+
+      ${q.ultimos.length ? `
+        <section class="panel">
+          <header class="panel-head"><h3>${Icons.svg('star')} O que fez por último</h3>
+            <span class="tiny muted">${q.totalGeral} no total</span>
+          </header>
+          <div class="list">
+            ${q.ultimos.slice(0, compacto ? 5 : 12).map((it) => {
+              const k = Store.quizKind(it.kind);
+              return `
+                <div class="mini-row">
+                  <span class="em ${k.grad}">${Icons.svg(k.icon)}</span>
+                  <div class="grow">
+                    <div class="bold small">${UI.esc(it.name || k.label)}</div>
+                    <div class="tiny muted">
+                      ${UI.esc(k.label)} • ${Store.labelDate(it.date)} • ${Store.duracao(it.ms)}
+                    </div>
+                  </div>
+                  ${it.total ? `<span class="chip ${it.acertos === it.total ? 'lime' : 'neutral'}">
+                    ${it.acertos}/${it.total}</span>` : ''}
+                </div>`;
+            }).join('')}
+          </div>
+        </section>` : ''}
+
+      <div class="note">
+        O tempo só conta quando o app está aberto na frente e alguém está mexendo nele:
+        se a tela fica parada por mais de 3 minutos ou o app vai para segundo plano, o relógio para.
+      </div>`;
+  }
+
   function view(user) {
     const d = Store.dashboard(user.id, 6);
     const meta = Number(user.goalAmount) || 0;
@@ -188,5 +309,5 @@ const Dash = (() => {
       </div>`;
   }
 
-  return { view };
+  return { view, tempo };
 })();
