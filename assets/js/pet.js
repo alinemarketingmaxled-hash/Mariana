@@ -159,6 +159,48 @@ const Pet = (() => {
   const XP_POR_NIVEL = 60;
   const CARINHOS_POR_DIA = 5;
 
+  /* ---------- fases de vida ----------
+     O bichinho não muda só de número: ele cresce junto com ela. A cada
+     fase o corpo muda de tamanho e de jeito, e aparecem partes novas.
+     ------------------------------------------------------------------ */
+  const FASES = [
+    {
+      id: 'filhote', nome: 'Filhotinho', nivel: 1, escala: 0.62, olhos: 1.16,
+      conta: 'Acabou de nascer. Cabeção, olho enorme e um cachinho na cabeça.',
+      vira: 'Com o nível 3 ele vira Criancinha.',
+    },
+    {
+      id: 'crianca', nome: 'Criancinha', nivel: 3, escala: 0.71, olhos: 1.08,
+      conta: 'Cresceu um tanto e ganhou orelhinhas.',
+      vira: 'Com o nível 6 ele vira Jovem.',
+    },
+    {
+      id: 'jovem', nome: 'Jovem', nivel: 6, escala: 0.79, olhos: 1,
+      conta: 'Ficou do tamanho de gente grande, com topete e sardinhas.',
+      vira: 'Com o nível 10 ele fica Crescido.',
+    },
+    {
+      id: 'crescido', nome: 'Crescido', nivel: 10, escala: 0.86, olhos: 0.95,
+      conta: 'Maior, com sobrancelha e cara de quem já sabe das coisas.',
+      vira: 'Com o nível 15 ele vira Lendário.',
+    },
+    {
+      id: 'lendario', nome: 'Lendário', nivel: 15, escala: 0.92, olhos: 0.92,
+      conta: 'A última fase: ganhou uma auréola dourada e estrelas em volta.',
+      vira: 'Essa é a última fase. Daqui ele só fica mais forte.',
+    },
+  ];
+
+  /** a fase de vida de um nível */
+  function fase(lv) {
+    let atual = FASES[0];
+    FASES.forEach((f) => { if ((lv || 1) >= f.nivel) atual = f; });
+    return atual;
+  }
+
+  /** a fase seguinte, ou null quando já chegou na última */
+  const proximaFase = (lv) => FASES.find((f) => f.nivel > (lv || 1)) || null;
+
   const color = (id) => COLORS.find((c) => c.id === id) || COLORS[0];
   const shape = (id) => SHAPES.find((s) => s.id === id) || SHAPES[0];
   const level = (xp) => Math.floor((xp || 0) / XP_POR_NIVEL) + 1;
@@ -531,7 +573,10 @@ const Pet = (() => {
              c${r * 0.75} -${r * 0.8} ${r * 1.15} ${r * 0.15} 0 ${r * 0.95}z"
           fill="${cor || '#ff5f9e'}" stroke="#131338" stroke-width="3" stroke-linejoin="round"/>`;
 
-  const OLHOS = {
+  /** cada par de olhos entra num grupo, para a fase poder aumentar */
+  const olhar = (svgOlhos) => `<g class="pet-olhos">${svgOlhos}</g>`;
+
+  const OLHOS_BASE = {
     normal: olhoFofo(74, 98) + olhoFofo(126, 98),
     grande: olhoFofo(74, 96, { rx: 22, ry: 24, pupila: 12 }) + olhoFofo(126, 96, { rx: 22, ry: 24, pupila: 12 }),
     // olhando para os lados, curioso
@@ -573,6 +618,11 @@ const Pet = (() => {
         <path d="M74 98m-16 0a16 16 0 1 0 32 0a16 16 0 1 0-32 0M74 98m-8 0a8 8 0 1 0 16 0"/>
         <path d="M126 98m-16 0a16 16 0 1 0 32 0a16 16 0 1 0-32 0M126 98m-8 0a8 8 0 1 0 16 0"/></g>`,
   };
+
+  const OLHOS = Object.keys(OLHOS_BASE).reduce((acc, k) => {
+    acc[k] = olhar(OLHOS_BASE[k]);
+    return acc;
+  }, {});
 
   const BOCAS = {
     sorriso: '<path d="M76 132q24 26 48 0" stroke="#131338" stroke-width="8" fill="none" stroke-linecap="round"/>',
@@ -659,6 +709,63 @@ const Pet = (() => {
       <ellipse class="pet-braco dir" cx="172" cy="146" rx="15" ry="11"/>
     </g>`;
 
+  /**
+   * As partes que aparecem em cada fase de vida. O que vai atrás do
+   * corpo (orelhinhas) sai em `atras`, e o que vai na frente
+   * (cachinho, orelhinha, topete) sai em `frente`.
+   */
+  function faseSvg(faseId, hex) {
+    const traco = 'stroke="#131338" stroke-width="5" stroke-linejoin="round"';
+    // cachinho de bebê, saindo do alto da cabeça
+    const cachinho = `
+      <path class="pet-cachinho" d="M100 20C98 2 110-8 120-2c9 6 4 16-6 16 9 3 10 14 1 18"
+            fill="none" stroke="#131338" stroke-width="7" stroke-linecap="round"/>`;
+    // orelhinhas redondas, atrás da cabeça
+    const orelhas = `
+      <g class="pet-orelhas" fill="${hex}" ${traco}>
+        <ellipse cx="56" cy="16" rx="21" ry="24"/>
+        <ellipse cx="144" cy="16" rx="21" ry="24"/>
+      </g>`;
+    // topete de quem já cresceu
+    const topete = `
+      <path class="pet-topete" d="M74 26C70-2 96-14 114-4c14 8 8 22-4 24 14 4 14 18 0 22"
+            fill="${hex}" ${traco}/>`;
+    const sardas = `
+      <g class="pet-sardas" fill="#131338" opacity=".26">
+        <circle cx="30" cy="104" r="3"/><circle cx="40" cy="96" r="2.4"/><circle cx="24" cy="94" r="2.4"/>
+        <circle cx="170" cy="104" r="3"/><circle cx="160" cy="96" r="2.4"/><circle cx="176" cy="94" r="2.4"/>
+      </g>`;
+    const sobrancelhas = `
+      <g class="pet-sobrancelhas" fill="none" stroke="#131338" stroke-width="5" stroke-linecap="round">
+        <path d="M56 58q18-9 34-2"/><path d="M110 56q18-7 34 2"/>
+      </g>`;
+    // auréola dourada por cima da cabeça: a marca da última fase
+    const aureola = `
+      <g class="pet-aureola">
+        <ellipse cx="100" cy="2" rx="40" ry="11" fill="none" stroke="#ffd84b" stroke-width="9"/>
+        <ellipse cx="100" cy="2" rx="40" ry="11" fill="none" stroke="#131338" stroke-width="3"/>
+        <ellipse cx="100" cy="2" rx="31" ry="4" fill="none" stroke="#131338" stroke-width="2.5" opacity=".4"/>
+      </g>`;
+    const aura = `
+      <g class="pet-aura" fill="#ffd84b" stroke="#131338" stroke-width="2.5" stroke-linejoin="round">
+        <path d="M2 84l4 10 10 2-7 6 2 10-9-5-9 5 2-10-7-6 10-2z"/>
+        <path d="M198 84l4 10 10 2-7 6 2 10-9-5-9 5 2-10-7-6 10-2z"/>
+        <path d="M10 20l3 7 7 1-5 5 1 8-6-4-6 4 1-8-5-5 7-1z"/>
+        <path d="M190 20l3 7 7 1-5 5 1 8-6-4-6 4 1-8-5-5 7-1z"/>
+      </g>`;
+
+    if (faseId === 'filhote') return { atras: '', frente: cachinho };
+    if (faseId === 'crianca') return { atras: orelhas, frente: cachinho };
+    if (faseId === 'jovem') return { atras: orelhas, frente: topete + sardas };
+    if (faseId === 'crescido') return { atras: orelhas, frente: topete + sardas + sobrancelhas };
+    if (faseId === 'lendario') return { atras: orelhas, frente: topete + sardas + sobrancelhas + aureola + aura };
+    return { atras: '', frente: '' };
+  }
+
+  /** sombrinha na barriga: é ela que dá volume ao corpo */
+  const volumeCorpo = `
+    <ellipse class="pet-volume" cx="100" cy="164" rx="62" ry="30" fill="#131338" opacity=".08"/>`;
+
   /** o brilhinho do plástico novo, no alto do corpo */
   const brilhoCorpo = `
     <g class="pet-brilho" fill="#fff" opacity=".38">
@@ -699,60 +806,114 @@ const Pet = (() => {
   }
 
   /** desenho do bichinho; `size` é a largura em px */
+  /**
+   * O corpo inteiro, já com a fase de vida aplicada. A fase muda o
+   * tamanho (o filhote é menor, o lendário é maior) e acrescenta as
+   * partes que ele ganhou ao crescer.
+   */
+  function corpoSvg(dados, moodId, nivel) {
+    const c = color(dados.color);
+    const sh = shape(dados.shape);
+    const f = fase(nivel);
+    const partes = faseSvg(f.id, c.hex);
+    // cresce a partir dos pés, senão ele flutuaria ao mudar de tamanho.
+    // a escala fica num grupo de fora porque a animação do corpo também
+    // usa transform e uma sobrescreveria a outra
+    const cresce = `translate(100 190) scale(${f.escala}) translate(-100 -190)`;
+    return `
+      <g class="pet-fase fase-${f.id}" transform="${cresce}">
+      <g class="pet-body">
+        ${partes.atras}
+        <ellipse class="pet-foot" cx="74" cy="188" rx="17" ry="10" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
+        <ellipse class="pet-foot" cx="126" cy="188" rx="17" ry="10" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
+        ${bracos(c.hex)}
+        <path d="${sh.path}" fill="${c.hex}" stroke="#131338" stroke-width="6" stroke-linejoin="round"/>
+        ${volumeCorpo}
+        ${brilhoCorpo}
+        ${outfitSvg(dados.outfit, dados.shape)}
+        <g class="pet-face" style="--olhos:${f.olhos}">${face(moodId)}</g>
+        ${partes.frente}
+        ${accessorySvg(dados.accessory, c.hex)}
+      </g>
+      </g>`;
+  }
+
   function svg(child, size = 180, moodId, opts) {
     const pet = Store.petOf(child.id);
-    const c = color(pet.color);
-    const sh = shape(pet.shape);
     const m = moodId || mood(child).id;
     const comCama = (opts && opts.bed) || m === 'dormindo';
     const comQuarto = !!(opts && opts.room);
     const quarto = (opts && opts.quarto) || quartoDe(pet);
+    const f = fase(level(pet.xp));
     // dentro do quarto o bichinho fica um pouco menor, para caber no cenário
     const dentro = comQuarto ? ' transform="translate(30,22) scale(.7)"' : '';
     return `
-      <svg class="pet-svg mood-${m}" viewBox="0 0 200 200" width="${size}" height="${size}"
-           role="img" aria-label="${UI.esc(pet.name)}, ${UI.esc(mood(child).label)}">
+      <svg class="pet-svg mood-${m} vida-${f.id}" viewBox="0 0 200 200" width="${size}" height="${size}"
+           role="img" aria-label="${UI.esc(pet.name)}, ${UI.esc(f.nome)}, ${UI.esc(mood(child).label)}">
         ${comQuarto ? `<g class="pet-room">${roomSvg(quarto)}</g>` : ''}
         <g class="pet-cena"${dentro}>
         ${comCama ? `<g class="pet-bed">${bedSvg(pet.bed)}</g>` : ''}
-        <g class="pet-body">
-          <ellipse class="pet-foot" cx="74" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
-          <ellipse class="pet-foot" cx="126" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
-          ${bracos(c.hex)}
-          <path d="${sh.path}" fill="${c.hex}" stroke="#131338" stroke-width="6" stroke-linejoin="round"/>
-          ${brilhoCorpo}
-          ${outfitSvg(pet.outfit, pet.shape)}
-          <g class="pet-face">${face(m)}</g>
-          ${accessorySvg(pet.accessory, c.hex)}
-        </g>
+        ${corpoSvg(pet, m, level(pet.xp))}
         </g>
       </svg>`;
   }
 
   /** desenho de teste: mostra como o bichinho vai ficar antes de salvar */
   function previewSvg(data, size = 150, moodId = 'feliz', opts) {
-    const c = color(data.color);
-    const sh = shape(data.shape);
     const comQuarto = !!(opts && opts.room);
     const comCama = !!(opts && opts.bed);
     const dentro = comQuarto ? ' transform="translate(30,22) scale(.7)"' : '';
+    // o preview pode pedir uma fase, para mostrar como ele vai ficar
+    const nivel = (opts && opts.nivel) || data.nivel || 6;
+    const f = fase(nivel);
     return `
-      <svg class="pet-svg mood-${moodId}" viewBox="0 0 200 200" width="${size}" height="${size}" aria-hidden="true">
+      <svg class="pet-svg mood-${moodId} vida-${f.id}" viewBox="0 0 200 200" width="${size}" height="${size}" aria-hidden="true">
         ${comQuarto ? `<g class="pet-room">${roomSvg(quartoDe(data))}</g>` : ''}
         <g class="pet-cena"${dentro}>
           ${comCama ? `<g class="pet-bed">${bedSvg(data.bed)}</g>` : ''}
-          <g class="pet-body">
-            <ellipse class="pet-foot" cx="74" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
-            <ellipse class="pet-foot" cx="126" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
-            ${bracos(c.hex)}
-            <path d="${sh.path}" fill="${c.hex}" stroke="#131338" stroke-width="6" stroke-linejoin="round"/>
-            ${brilhoCorpo}
-            ${outfitSvg(data.outfit, data.shape)}
-            <g class="pet-face">${face(moodId)}</g>
-            ${accessorySvg(data.accessory, c.hex)}
-          </g>
+          ${corpoSvg(data, moodId, nivel)}
         </g>
       </svg>`;
+  }
+
+  /**
+   * A linha do tempo das fases: onde ele está agora, o que já passou e o
+   * que ainda vem. É o que mostra que ele cresce junto com ela.
+   */
+  function faseCard(lv, pet) {
+    const dono = pet || {};
+    const atual = fase(lv);
+    const prox = proximaFase(lv);
+    return `
+      <section class="card pet-vida">
+        <div class="between">
+          <div>
+            <div class="bold small">${UI.esc(atual.nome)}</div>
+            <div class="tiny muted">${UI.esc(atual.conta)}</div>
+          </div>
+          <span class="chip lime">fase ${FASES.indexOf(atual) + 1} de ${FASES.length}</span>
+        </div>
+        <div class="pet-vida-linha">
+          ${FASES.map((f, i) => {
+            const passou = lv >= f.nivel;
+            const agora = f.id === atual.id;
+            return `
+              <div class="pet-vida-passo ${passou ? 'aberta' : ''} ${agora ? 'agora' : ''}">
+                <div class="pet-vida-art">
+                  ${passou
+                    ? previewSvg({ color: dono.color, shape: dono.shape }, 62, 'feliz', { nivel: f.nivel })
+                    : `<span class="pet-vida-lock">${Icons.svg('lock')}</span>`}
+                </div>
+                <div class="tiny bold">${UI.esc(f.nome)}</div>
+                <div class="tiny muted">nível ${f.nivel}</div>
+              </div>`;
+          }).join('')}
+        </div>
+        <p class="tiny muted mt8">${UI.esc(atual.vira)}</p>
+        ${prox ? `<div class="bar mt8" style="background:var(--surface-2)">
+            <i style="width:${Math.round((Math.min(lv, prox.nivel) / prox.nivel) * 100)}%"></i>
+          </div>` : ''}
+      </section>`;
   }
 
   /** rosquinha de progresso: no meio o nível, na volta o quanto falta */
@@ -803,6 +964,7 @@ const Pet = (() => {
               <h4>${UI.esc(pet.name)}</h4>
               <span class="chip lime">nível ${lv}</span>
             </div>
+            <div class="pet-fase-chip">${UI.esc(fase(lv).nome)}</div>
             <div class="bar mt8" style="background:var(--surface-2)"><i style="width:${pct}%"></i></div>
             <p class="tiny muted mt8">${pet.xp} pontos • ${carinhos} carinho(s) hoje</p>
           </div>
@@ -973,6 +1135,8 @@ const Pet = (() => {
             </div>
           </div>
         </div>
+
+        ${faseCard(lv, pet)}
 
         <div class="seg-tabs" data-abas>
           ${ABAS.map((a) => `
@@ -1281,6 +1445,56 @@ const Pet = (() => {
     });
   }
 
+  /* ---------- subir de fase ---------- */
+  /**
+   * O bichinho cresceu de verdade. Mostra a fase nova, com o antes e o
+   * depois lado a lado, para ela ver o que mudou.
+   */
+  function comemorarFase(child, nivelAntes, nivelAgora) {
+    const de = fase(nivelAntes);
+    const para = fase(nivelAgora);
+    if (de.id === para.id) return false;
+    // com uma folha aberta (o fim de um jogo, por exemplo) a festa espera
+    // ela fechar, senão uma tela comeria a outra
+    if (UI.folhaAberta()) {
+      UI.aoFechar(() => setTimeout(() => mostrarFase(child, de, para), 60));
+      return true;
+    }
+    mostrarFase(child, de, para);
+    return true;
+  }
+
+  function mostrarFase(child, de, para) {
+    const pet = Store.petOf(child.id);
+    Effects.burst('goal');
+    Voz.falar(`Eu cresci! Agora eu sou ${para.nome}.`, child);
+    UI.openSheet({
+      title: `${pet.name} cresceu!`,
+      subtitle: `De ${de.nome} para ${para.nome}`,
+      body: `
+        <div class="pet-cresceu">
+          <div class="pet-cresceu-lado">
+            ${previewSvg(pet, 130, 'feliz', { nivel: de.nivel })}
+            <div class="tiny muted">${UI.esc(de.nome)}</div>
+          </div>
+          <span class="pet-cresceu-seta">${Icons.svg('arrow')}</span>
+          <div class="pet-cresceu-lado agora">
+            <div class="pet-cresceu-novo">${previewSvg(pet, 150, 'festa', { nivel: para.nivel })}</div>
+            <div class="tiny bold">${UI.esc(para.nome)}</div>
+          </div>
+        </div>
+        <div class="note">${UI.esc(para.conta)}</div>
+        <p class="tiny muted center mt8">${UI.esc(para.vira)}</p>`,
+      actions: '<button class="btn btn-primary btn-block" data-ok>Que legal!</button>',
+      onMount(sheet) {
+        sheet.querySelector('[data-ok]').addEventListener('click', () => { UI.closeSheet(); App.render(); });
+        const novo = sheet.querySelector('.pet-cresceu-novo .pet-svg');
+        if (novo) novo.classList.add('subiu-fase');
+      },
+      onClose() { App.render(); },
+    });
+  }
+
   /* ---------- interação ---------- */
   /** troca a carinha do desenho por alguns instantes e depois volta ao normal */
   function humorRelampago(svgEl, moodId, ms = 1800) {
@@ -1334,6 +1548,7 @@ const Pet = (() => {
       void bubble.offsetWidth;
       bubble.classList.add('pop');
     }
+    if (res.levelUp && comemorarFase(child, res.nivelAntes, res.nivelAgora)) return;
     if (res.levelUp) {
       Effects.burst('goal');
       UI.toast(`${Store.petOf(child.id).name} subiu para o nível ${level(Store.petOf(child.id).xp)}!`, 'ok');
@@ -1940,5 +2155,6 @@ const Pet = (() => {
     openShop, outfit, bed, roomSvg, movelSvg, quartoDe, ringSvg, previewSvg, faltaParaSubir,
     level, progress, COLORS, SHAPES, ACCESSORIES, OUTFITS, BEDS, ROOMS, PAREDES, CHAOS, MOVEIS, SLOTS,
     XP_POR_NIVEL, CARINHOS_POR_DIA,
+    fase, proximaFase, corpoSvg, comemorarFase, FASES,
   };
 })();

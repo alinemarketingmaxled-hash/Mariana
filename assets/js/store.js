@@ -826,7 +826,11 @@ const Store = (() => {
     const antes = Math.floor(pet.xp / XP_NIVEL);
     pet.xp = Math.max(0, pet.xp + amount);
     save();
-    return { xp: pet.xp, levelUp: Math.floor(pet.xp / XP_NIVEL) > antes };
+    const depois = Math.floor(pet.xp / XP_NIVEL);
+    return {
+      xp: pet.xp, levelUp: depois > antes,
+      nivelAntes: antes + 1, nivelAgora: depois + 1,
+    };
   }
 
   const petCareLeft = (childId) => {
@@ -845,7 +849,10 @@ const Store = (() => {
     pet.care.count += 1;
     const res = petAddXp(childId, 3) || {};
     save();
-    return { ok: true, count: pet.care.count, levelUp: !!res.levelUp };
+    return {
+      ok: true, count: pet.care.count, levelUp: !!res.levelUp,
+      nivelAntes: res.nivelAntes, nivelAgora: res.nivelAgora,
+    };
   }
 
   /* =========================================================
@@ -1097,7 +1104,10 @@ const Store = (() => {
     pet.games.xp += xp;
     const res = xp ? petAddXp(childId, xp) : null;
     save();
-    return { xp, levelUp: !!(res && res.levelUp), acertos, total };
+    return {
+      xp, levelUp: !!(res && res.levelUp), acertos, total,
+      nivelAntes: res && res.nivelAntes, nivelAgora: res && res.nivelAgora,
+    };
   }
 
   const XP_JOGOS_DIA = 20;
@@ -1120,7 +1130,10 @@ const Store = (() => {
     if (recorde) pet.best[gameId] = score;
     const res = xp ? petAddXp(childId, xp) : null;
     save();
-    return { xp, recorde, levelUp: !!(res && res.levelUp) };
+    return {
+      xp, recorde, levelUp: !!(res && res.levelUp),
+      nivelAntes: res && res.nivelAntes, nivelAgora: res && res.nivelAgora,
+    };
   }
 
   /* ---------- desafios do dia (palavrinha, contexto, teia) ---------- */

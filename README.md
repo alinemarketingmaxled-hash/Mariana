@@ -144,6 +144,17 @@ quantos filhos quiser, cada um com o próprio login e senha.
   > O app funciona sem internet e sem servidor, então ele não inventa perguntas a partir de um texto
   > livre: as perguntas saem do **banco de conteúdo da escola** que já vem embutido, ou são as que
   > a criança escreve, cola do caderno ou gera pelos atalhos.
+- **O bichinho cresce junto com ela**: ele não muda só de número, muda de corpo. São **cinco
+  fases de vida**, e a cada uma ele fica maior e ganha uma parte nova:
+  - **Filhotinho** (nível 1): pequenininho, cabeção, olhos enormes e um cachinho na cabeça.
+  - **Criancinha** (nível 3): cresceu e ganhou **orelhinhas**.
+  - **Jovem** (nível 6): ficou do tamanho de gente grande, com **topete** e **sardinhas**.
+  - **Crescido** (nível 10): maior, com **sobrancelhas** e cara de quem já sabe das coisas.
+  - **Lendário** (nível 15): o maior de todos, com **auréola dourada** e **estrelas** em volta.
+
+  Quando ele passa de fase o app abre uma tela mostrando **o antes e o depois lado a lado**, e
+  na tela de atualizar tem a **linha do tempo das cinco fases**, com as que já passaram
+  desenhadas e as que ainda vêm com cadeado.
 - **Bichinho**: o mesmo personagem também aparece no cartão da tela inicial e tem **dezoito
   sentimentos**, todos ligados ao que está acontecendo de verdade, nunca a um contador escondido:
   fica **orgulhoso** quando o dia fecha completo e com leitura, **em festa** quando fecha o dia,

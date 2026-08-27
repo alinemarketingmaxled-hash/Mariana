@@ -1,2 +1,6 @@
 .DS_Store
 node_modules/
+
+# arquivo unico gerado por deploy/artifact.mjs
+mesada.html
+mesada-artifact.html

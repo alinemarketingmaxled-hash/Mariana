@@ -45,6 +45,12 @@ const UI = (() => {
     if (onCloseHook) { const f = onCloseHook; onCloseHook = null; f(folha); }
   }
 
+  /** tem alguma folha aberta agora? */
+  const folhaAberta = () => {
+    const root = sheetRoot();
+    return !!(root && !root.hidden && root.querySelector('.sheet'));
+  };
+
   /** pendura mais uma despedida na folha aberta, sem apagar a que já existe */
   function aoFechar(fn) {
     const anterior = onCloseHook;
@@ -530,7 +536,7 @@ const UI = (() => {
     esc, toast, openSheet, closeSheet, confirm, openRadial, fecharRadial,
     iconPicker, gradPicker, bindPickers, bindSwitches,
     photoField, bindPhotos, photoStrip, bindPhotoViewers, avatar, catVisual, entryVisual,
-    shell, bindShell, panel, aoFechar,
+    shell, bindShell, panel, aoFechar, folhaAberta,
     field, input, empty, statusChip, formData,
     GRADS,
   };

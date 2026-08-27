@@ -155,7 +155,10 @@ const Games = (() => {
       onClose() { App.render(); },
     });
     if (res.xp > 0) Effects.burst(res.levelUp ? 'goal' : 'approved');
-    if (res.levelUp) UI.toast(`${pet.name} subiu de nível!`, 'ok');
+    if (res.levelUp) {
+      UI.toast(`${pet.name} subiu de nível!`, 'ok');
+      Pet.comemorarFase(child, res.nivelAntes, res.nivelAgora);
+    }
   }
 
   /* ---------- jogo 1: pega a bola ---------- */
