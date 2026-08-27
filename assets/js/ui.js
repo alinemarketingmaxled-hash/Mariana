@@ -187,10 +187,8 @@ const UI = (() => {
               <h2>${esc(title)}</h2>
               ${subtitle ? `<p>${esc(subtitle)}</p>` : ''}
             </div>
-            <div class="page-actions">
-              ${actions}
-              <button class="icon-btn" data-menu aria-label="Menu">${Icons.svg('menu')}</button>
-            </div>
+            ${actions ? `<div class="page-actions">${actions}</div>` : ''}
+            <button class="icon-btn page-menu" data-menu aria-label="Menu">${Icons.svg('menu')}</button>
           </header>
           <div class="page ${aside ? '' : 'solo'}">
             <main class="page-main">${main}</main>

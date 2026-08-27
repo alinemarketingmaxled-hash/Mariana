@@ -137,14 +137,14 @@ ul{margin:0;padding:0;list-style:none}
 /* ---------- tipografia ---------- */
 h1,h2,h3,h4,
 .btn,.tab,.seg,.hero .value,.day .dd,.stat .v,.hero-stat .v,
-.sheet-head h3,.section-title h3,.chip,.pin,.val,.date-head h4,.field > label,
+.sheet-head h3,.section-title h3,.chip,.tile .pin,.val,.date-head h4,.field > label,
 .hero .label,.hero-stat .k,.stat .k,.day .dw,.tiny.upper{
   font-weight:800;
   font-variation-settings:'wdth' 118;
   text-transform:uppercase;
 }
 h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weight:900}
-.btn,.tab,.seg,.chip,.pin,.date-head h4,.section-title h3{letter-spacing:.04em}
+.btn,.tab,.seg,.chip,.tile .pin,.date-head h4,.section-title h3{letter-spacing:.04em}
 .field > label,.hero .label,.hero-stat .k,.stat .k,.day .dw{letter-spacing:.1em;font-weight:700}
 .wordmark{font-style:italic;font-weight:900;font-variation-settings:'wdth' 125;letter-spacing:-.01em}
 .val,.hero .value,.stat .v,.hero-stat .v{font-variant-numeric:tabular-nums}
@@ -333,6 +333,7 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
   text-transform:none;font-variation-settings:'wdth' 104;font-weight:500
 }
 .page-actions{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+.page-menu{flex:0 0 auto;align-self:center}
 
 .page{display:grid;gap:20px;align-items:start}
 .page-main{min-width:0}
@@ -742,10 +743,7 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 }
 .pet-preview{display:grid;place-items:center;padding:12px;border-radius:24px;background:var(--surface-2)}
 .kid-pet{flex:0 0 auto;display:grid;place-items:center;width:54px;height:54px}
-@media (max-width:999px){
-  /* no celular o bichinho já está solto na tela; o painel fica só com os controles */
-  .pet-panel .pet-hit{display:none}
-}
+
 @media (max-width:520px){
   .pet-bubble{align-self:center}
   .pet-bubble::after{left:calc(50% - 8px)}
@@ -1209,10 +1207,10 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 .dash-legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:12px}
 .dash-legend span{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);
   text-transform:uppercase;letter-spacing:.06em;font-weight:800}
-.pin{width:11px;height:11px;border-radius:4px;display:block}
-.pin.ganho,.dash-bars i.ganho{background:var(--mint)}
-.pin.recebido,.dash-bars i.recebido{background:var(--blue)}
-.pin.gasto,.dash-bars i.gasto{background:var(--orange)}
+.dash-pin{width:11px;height:11px;border-radius:4px;display:block;flex:none}
+.dash-pin.ganho,.dash-bars i.ganho{background:var(--mint)}
+.dash-pin.recebido,.dash-bars i.recebido{background:var(--blue)}
+.dash-pin.gasto,.dash-bars i.gasto{background:var(--orange)}
 .dash-chart{display:flex;align-items:flex-end;gap:10px;height:170px;padding-top:6px}
 .dash-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%}
 .dash-bars{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center;gap:4px}
@@ -1317,11 +1315,40 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
   .sheet-actions .btn{flex:1 1 46%;font-size:13px;padding:14px 12px}
   .sheet-actions .btn-block{flex:1 1 100%}
 
+  /* ----- cabeçalho: título em cima, botão embaixo, sem espremer ----- */
+  .page-head{
+    padding-top:calc(16px + env(safe-area-inset-top,0px));
+    flex-wrap:wrap;align-items:center;gap:10px 12px
+  }
+  .page-title-box{flex:1 1 0;min-width:0}
+  .page-title-box h2{font-size:21px;white-space:normal;overflow:visible}
+  .page-title-box p{margin-top:3px}
+  .page-actions{flex:1 1 100%;order:3}
+  .page-actions .btn{flex:1}
+  .page-menu{order:2}
+
+  /* ----- filtros: deslizam de lado em vez de sumirem ----- */
+  .seg-mini{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .seg-mini::-webkit-scrollbar{display:none}
+  .seg-mini > button{flex:0 0 auto;padding:9px 15px}
+  .seg-mini.wrap{flex-wrap:wrap;overflow:visible}
+  .seg-mini.wrap > button{flex:1 1 30%}
+
+  /* ----- calendário: bolinhas no lugar de textos cortados ----- */
+  .cal-day{min-height:56px;gap:4px}
+  .cal-chip{
+    font-size:0;height:6px;width:62%;margin:0 auto;padding:0;border-radius:99px;
+    line-height:0;text-indent:-9999px;overflow:hidden
+  }
+  .cal-chip.done{opacity:.4;text-decoration:none}
+  .cal-more{font-size:8px}
+
   /* ----- conteúdo mais folgado ----- */
-  .page-head{padding-top:calc(16px + env(safe-area-inset-top,0px))}
   .panel{padding:16px}
   .hero{padding:20px}
-  .hero-stat .k{letter-spacing:.03em}
+  .hero-stats{gap:8px}
+  .hero-stat{padding:11px 9px}
+  .hero-stat .k{letter-spacing:0;font-size:9.5px}
   .stat-row{gap:9px}
   .seg-tabs button{padding:12px 8px;font-size:11.5px;min-height:46px}
   .seg-tabs button svg{width:16px;height:16px}
@@ -1346,10 +1373,10 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 /* telas bem estreitas */
 @media (max-width:400px){
   .content{padding:0 13px calc(132px + var(--safe-b))}
-  .hero-stats{gap:7px}
-  .hero-stat{padding:10px 9px}
+  .hero-stats{gap:5px}
+  .hero-stat{padding:10px 6px}
   .hero-stat .v{font-size:13px}
-  .hero-stat .k{font-size:9px;letter-spacing:.05em}
+  .hero-stat .k{font-size:8.5px;letter-spacing:0}
   .tab{font-size:10px}
   .tab .ico{width:20px;height:20px}
   .sheet{padding:0 15px}

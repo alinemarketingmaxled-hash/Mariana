@@ -199,10 +199,17 @@ O app foi ajustado para ser usado principalmente no celular:
   topo** e os **botões fixos embaixo**: dá para rolar uma lista longa sem perder o Salvar de vista.
 - **Avisos aparecem embaixo**, acima da barra de navegação, e sobem mais quando há uma folha
   aberta, para não taparem os botões.
-- **O bichinho começa encostado na direita** para não cobrir o conteúdo, e continua podendo ser
-  arrastado, sacudido e jogado para qualquer canto.
+- **O bichinho** continua podendo ser arrastado, sacudido e jogado para qualquer canto.
 - **Tira de dias com deslize** e o dia de hoje já centralizado.
 - **Sem atraso no toque** e sem o retângulo cinza que alguns navegadores desenham ao tocar.
+- **Nada some no celular**: o desenho do bichinho no quarto continua no painel lateral, os
+  filtros que não cabem deslizam de lado em vez de serem cortados, os selos de contagem
+  (2/2, 1/1) aparecem inteiros e o cabeçalho põe o botão de ação numa linha própria, para o
+  título e o menu não se espremerem.
+- **No calendário** cada compromisso vira uma barrinha colorida no dia, em vez de um texto
+  cortado que não dava para ler; tocando no dia a lista completa aparece embaixo.
+- **O bichinho começa no canto de baixo à esquerda**, longe do botão redondo de ação, que fica
+  à direita: assim ele nunca cobre um botão.
 - **Celular deitado**: a barra e o botão flutuante encolhem para sobrar tela.
 - Instalável na tela inicial (PWA) com nome, ícone, cor da barra de status clara e escura,
   e funcionando offline.

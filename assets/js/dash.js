@@ -34,9 +34,9 @@ const Dash = (() => {
           <span class="tiny muted">últimos ${d.meses.length} meses</span>
         </header>
         <div class="dash-legend">
-          <span><i class="pin ganho"></i> ganhou</span>
-          <span><i class="pin recebido"></i> recebeu</span>
-          <span><i class="pin gasto"></i> gastou</span>
+          <span><i class="dash-pin ganho"></i> ganhou</span>
+          <span><i class="dash-pin recebido"></i> recebeu</span>
+          <span><i class="dash-pin gasto"></i> gastou</span>
         </div>
         <div class="dash-chart">
           ${d.meses.map((m) => `

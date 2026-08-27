@@ -1539,9 +1539,9 @@ const Pet = (() => {
       ball.hidden = true;
       document.body.appendChild(ball);
 
-      // no celular ele começa encostado na direita, para não tapar o conteúdo
+      // no celular ele começa na esquerda: o botão redondo de ação fica na direita
       pos.x = window.innerWidth < 1000
-        ? limiteX() - 4
+        ? 10
         : Math.min(limiteX(), window.innerWidth / 2 - SIZE / 2);
       pos.y = chaoY();
       aplicar();
