@@ -78,6 +78,8 @@ const AuthScreen = (() => {
             ${Store.theme() === 'dark' ? 'Tema claro' : 'Tema escuro'}
           </button>
         </div>
+
+        <p class="tiny muted center mt8">versão ${UI.esc(App.VERSAO)} • ${UI.esc(App.DATA_VERSAO)}</p>
       </section>`;
 
     root.querySelectorAll('[data-role]').forEach((b) =>

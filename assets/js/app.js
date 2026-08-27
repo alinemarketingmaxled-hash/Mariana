@@ -4,6 +4,12 @@
 const App = (() => {
   const root = () => document.getElementById('app');
 
+  /* O carimbo da versão. Aparece embaixo da tela de entrar, e serve para
+     saber, olhando, se o aparelho já pegou o app novo ou ainda está com o
+     velho guardado. Sobe de número a cada mudança publicada. */
+  const VERSAO = '22';
+  const DATA_VERSAO = '27/08';
+
   function applyTheme() {
     document.documentElement.setAttribute('data-theme', Store.theme());
     const meta = document.querySelector('meta[name="theme-color"]');
@@ -113,6 +119,17 @@ const App = (() => {
     render();
     // permite instalar na tela inicial e abrir offline
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      // Quando sai uma versão nova, quem guarda o app offline assume o
+      // comando na hora, mas a tela continua com o código velho que já
+      // estava na memória. Então o app se recarrega uma vez sozinho, senão
+      // a mudança só apareceria depois de fechar todas as abas.
+      const jaTinhaDono = !!navigator.serviceWorker.controller;
+      let recarregando = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!jaTinhaDono || recarregando) return;
+        recarregando = true;
+        window.location.reload();
+      });
       navigator.serviceWorker.register('sw.js').catch(() => { /* offline é opcional */ });
     }
     // mantém abas do mesmo navegador sincronizadas
@@ -121,7 +138,7 @@ const App = (() => {
     });
   }
 
-  return { start, render, logout, toggleTheme, openChangePassword, openProfilePhoto, applyTheme };
+  return { start, render, logout, toggleTheme, openChangePassword, openProfilePhoto, applyTheme, VERSAO, DATA_VERSAO };
 })();
 
 document.addEventListener('DOMContentLoaded', App.start);
