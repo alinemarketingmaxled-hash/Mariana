@@ -81,6 +81,12 @@ quantos filhos quiser, cada um com o próprio login e senha.
 
   Tudo o que ainda está bloqueado aparece com cadeado e o nível que falta, e o botão **Ver tudo**
   abre o catálogo completo com o que já foi liberado e qual é a próxima peça.
+- **Lembrete de todo dia**: no *Perfil* ela liga o lembrete e escolhe a hora. O app pede a
+  permissão do celular e, no horário, o bichinho chama ela por uma notificação com o que ainda
+  falta ("faltam 3 tarefas e a leitura"). Se o aviso não sair na hora, ele aparece assim que ela
+  abre o app, e nunca sai duas vezes no mesmo dia. Tem também **"pôr no calendário"**, que salva
+  um lembrete que se repete todo dia no calendário do próprio celular: esse funciona em qualquer
+  aparelho, sem internet e sem o app aberto.
 - **Minha mesada**: o cartão da tela inicial mostra o valor combinado do mês, quanto já foi
   validado, quanto está esperando e quanto falta para fechar. Também lembra que a leitura é a
   parte que mais rende.
@@ -133,9 +139,16 @@ quantos filhos quiser, cada um com o próprio login e senha.
   > O app funciona sem internet e sem servidor, então ele não inventa perguntas a partir de um texto
   > livre: as perguntas saem do **banco de conteúdo da escola** que já vem embutido, ou são as que
   > a criança escreve, cola do caderno ou gera pelos atalhos.
-- **Bichinho**: o mesmo personagem também aparece no cartão da tela inicial, reage ao que acontece no dia (dorme quando
-  nada foi feito, fica animado quando tem tarefa marcada, comemora quando o dia está completo,
-  fica preocupado com compromisso atrasado) e fala frases ligadas ao que está pendente. Recebe
+- **Bichinho**: o mesmo personagem também aparece no cartão da tela inicial e tem **dezoito
+  sentimentos**, todos ligados ao que está acontecendo de verdade, nunca a um contador escondido:
+  fica **orgulhoso** quando o dia fecha completo e com leitura, **em festa** quando fecha o dia,
+  **animado** quando ela lê, **derretido de amor** depois de muito carinho (com coração no lugar
+  dos olhos), **curioso** na véspera de uma prova, **preocupado** quando a tarde vira sem nada
+  marcado, **assustado** com compromisso atrasado, **triste** quando alguma coisa é recusada,
+  **com saudade** e lagriminha quando ela some por três dias, **entediado** quando o dia passa
+  em branco, **com sono** perto das 21h, e ainda **dormindo**, **tonto**, **enjoado**,
+  **rindo**, **estudando**, **cantando** e **feliz**. O desenho ganhou olhos maiores e brilhantes,
+  bochecha corada, bracinhos que balançam e um brilho no corpo. Fala frases ligadas ao que está pendente. Recebe
   carinho (até 5 por dia) e, quando recebe, **cai na gargalhada**: fecha os olhinhos, abre o
   sorrisão, solta um "ha ha" e ri em voz alta (o bichinho solto na tela ri junto). Ganha
   **pontos de amizade** a cada tarefa, livro, compromisso e
@@ -322,6 +335,7 @@ assets/
     effects.js        # animações de resposta (moedas, livros, estrelas)
     agenda.js         # calendário compartilhado de provas, trabalhos e eventos
     bank.js           # banco de conteúdo da escola (matérias, submatérias e questões)
+    notify.js         # o lembrete de todo dia e o arquivo de calendário
     wordbank.js       # palavras dos desafios do dia (palavrinha, contexto e teia)
     wordgames.js      # os três desafios do dia
     dash.js           # painel de ganhos, gastos e tempo de uso

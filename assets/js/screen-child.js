@@ -511,6 +511,98 @@ const ChildScreen = (() => {
   }
 
   /* ---------- aba: perfil ---------- */
+  /* ---------- lembrete diário ---------- */
+  const HORAS = ['07:00', '08:00', '12:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
+
+  function lembreteCard(user) {
+    const r = Store.reminderOf(user.id);
+    const perm = Notify.permissao();
+    return `
+      <div class="section-title mt16"><h3>Meu lembrete de todo dia</h3></div>
+      <section class="card">
+        <div class="between">
+          <div class="row">
+            <span class="em ${r.on ? 'g8' : 'g6'}" style="width:40px;height:40px;border-radius:14px;display:grid;place-items:center">
+              ${Icons.svg('bell')}
+            </span>
+            <div>
+              <div class="bold small">${r.on ? `Ligado para as ${r.hora}` : 'Desligado'}</div>
+              <div class="tiny muted">
+                ${r.on
+                  ? 'Todo dia nesse horário o bichinho chama você.'
+                  : 'Um toque por dia para não esquecer as tarefas e a leitura.'}
+              </div>
+            </div>
+          </div>
+          <button type="button" class="switch" data-lembrete aria-pressed="${r.on}" aria-label="Lembrete de todo dia"></button>
+        </div>
+
+        <div class="field mt12">
+          <label>Que horas você quer ser lembrada</label>
+          <div class="seg-mini" data-horas>
+            ${HORAS.map((h) => `<button type="button" data-hora="${h}" aria-pressed="${h === r.hora}">${h}</button>`).join('')}
+          </div>
+        </div>
+
+        ${perm === 'denied' ? `<div class="note aviso">
+            Este celular bloqueou os avisos do app. Para liberar, abra as configurações do
+            navegador, procure este site e ligue as notificações.
+          </div>` : ''}
+
+        <div class="note mt12">
+          <b>Para o aviso chegar mesmo com o app fechado:</b> guarde o app na tela de início do
+          celular (no menu do navegador, "adicionar à tela de início"). No iPhone isso é obrigatório.
+          Se mesmo assim não chegar, use o botão do calendário aqui embaixo: o próprio celular
+          passa a avisar todo dia, sem depender do app.
+        </div>
+
+        <div class="acts mt12">
+          <button class="btn btn-soft btn-sm" data-lembrete-testar>${Icons.svg('bell')} Testar agora</button>
+          <button class="btn btn-soft btn-sm" data-lembrete-agenda>${Icons.svg('calendar')} Pôr no calendário</button>
+        </div>
+      </section>`;
+  }
+
+  function ligarLembrete(root, user) {
+    const troca = root.querySelector('[data-lembrete]');
+    if (troca) {
+      troca.addEventListener('click', async () => {
+        const ligando = troca.getAttribute('aria-pressed') !== 'true';
+        if (!ligando) {
+          Notify.desligar(user);
+          UI.toast('Lembrete desligado');
+          App.render();
+          return;
+        }
+        const res = await Notify.ligar(user, Store.reminderOf(user.id).hora);
+        if (!res.ok) { UI.toast(res.error, 'bad'); App.render(); return; }
+        UI.toast('Lembrete ligado. Já já ele te chama.', 'ok');
+        await Notify.mostrar(user);
+        App.render();
+      });
+    }
+    root.querySelectorAll('[data-hora]').forEach((b) => b.addEventListener('click', async () => {
+      const hora = b.getAttribute('data-hora');
+      Store.setReminder(user.id, { hora, ultimo: '' });
+      if (Store.reminderOf(user.id).on) Notify.agendar(user);
+      UI.toast(`Lembrete às ${hora}`);
+      App.render();
+    }));
+    const testar = root.querySelector('[data-lembrete-testar]');
+    if (testar) testar.addEventListener('click', async () => {
+      const ok = await Notify.pedir();
+      if (!ok) return UI.toast('Você precisa permitir os avisos primeiro', 'bad');
+      const foi = await Notify.mostrar(user);
+      UI.toast(foi ? 'Mandei o aviso. Olha a tela do celular.' : 'Não deu para mostrar o aviso neste aparelho', foi ? 'ok' : 'bad');
+      return undefined;
+    });
+    const agenda = root.querySelector('[data-lembrete-agenda]');
+    if (agenda) agenda.addEventListener('click', () => {
+      Notify.baixarCalendario(user);
+      UI.toast('Abra o arquivo baixado para o celular guardar o lembrete', 'ok');
+    });
+  }
+
   function perfilView(user) {
     const t = Store.totals(user.id, Store.monthOf(Store.today()));
     const bal = Store.balance(user.id);
@@ -546,6 +638,8 @@ const ChildScreen = (() => {
             <i style="width:${Math.max(0, Math.min(100, (bal / user.goalAmount) * 100))}%"></i>
           </div>
         </div>` : ''}
+
+      ${lembreteCard(user)}
 
       <div class="section-title"><h3>Meu tempo no app</h3>
         <span class="small muted">${Store.duracao(Store.usageToday(user.id))} hoje</span></div>
@@ -1109,6 +1203,7 @@ const ChildScreen = (() => {
     if (passBtn) passBtn.addEventListener('click', () => App.openChangePassword(user));
     root.querySelectorAll('[data-photo-profile]').forEach((b) =>
       b.addEventListener('click', () => App.openProfilePhoto(user)));
+    ligarLembrete(root, user);
   }
 
   return {

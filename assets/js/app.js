@@ -21,6 +21,7 @@ const App = (() => {
     if (!user) {
       Pet.unmountBuddy();
       Uso.parar();
+      Notify.parar();
       AuthScreen.render(el);
       return;
     }
@@ -28,10 +29,13 @@ const App = (() => {
       ParentScreen.render(el, user);
       Pet.unmountBuddy();
       Uso.parar();
+      Notify.parar();
     } else {
       ChildScreen.render(el, user);
       Pet.mountBuddy(user);
       Uso.iniciar(user);
+      // o lembrete do dia: mostra o que ficou para trás e marca a próxima hora
+      Notify.agendar(user);
     }
     Photos.hydrate(el);
     UI.bindPhotoViewers(el);
@@ -39,6 +43,7 @@ const App = (() => {
 
   function logout() {
     Uso.parar();
+    Notify.parar();
     Pet.unmountBuddy();
     Store.logout();
     AuthScreen.reset();

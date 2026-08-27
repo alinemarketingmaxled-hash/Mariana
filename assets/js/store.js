@@ -1724,6 +1724,29 @@ const Store = (() => {
     };
   }
 
+  /* ---------- lembrete diário no celular do filho ---------- */
+  const LEMBRETE_PADRAO = { on: false, hora: '19:00', ultimo: '' };
+
+  const reminderOf = (childId) => {
+    const c = userById(childId);
+    return Object.assign({}, LEMBRETE_PADRAO, (c && c.reminder) || {});
+  };
+
+  /** liga, desliga ou muda a hora do lembrete; só mexe no que vier */
+  function setReminder(childId, dados) {
+    const c = userById(childId);
+    if (!c) return reminderOf(childId);
+    const atual = reminderOf(childId);
+    const d = dados || {};
+    c.reminder = {
+      on: d.on === undefined ? atual.on : !!d.on,
+      hora: /^\d{1,2}:\d{2}$/.test(d.hora || '') ? d.hora : atual.hora,
+      ultimo: d.ultimo === undefined ? atual.ultimo : d.ultimo,
+    };
+    save();
+    return c.reminder;
+  }
+
   /* ---------- foto obrigatória nas tarefas de todo dia ---------- */
   /** liga ou desliga a exigência de foto (o responsável decide) */
   function setPhotoRequired(valor) {
@@ -1799,6 +1822,8 @@ const Store = (() => {
     trackUse, usageOf, usageToday, logQuiz, quizStats, duracao, area, quizKind, AREAS, QUIZ_KINDS, removePayout, payoutById, payoutsOf,
     // planejador da mesada
     allowanceOf, setAllowance, planoMesada, aplicarPlano, mesadaStatus, DIAS_MES,
+    // lembrete diário
+    reminderOf, setReminder,
     // tema e regras
     setTheme, theme, setPhotoRequired, photoRequired, entryIsDaily, entryNeedsPhoto, missingPhotos,
     // registro de leitura

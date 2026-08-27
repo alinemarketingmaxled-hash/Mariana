@@ -235,23 +235,47 @@ const Pet = (() => {
   })();
 
   /* ---------- humor ---------- */
-  /** o humor sai do que aconteceu hoje, não de um contador escondido */
+  /** há quantos dias ela não marca nada; 99 quando nunca marcou */
+  function diasSemAparecer(childId) {
+    const historico = Store.historyOf(childId, 30);
+    if (!historico.length) return 99;
+    const ultimo = historico[0].date;
+    return Math.max(0, -Store.daysUntil(ultimo));
+  }
+
+  /**
+   * O humor sai do que está acontecendo de verdade, nunca de um contador
+   * escondido. A ordem importa: o que é mais forte vem primeiro.
+   */
   function mood(child) {
     const hoje = Store.today();
     const st = Store.dayStatus(child.id, hoje);
     const doDia = Store.entriesOf(child.id, hoje);
     const recusados = doDia.filter((e) => e.status === 'rejected').length;
-    const atrasados = Store.upcomingEvents(child.id).filter((e) => !e.done && Store.daysUntil(e.date) < 0).length;
-
+    const eventos = Store.upcomingEvents(child.id).filter((e) => !e.done);
+    const atrasados = eventos.filter((e) => Store.daysUntil(e.date) < 0).length;
+    const amanha = eventos.filter((e) => Store.daysUntil(e.date) >= 0 && Store.daysUntil(e.date) <= 1).length;
+    const leuHoje = doDia.some((e) => Store.entryIsReading(e) || /leitur|livro|ler /i.test(e.catName || ''));
+    const carinhos = CARINHOS_POR_DIA - Store.petCareLeft(child.id);
+    const sumida = diasSemAparecer(child.id);
     const hora = new Date().getHours();
+
     if (Store.petSleeping(child.id)) return { id: 'dormindo', label: 'tirando um cochilo' };
     if (recusados) return { id: 'triste', label: 'meio triste' };
-    if (st.required && st.complete) return { id: 'festa', label: 'muito feliz' };
-    if (atrasados) return { id: 'preocupado', label: 'preocupado' };
-    if (doDia.length) return { id: 'feliz', label: 'animado' };
-    // só dorme de madrugada; no resto do dia fica acordado esperando
+    if (sumida >= 3) return { id: 'saudade', label: 'com saudade de você' };
+    if (atrasados) return { id: 'assustado', label: 'assustado com o atraso' };
+    // dia completo e com leitura é o motivo de mais orgulho que existe
+    if (st.required && st.complete && leuHoje) return { id: 'orgulhoso', label: 'muito orgulhoso' };
+    if (st.required && st.complete) return { id: 'festa', label: 'em festa' };
+    if (carinhos >= 4) return { id: 'amoroso', label: 'derretido de carinho' };
+    if (leuHoje) return { id: 'animado', label: 'animado com a leitura' };
+    if (amanha) return { id: 'curioso', label: 'curioso com o que vem aí' };
+    if (hora >= 21 && hora < 22) return { id: 'sonolento', label: 'morrendo de sono' };
     if (hora >= 22 || hora < 6) return { id: 'dormindo', label: 'dormindo' };
-    return { id: 'feliz', label: 'acordado' };
+    if (doDia.length) return { id: 'feliz', label: 'contente' };
+    if (st.required && hora >= 17) return { id: 'preocupado', label: 'preocupado com o dia' };
+    if (sumida >= 1) return { id: 'entediado', label: 'entediado' };
+    return { id: 'feliz', label: 'esperando você' };
   }
 
   /** frase que o bichinho fala, sempre ligada ao que está acontecendo */
@@ -481,103 +505,197 @@ const Pet = (() => {
       ${(q.moveis || []).map((id) => movelSvg(id)).join('')}`;
   }
 
+  /* ---------- carinhas ----------
+     Os olhos e a boca saem de duas listas, e cada humor escolhe um par.
+     Assim dá para acrescentar sentimento novo sem redesenhar tudo.
+     ------------------------------------------------------------------ */
+
+  /** olho redondo e brilhante, do jeito que criança desenha */
+  function olhoFofo(cx, cy, opcoes) {
+    const o = opcoes || {};
+    const rx = o.rx || 19;
+    const ry = o.ry || 21;
+    const pupila = o.pupila || 10;
+    const dy = o.dy === undefined ? 3 : o.dy;
+    return `
+      <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#fff" stroke="#131338" stroke-width="3.5"/>
+      <circle class="pet-pupil" cx="${cx + (o.dx || 0)}" cy="${cy + dy}" r="${pupila}" fill="#131338"/>
+      <circle cx="${cx - pupila * 0.45}" cy="${cy + dy - pupila * 0.5}" r="${pupila * 0.42}" fill="#fff"/>
+      <circle cx="${cx + pupila * 0.5}" cy="${cy + dy + pupila * 0.45}" r="${pupila * 0.2}" fill="#fff" opacity=".85"/>`;
+  }
+
+  /** coraçãozinho, usado nos olhos apaixonados e flutuando em volta */
+  const coracao = (cx, cy, r, cor) => `
+    <path d="M${cx} ${cy + r * 0.85}
+             c-${r * 1.15} -${r * 0.8} -${r * 0.75} -${r * 1.75} 0 -${r * 0.95}
+             c${r * 0.75} -${r * 0.8} ${r * 1.15} ${r * 0.15} 0 ${r * 0.95}z"
+          fill="${cor || '#ff5f9e'}" stroke="#131338" stroke-width="3" stroke-linejoin="round"/>`;
+
+  const OLHOS = {
+    normal: olhoFofo(74, 98) + olhoFofo(126, 98),
+    grande: olhoFofo(74, 96, { rx: 22, ry: 24, pupila: 12 }) + olhoFofo(126, 96, { rx: 22, ry: 24, pupila: 12 }),
+    // olhando para os lados, curioso
+    curioso: olhoFofo(74, 97, { dx: 5, rx: 20, ry: 22 }) + olhoFofo(126, 97, { dx: 5, rx: 20, ry: 22 }),
+    // fechadinhos e arqueados: a cara de quem está muito contente
+    felizes: `<g fill="none" stroke="#131338" stroke-width="7" stroke-linecap="round">
+        <path d="M60 104q14-18 28 0"/><path d="M112 104q14-18 28 0"/></g>`,
+    dormindo: `<g fill="none" stroke="#131338" stroke-width="7" stroke-linecap="round">
+        <path d="M60 98q14 16 28 0"/><path d="M112 98q14 16 28 0"/></g>`,
+    // metade da pálpebra caída, de sono
+    sonolentos: `<g>
+        ${olhoFofo(74, 100, { ry: 18, pupila: 9, dy: 4 })}
+        ${olhoFofo(126, 100, { ry: 18, pupila: 9, dy: 4 })}
+        <path d="M55 92q19-9 38 0M107 92q19-9 38 0" fill="none" stroke="#131338" stroke-width="9" stroke-linecap="round"/>
+      </g>`,
+    // reta em cima do olho: entediado
+    entediados: `<g>
+        ${olhoFofo(74, 100, { ry: 16, pupila: 8, dy: 3 })}
+        ${olhoFofo(126, 100, { ry: 16, pupila: 8, dy: 3 })}
+        <path d="M56 86h36M108 86h36" stroke="#131338" stroke-width="7" stroke-linecap="round"/>
+      </g>`,
+    apaixonados: `<g class="pet-coracoes">
+        ${coracao(74, 88, 17)}${coracao(126, 88, 17)}</g>`,
+    estrelas: `<g class="pet-estrelinhas" stroke="#131338" stroke-width="3" stroke-linejoin="round" fill="#ffd84b">
+        <path d="M74 78l6 14 15 2-11 10 3 15-13-7-13 7 3-15-11-10 15-2z"/>
+        <path d="M126 78l6 14 15 2-11 10 3 15-13-7-13 7 3-15-11-10 15-2z"/></g>`,
+    chorosos: `<g>
+        ${olhoFofo(74, 98, { rx: 18, ry: 21, dy: 5 })}
+        ${olhoFofo(126, 98, { rx: 18, ry: 21, dy: 5 })}
+        <path d="M55 88q19-12 38-2M107 86q19-10 38 2" fill="none" stroke="#131338" stroke-width="6" stroke-linecap="round"/>
+      </g>`,
+    assustados: `<g>
+        ${olhoFofo(74, 96, { rx: 23, ry: 25, pupila: 7, dy: 0 })}
+        ${olhoFofo(126, 96, { rx: 23, ry: 25, pupila: 7, dy: 0 })}
+      </g>`,
+    xis: `<g fill="none" stroke="#131338" stroke-width="7" stroke-linecap="round">
+        <path d="M62 88l24 16M86 88l-24 16"/><path d="M114 88l24 16M138 88l-24 16"/></g>`,
+    rodando: `<g fill="none" stroke="#131338" stroke-width="6" stroke-linecap="round">
+        <path d="M74 98m-16 0a16 16 0 1 0 32 0a16 16 0 1 0-32 0M74 98m-8 0a8 8 0 1 0 16 0"/>
+        <path d="M126 98m-16 0a16 16 0 1 0 32 0a16 16 0 1 0-32 0M126 98m-8 0a8 8 0 1 0 16 0"/></g>`,
+  };
+
+  const BOCAS = {
+    sorriso: '<path d="M76 132q24 26 48 0" stroke="#131338" stroke-width="8" fill="none" stroke-linecap="round"/>',
+    sorrisao: '<path d="M74 130q26 34 52 0q-26 13-52 0z" fill="#131338"/>',
+    // aberta com a linguinha aparecendo
+    gargalhada: `<path d="M70 126q30 40 60 0q-30 16-60 0z" fill="#131338"/>
+      <path d="M92 145q8 9 16 0z" fill="#ff8fc8"/>`,
+    triste: '<path d="M78 144q22-22 44 0" stroke="#131338" stroke-width="8" fill="none" stroke-linecap="round"/>',
+    reta: '<path d="M82 138h36" stroke="#131338" stroke-width="8" stroke-linecap="round"/>',
+    ondinha: '<path d="M76 138q12 14 24 0t24 0" stroke="#131338" stroke-width="7" fill="none" stroke-linecap="round"/>',
+    bocejo: '<ellipse cx="100" cy="134" rx="14" ry="15" fill="#131338"/>',
+    dormindo: '<ellipse cx="100" cy="134" rx="11" ry="12" fill="#131338"/>',
+    o: '<ellipse cx="100" cy="135" rx="11" ry="12" fill="#131338"/>',
+    aberta: '<path d="M76 122q24 22 48 0 2 32-24 32t-24-32z" fill="#131338"/>',
+    orgulho: `<path d="M74 130q26 26 52 0" stroke="#131338" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <path d="M88 122q12-8 24 0" stroke="#131338" stroke-width="5" fill="none" stroke-linecap="round" opacity=".5"/>`,
+  };
+
+  /** bochecha rosada: é ela que deixa a carinha fofa */
+  const bochechas = (op = 0.6, ry = 9) => `
+    <g class="pet-bochecha" fill="#ff8fc8" opacity="${op}">
+      <ellipse cx="48" cy="120" rx="15" ry="${ry}"/>
+      <ellipse cx="152" cy="120" rx="15" ry="${ry}"/>
+    </g>`;
+
+  /** o que flutua em volta da cabeça em cada sentimento */
+  const ENFEITES = {
+    zzz: `<g class="pet-zzz" fill="#131338" font-family="Archivo,Arial" font-weight="900"
+             stroke="#fff" stroke-width="5" paint-order="stroke">
+        <text x="146" y="52" font-size="26">z</text><text x="172" y="30" font-size="18">z</text></g>`,
+    brilhos: `<g class="pet-spark" fill="#ffd84b" stroke="#131338" stroke-width="2.5" stroke-linejoin="round">
+        <path d="M34 62l4 9 9 2-7 6 2 10-8-5-8 5 2-10-7-6 9-2z"/>
+        <path d="M168 72l3 7 8 1-6 5 2 8-7-4-7 4 2-8-6-5 8-1z"/>
+        <path d="M158 36l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></g>`,
+    coracoes: `<g class="pet-love">
+        ${coracao(36, 62, 11)}${coracao(166, 70, 9)}${coracao(152, 34, 7)}</g>`,
+    interrogacao: `<g class="pet-pergunta" fill="#131338" font-family="Archivo,Arial" font-weight="900"
+             stroke="#fff" stroke-width="6" paint-order="stroke">
+        <text x="150" y="50" font-size="42">?</text></g>`,
+    gota: `<g class="pet-gota" fill="#6fd3ff" stroke="#131338" stroke-width="3.5" stroke-linejoin="round">
+        <path d="M158 62q10 14 10 21a10 10 0 0 1-20 0q0-7 10-21z"/></g>`,
+    lagrima: `<g class="pet-lagrima" fill="#6fd3ff" stroke="#131338" stroke-width="3">
+        <path d="M58 118q7 11 7 16a7 7 0 0 1-14 0q0-5 7-16z"/>
+        <path d="M142 120q6 9 6 13a6 6 0 0 1-12 0q0-4 6-13z"/></g>`,
+    estrelinhas: `<g class="pet-stars" fill="#ffd84b" stroke="#131338" stroke-width="3">
+        <path d="M40 44l5 11 12 2-9 8 3 12-11-6-11 6 3-12-9-8 12-2z"/>
+        <path d="M160 38l4 9 10 2-7 7 2 10-9-5-9 5 2-10-7-7 10-2z"/></g>`,
+    haha: `<g class="pet-haha" fill="#131338" font-family="Archivo,Arial" font-weight="900"
+             stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke">
+        <text x="140" y="42" font-size="24">ha</text><text x="18" y="60" font-size="18">ha</text></g>`,
+    nota: `<g class="pet-nota" fill="#131338" stroke="#fff" stroke-width="4" paint-order="stroke">
+        <path d="M150 30v34a11 9 0 1 1-7-8V38l22-5v26a11 9 0 1 1-7-8V26z"/></g>`,
+    suspiro: `<g class="pet-suspiro" fill="none" stroke="#131338" stroke-width="5" stroke-linecap="round" opacity=".55">
+        <path d="M128 150q14-6 22 2"/><path d="M136 162q16-5 24 4"/></g>`,
+  };
+
+  /**
+   * A carinha de cada sentimento: quais olhos, qual boca, o que flutua
+   * em volta e o quanto a bochecha fica corada.
+   */
+  const HUMORES = {
+    feliz: { olhos: 'normal', boca: 'sorriso', bochecha: 0.55 },
+    festa: { olhos: 'felizes', boca: 'sorrisao', enfeite: 'brilhos', bochecha: 0.7 },
+    animado: { olhos: 'estrelas', boca: 'sorrisao', enfeite: 'brilhos', bochecha: 0.7 },
+    orgulhoso: { olhos: 'felizes', boca: 'orgulho', enfeite: 'brilhos', bochecha: 0.6 },
+    amoroso: { olhos: 'apaixonados', boca: 'sorrisao', enfeite: 'coracoes', bochecha: 0.85 },
+    rindo: { olhos: 'felizes', boca: 'gargalhada', enfeite: 'haha', bochecha: 0.7 },
+    curioso: { olhos: 'curioso', boca: 'o', enfeite: 'interrogacao', bochecha: 0.5 },
+    triste: { olhos: 'chorosos', boca: 'triste', bochecha: 0.35 },
+    saudade: { olhos: 'chorosos', boca: 'triste', enfeite: 'lagrima', bochecha: 0.35 },
+    preocupado: { olhos: 'grande', boca: 'ondinha', enfeite: 'gota', bochecha: 0.4 },
+    assustado: { olhos: 'assustados', boca: 'o', enfeite: 'gota', bochecha: 0.3 },
+    entediado: { olhos: 'entediados', boca: 'reta', enfeite: 'suspiro', bochecha: 0.35 },
+    sonolento: { olhos: 'sonolentos', boca: 'bocejo', enfeite: 'zzz', bochecha: 0.45 },
+    dormindo: { olhos: 'dormindo', boca: 'dormindo', enfeite: 'zzz', bochecha: 0.5 },
+    tonto: { olhos: 'rodando', boca: 'ondinha', enfeite: 'estrelinhas', bochecha: 0.4 },
+    cantando: { olhos: 'felizes', boca: 'sorrisao', enfeite: 'nota', bochecha: 0.6 },
+  };
+
+  /** bracinhos curtos, que balançam junto com o corpo */
+  const bracos = (hex) => `
+    <g class="pet-bracos" stroke="#131338" stroke-width="5" fill="${hex}" stroke-linejoin="round">
+      <ellipse class="pet-braco esq" cx="28" cy="146" rx="15" ry="11"/>
+      <ellipse class="pet-braco dir" cx="172" cy="146" rx="15" ry="11"/>
+    </g>`;
+
+  /** o brilhinho do plástico novo, no alto do corpo */
+  const brilhoCorpo = `
+    <g class="pet-brilho" fill="#fff" opacity=".38">
+      <ellipse cx="66" cy="62" rx="17" ry="11" transform="rotate(-28 66 62)"/>
+      <ellipse cx="88" cy="50" rx="7" ry="5" transform="rotate(-28 88 50)"/>
+    </g>`;
+
   function face(moodId) {
-    // rindo: olhos fechados de tanto rir, boca escancarada e "ha ha" saindo
-    if (moodId === 'rindo') {
-      return `
-        <g fill="none" stroke="#131338" stroke-width="7" stroke-linecap="round">
-          <path d="M60 104q14-18 28 0"/>
-          <path d="M112 104q14-18 28 0"/>
-        </g>
-        <g class="pet-mouth">
-          <path d="M70 128q30 40 60 0q-30 16-60 0z" fill="#131338"/>
-          <path d="M92 152q8 10 16 0z" fill="#ff8fc8"/>
-        </g>
-        <g fill="#ff8fc8" opacity=".55">
-          <ellipse cx="52" cy="122" rx="13" ry="8"/>
-          <ellipse cx="148" cy="122" rx="13" ry="8"/>
-        </g>
-        <g class="pet-haha" fill="#131338" font-family="Archivo,Arial" font-weight="900"
-           stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke">
-          <text x="148" y="44" font-size="26">ha</text>
-          <text x="10" y="64" font-size="20">ha</text>
-        </g>`;
-    }
-    // enjoado: olhos apertados, boca aberta e o jorro saindo
+    // enjoado tem o jorro saindo da boca, então é desenhado à parte
     if (moodId === 'enjoado') {
       return `
-        <g fill="none" stroke="#131338" stroke-width="7" stroke-linecap="round">
-          <path d="M62 88l24 16M86 88l-24 16"/>
-          <path d="M114 88l24 16M138 88l-24 16"/>
-        </g>
+        ${OLHOS.xis}
         <g fill="#79e3b5" opacity=".75">
-          <ellipse cx="48" cy="116" rx="14" ry="9"/>
-          <ellipse cx="152" cy="116" rx="14" ry="9"/>
+          <ellipse cx="48" cy="116" rx="14" ry="9"/><ellipse cx="152" cy="116" rx="14" ry="9"/>
         </g>
-        <g class="pet-mouth">
-          <path d="M76 122q24 22 48 0 2 32-24 32t-24-32z" fill="#131338"/>
-        </g>
+        <g class="pet-mouth">${BOCAS.aberta}</g>
         <g class="pet-jorro" fill="#4fc78f" stroke="#131338" stroke-width="4" stroke-linejoin="round">
           <path d="M82 138q18 18 36 0 8 24-18 52-26-28-18-52z"/>
-          <circle cx="70" cy="172" r="6"/>
-          <circle cx="130" cy="166" r="5"/>
-          <circle cx="100" cy="194" r="6"/>
+          <circle cx="70" cy="172" r="6"/><circle cx="130" cy="166" r="5"/><circle cx="100" cy="194" r="6"/>
         </g>`;
     }
-    if (moodId === 'tonto') {
-      return `
-        <g fill="none" stroke="#131338" stroke-width="6" stroke-linecap="round">
-          <path d="M74 98m-16 0a16 16 0 1 0 32 0a16 16 0 1 0-32 0M74 98m-8 0a8 8 0 1 0 16 0"/>
-          <path d="M126 98m-16 0a16 16 0 1 0 32 0a16 16 0 1 0-32 0M126 98m-8 0a8 8 0 1 0 16 0"/>
-        </g>
-        <g class="pet-mouth">
-          <path d="M74 138q13 16 26 0t26 0" stroke="#131338" stroke-width="7" fill="none" stroke-linecap="round"/>
-        </g>
-        <g class="pet-stars" fill="#ffd84b" stroke="#131338" stroke-width="3">
-          <path d="M40 44l5 11 12 2-9 8 3 12-11-6-11 6 3-12-9-8 12-2z"/>
-          <path d="M160 38l4 9 10 2-7 7 2 10-9-5-9 5 2-10-7-7 10-2z"/>
-        </g>`;
-    }
-    const eyes = moodId === 'dormindo'
-      ? `<path d="M60 100q14 14 28 0" stroke="#131338" stroke-width="7" fill="none" stroke-linecap="round"/>
-         <path d="M112 100q14 14 28 0" stroke="#131338" stroke-width="7" fill="none" stroke-linecap="round"/>`
-      : `<g class="pet-eye">
-           <ellipse cx="74" cy="98" rx="17" ry="19" fill="#fff"/>
-           <ellipse cx="126" cy="98" rx="17" ry="19" fill="#fff"/>
-           <circle class="pet-pupil" cx="74" cy="102" r="9" fill="#131338"/>
-           <circle class="pet-pupil" cx="126" cy="102" r="9" fill="#131338"/>
-           <circle cx="70" cy="96" r="3" fill="#fff"/><circle cx="122" cy="96" r="3" fill="#fff"/>
-         </g>`;
-    const mouth = {
-      tonto: '<path d="M74 138q13 16 26 0t26 0" stroke="#131338" stroke-width="7" fill="none" stroke-linecap="round"/>',
-      festa: '<path d="M74 132q26 34 52 0q-26 12-52 0z" fill="#131338"/>',
-      feliz: '<path d="M76 134q24 24 48 0" stroke="#131338" stroke-width="8" fill="none" stroke-linecap="round"/>',
-      triste: '<path d="M76 142q24-22 48 0" stroke="#131338" stroke-width="8" fill="none" stroke-linecap="round"/>',
-      preocupado: '<path d="M78 138h44" stroke="#131338" stroke-width="8" stroke-linecap="round"/>',
-      dormindo: '<ellipse cx="100" cy="136" rx="11" ry="13" fill="#131338"/>',
-    }[moodId] || '<path d="M76 134q24 24 48 0" stroke="#131338" stroke-width="8" fill="none" stroke-linecap="round"/>';
-    const bocaAnimada = `<g class="pet-mouth">${mouth}</g>`;
-
+    // estudando: sobrancelha concentrada e boca de quem está pensando
     if (moodId === 'estudando') {
       return `
-        <g class="pet-eye">
-          <ellipse cx="74" cy="98" rx="16" ry="17" fill="#fff"/>
-          <ellipse cx="126" cy="98" rx="16" ry="17" fill="#fff"/>
-          <circle cx="74" cy="104" r="8" fill="#131338"/><circle cx="126" cy="104" r="8" fill="#131338"/>
-        </g>
+        ${olhoFofo(74, 100, { rx: 17, ry: 18, pupila: 9 })}
+        ${olhoFofo(126, 100, { rx: 17, ry: 18, pupila: 9 })}
         <path d="M56 78q16-10 32-2M112 76q16-8 32 2" stroke="#131338" stroke-width="6" fill="none" stroke-linecap="round"/>
-        <g class="pet-mouth"><path d="M84 136h32" stroke="#131338" stroke-width="8" stroke-linecap="round"/></g>`;
+        ${bochechas(0.45)}
+        <g class="pet-mouth">${BOCAS.reta}</g>`;
     }
-    const extra = moodId === 'dormindo'
-      ? `<g class="pet-zzz" fill="#131338" font-family="Archivo,Arial" font-weight="900">
-           <text x="150" y="52" font-size="26">z</text>
-           <text x="172" y="32" font-size="18">z</text>
-         </g>`
-      : moodId === 'festa'
-        ? `<g class="pet-spark" fill="#131338"><circle cx="34" cy="66" r="5"/><circle cx="170" cy="76" r="6"/><circle cx="158" cy="40" r="4"/></g>`
-        : '';
 
-    return eyes + bocaAnimada + extra;
+    const h = HUMORES[moodId] || HUMORES.feliz;
+    return `
+      ${OLHOS[h.olhos] || OLHOS.normal}
+      ${bochechas(h.bochecha === undefined ? 0.55 : h.bochecha)}
+      <g class="pet-mouth">${BOCAS[h.boca] || BOCAS.sorriso}</g>
+      ${h.enfeite ? ENFEITES[h.enfeite] || '' : ''}`;
   }
 
   /** desenho do bichinho; `size` é a largura em px */
@@ -600,10 +718,10 @@ const Pet = (() => {
         <g class="pet-body">
           <ellipse class="pet-foot" cx="74" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
           <ellipse class="pet-foot" cx="126" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
+          ${bracos(c.hex)}
           <path d="${sh.path}" fill="${c.hex}" stroke="#131338" stroke-width="6" stroke-linejoin="round"/>
+          ${brilhoCorpo}
           ${outfitSvg(pet.outfit, pet.shape)}
-          <ellipse cx="52" cy="120" rx="11" ry="7" fill="#131338" opacity=".16"/>
-          <ellipse cx="148" cy="120" rx="11" ry="7" fill="#131338" opacity=".16"/>
           <g class="pet-face">${face(m)}</g>
           ${accessorySvg(pet.accessory, c.hex)}
         </g>
@@ -626,10 +744,10 @@ const Pet = (() => {
           <g class="pet-body">
             <ellipse class="pet-foot" cx="74" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
             <ellipse class="pet-foot" cx="126" cy="188" rx="17" ry="9" fill="${c.hex}" stroke="#131338" stroke-width="5"/>
+            ${bracos(c.hex)}
             <path d="${sh.path}" fill="${c.hex}" stroke="#131338" stroke-width="6" stroke-linejoin="round"/>
+            ${brilhoCorpo}
             ${outfitSvg(data.outfit, data.shape)}
-            <ellipse cx="52" cy="120" rx="11" ry="7" fill="#131338" opacity=".16"/>
-            <ellipse cx="148" cy="120" rx="11" ry="7" fill="#131338" opacity=".16"/>
             <g class="pet-face">${face(moodId)}</g>
             ${accessorySvg(data.accessory, c.hex)}
           </g>
