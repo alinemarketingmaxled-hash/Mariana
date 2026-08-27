@@ -1392,6 +1392,10 @@ const Pet = (() => {
     let pressStart = 0;
     let moved = 0;
     let quedaMax = 0;
+    let arremessos = 0;       // quantas vezes seguidas ela jogou o bichinho
+    let ultimoArremesso = 0;  // para saber se ainda é a mesma brincadeira
+    let paraquedas = false;
+    let voando = null;        // rede de segurança do voo de paraquedas
     let shake = { dirs: 0, lastSign: 0, dist: 0, since: 0 };
     let estado = 'parado';
     let ultimaInteracao = Date.now();
@@ -1422,7 +1426,8 @@ const Pet = (() => {
         : novo === 'vomitando' ? 'enjoado'
         : novo === 'rindo' ? 'rindo'
         : novo === 'estudando' ? 'estudando'
-        : novo === 'brincando' || novo === 'pulando' ? 'festa'
+        : novo === 'brincando' || novo === 'pulando' || novo === 'festa' ? 'festa'
+        : novo === 'planando' ? 'animado'
         : mood(child).id;
       el.querySelector('.pet-buddy-art').innerHTML = svg(child, SIZE, m);
       if (ball) ball.hidden = novo !== 'brincando';
@@ -1432,17 +1437,34 @@ const Pet = (() => {
     function loop() {
       raf = null;
       if (!el || dragging) return;
-      pos.vy += GRAVIDADE;
-      pos.x += pos.vx;
-      pos.y += pos.vy;
+      if (paraquedas) {
+        // de paraquedas ele desce devagarinho e vai de um lado para o outro
+        pos.vy = Math.min(pos.vy + GRAVIDADE * 0.16, 2.6);
+        pos.vx *= 0.94;
+        pos.x += pos.vx + Math.sin(pos.y / 26) * 1.3;
+        pos.y += pos.vy;
+      } else {
+        pos.vy += GRAVIDADE;
+        pos.x += pos.vx;
+        pos.y += pos.vy;
+      }
 
       if (pos.x < 10) { pos.x = 10; pos.vx = -pos.vx * 0.6; }
       if (pos.x > limiteX()) { pos.x = limiteX(); pos.vx = -pos.vx * 0.6; }
-      if (pos.y < 6) { pos.y = 6; pos.vy = Math.abs(pos.vy) * 0.4; }  // bateu no teto
+      // teto: de paraquedas ele para mais embaixo, para a cúpula caber na tela
+      const teto = paraquedas ? 94 : 6;
+      if (pos.y < teto) { pos.y = teto; pos.vy = Math.abs(pos.vy) * (paraquedas ? 0 : 0.4); }
 
       const chao = chaoY();
       if (pos.y >= chao) {
         pos.y = chao;
+        if (paraquedas) {
+          pos.vy = 0;
+          pos.vx = 0;
+          pousarDeParaquedas();
+          aplicar();
+          return;
+        }
         quedaMax = Math.max(quedaMax, Math.abs(pos.vy));
         if (Math.abs(pos.vy) > 2.4) {
           pos.vy = -pos.vy * QUIQUE;
@@ -1464,7 +1486,7 @@ const Pet = (() => {
         }
       }
       aplicar();
-      if (pos.vy !== 0 || pos.vx !== 0 || pos.y < chao) raf = requestAnimationFrame(loop);
+      if (paraquedas || pos.vy !== 0 || pos.vx !== 0 || pos.y < chao) raf = requestAnimationFrame(loop);
     }
 
     const mover = () => { if (!raf) raf = requestAnimationFrame(loop); };
@@ -1498,6 +1520,79 @@ const Pet = (() => {
       Effects.burst('spend', el);
       clearTimeout(dizzyTimer);
       dizzyTimer = setTimeout(() => ficarTonto('Ufa, voltei. Que tontura!'), 1800);
+    }
+
+    /* ---------- o paraquedas da sétima vez ----------
+       Jogar o bichinho seis vezes seguidas ele aguenta. Na sétima ele já
+       se preparou: abre um paraquedas e desce planando até o chão. */
+    const ARREMESSOS_ATE_PARAQUEDAS = 7;
+    const JANELA_ARREMESSO = 25000;   // 25s entre um e outro ainda é a mesma brincadeira
+
+    const paraquedaSvg = `
+      <svg class="buddy-paraquedas" viewBox="0 0 120 96" width="120" height="96" aria-hidden="true">
+        <path d="M6 40a54 54 0 0 1 108 0c-14-8-26-8-36 0-8-8-20-8-36 0-10-8-22-8-36 0z"
+              fill="#ff8fc8" stroke="#131338" stroke-width="5" stroke-linejoin="round"/>
+        <path d="M42 40c0-22 6-38 18-38s18 16 18 38" fill="#d6f154" stroke="#131338" stroke-width="5"/>
+        <path d="M8 42 46 88M42 41 54 88M78 41 66 88M112 42 74 88"
+              stroke="#131338" stroke-width="4" stroke-linecap="round" fill="none"/>
+      </svg>`;
+
+    /** conta mais um arremesso e diz se é hora de abrir o paraquedas */
+    function contarArremesso() {
+      const agora = Date.now();
+      if (agora - ultimoArremesso > JANELA_ARREMESSO) arremessos = 0;
+      ultimoArremesso = agora;
+      arremessos += 1;
+      if (arremessos < ARREMESSOS_ATE_PARAQUEDAS) {
+        // do quarto em diante ele já avisa que está ficando esperto
+        if (arremessos === 4) fala('De novo? Tá bom, eu já vou me preparar...');
+        if (arremessos === 6) fala('Mais uma e você vai ver só.');
+        return false;
+      }
+      arremessos = 0;
+      abrirParaquedas();
+      return true;
+    }
+
+    function abrirParaquedas() {
+      if (!el || paraquedas) return;
+      paraquedas = true;
+      clearTimeout(dizzyTimer);
+      clearTimeout(holdTimer);
+      setEstado('planando');
+      el.classList.add('is-paraquedas');
+      if (!el.querySelector('.buddy-paraquedas')) {
+        el.insertAdjacentHTML('afterbegin', paraquedaSvg);
+      }
+      // se já estiver perto do chão, dá um pulo antes, para o voo aparecer
+      pos.vy = pos.y > chaoY() - 130 ? -15 : Math.min(pos.vy, -2);
+      // a cúpula fica acima dele: se estiver colado no topo, desce um pouco
+      if (pos.y < 94) pos.y = 94;
+      fala('Paraquedas! Eu estava esperando essa.');
+      Voz.falar('Paraquedas!', child);
+      Effects.burst('goal', el);
+      // se alguma coisa travar o voo, ele pousa do mesmo jeito
+      clearTimeout(voando);
+      voando = setTimeout(() => { if (paraquedas) { pos.y = chaoY(); pousarDeParaquedas(); aplicar(); } }, 12000);
+      mover();
+    }
+
+    function pousarDeParaquedas() {
+      if (!paraquedas) return;
+      paraquedas = false;
+      clearTimeout(voando);
+      quedaMax = 0;
+      el.classList.remove('is-paraquedas');
+      const p = el.querySelector('.buddy-paraquedas');
+      if (p) p.remove();
+      setEstado('festa');
+      fala('Pousei! Que voo lindo.');
+      Effects.burst('approved', el);
+      clearTimeout(dizzyTimer);
+      dizzyTimer = setTimeout(() => {
+        setEstado('parado');
+        agendarBrincadeira();
+      }, 2200);
     }
 
     /** chacoalhou demais: ele passa mal, vomita e depois fica tonto */
@@ -1616,7 +1711,10 @@ const Pet = (() => {
       clearTimeout(idleTimer);
       if (reduced()) return;
       idleTimer = setTimeout(() => {
-        if (!el || dragging || estado === 'tonto' || estado === 'derretendo') return agendarBrincadeira();
+        if (!el || dragging || paraquedas
+          || estado === 'tonto' || estado === 'derretendo' || estado === 'vomitando') {
+          return agendarBrincadeira();
+        }
         const hora = new Date().getHours();
         const madrugada = hora >= 22 || hora < 6;
         const paradoHaMuito = Date.now() - ultimaInteracao > 12 * 60 * 1000;
@@ -1688,6 +1786,14 @@ const Pet = (() => {
         dragging = true;
         clearTimeout(holdTimer);
         if (menuAberto) fecharMenu();
+        if (paraquedas) {
+          // pegou ele no ar: o paraquedas fecha e a brincadeira recomeça
+          paraquedas = false;
+          clearTimeout(voando);
+          el.classList.remove('is-paraquedas');
+          const pq = el.querySelector('.buddy-paraquedas');
+          if (pq) pq.remove();
+        }
         if (estado !== 'tonto' && estado !== 'derretendo' && estado !== 'vomitando') setEstado('segurado');
       }
       if (!dragging) return;
@@ -1725,9 +1831,13 @@ const Pet = (() => {
         return;
       }
       dragging = false;
-      if (estado === 'segurado') setEstado('caindo');
       pos.vx = Math.max(-22, Math.min(22, pos.vx * 1.6));
       pos.vy = Math.max(-24, Math.min(24, pos.vy * 1.4));
+      // soltou com força: isso conta como arremesso
+      const forca = Math.abs(pos.vx) + Math.abs(pos.vy);
+      const arremessou = forca > 7 && !paraquedas;
+      if (estado === 'segurado') setEstado('caindo');
+      if (arremessou && contarArremesso()) return;
       mover();
     }
 
@@ -1800,6 +1910,7 @@ const Pet = (() => {
       clearTimeout(idleTimer);
       clearTimeout(holdTimer);
       clearTimeout(dizzyTimer);
+      clearTimeout(voando);
       if (raf) cancelAnimationFrame(raf);
       raf = null;
       if (el) el.remove();
@@ -1808,15 +1919,24 @@ const Pet = (() => {
       ball = null;
       child = null;
       estado = 'parado';
+      paraquedas = false;
+      arremessos = 0;
     }
 
-    return { mount, unmount, fala, setEstado, registrarInteracao, rir, vomitar };
+    return {
+      mount, unmount, fala, setEstado, registrarInteracao, rir, vomitar,
+      arremessar: contarArremesso,
+      arremessos: () => arremessos,
+      planando: () => paraquedas,
+    };
   })();
 
   return {
     svg, panel, bind, openSheet, openChat, touch, mood, phrase, Voz,
     mountBuddy: Buddy.mount, unmountBuddy: Buddy.unmount, buddySay: Buddy.fala,
     buddyRir: Buddy.rir, buddyVomitar: Buddy.vomitar,
+    buddyArremessar: Buddy.arremessar, buddyArremessos: Buddy.arremessos,
+    buddyPlanando: Buddy.planando,
     openShop, outfit, bed, roomSvg, movelSvg, quartoDe, ringSvg, previewSvg, faltaParaSubir,
     level, progress, COLORS, SHAPES, ACCESSORIES, OUTFITS, BEDS, ROOMS, PAREDES, CHAOS, MOVEIS, SLOTS,
     XP_POR_NIVEL, CARINHOS_POR_DIA,

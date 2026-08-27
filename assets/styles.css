@@ -1834,3 +1834,34 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
   color:var(--ink);box-shadow:var(--neu-in-sm);resize:vertical
 }
 details summary{cursor:pointer;padding:6px 0}
+
+/* ---------- o paraquedas da sétima vez ---------- */
+.buddy-paraquedas{
+  position:absolute;left:50%;bottom:76px;width:112px;height:90px;
+  transform:translateX(-50%);transform-origin:50% 100%;pointer-events:none;
+  filter:drop-shadow(0 6px 10px rgba(19,19,56,.24));
+  animation:paraquedas-abre .45s var(--ease) both, paraquedas-balanca 2.4s ease-in-out .45s infinite
+}
+@keyframes paraquedas-abre{
+  0%{opacity:0;transform:translateX(-50%) translateY(26px) scale(.2)}
+  60%{opacity:1;transform:translateX(-50%) translateY(-4px) scale(1.12)}
+  100%{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+}
+@keyframes paraquedas-balanca{
+  0%,100%{transform:translateX(-50%) rotate(-5deg)}
+  50%{transform:translateX(-50%) rotate(5deg)}
+}
+/* pendurado no paraquedas ele fica de perninha solta */
+.pet-buddy.is-paraquedas .pet-buddy-art{
+  animation:buddy-planando 2.4s ease-in-out infinite;transform-origin:50% 0%
+}
+@keyframes buddy-planando{
+  0%,100%{transform:rotate(4deg)}
+  50%{transform:rotate(-4deg)}
+}
+.pet-buddy.is-paraquedas{z-index:41}
+
+@media (prefers-reduced-motion:reduce){
+  .buddy-paraquedas{animation:none}
+  .pet-buddy.is-paraquedas .pet-buddy-art{animation:none}
+}

@@ -67,6 +67,10 @@ quantos filhos quiser, cada um com o próprio login e senha.
   vomita** (olho em X, bochecha verde e um jorro caindo, e depois fica tonto até se recuperar); e
   dá para **arrastar e jogar de qualquer altura** (ele cai, quica no chão, bate no teto e,
   se a queda for feia, fica vendo estrelinhas).
+- **O paraquedas da sétima vez**: jogar ele **sete vezes seguidas** e na sétima ele já estava
+  preparado: abre um **paraquedas** e desce planando, balançando no ar, até pousar de leve e
+  comemorar. Na quarta e na sexta jogada ele avisa que está tramando alguma coisa. Pegar ele no
+  meio do voo fecha o paraquedas, e passar muito tempo sem jogar zera a contagem.
 - **Atualizar o bichinho**: a bolinha de atualizar abre uma tela grande com ele dentro do
   **quarto** e, ao lado, um **gráfico de círculo** que mostra o **nível no meio** e quantos pontos
   faltam para evoluir. A tela tem três abas:
