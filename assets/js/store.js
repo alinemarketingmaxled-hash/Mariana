@@ -123,6 +123,7 @@ const Store = (() => {
       decks: [],
       usage: [],
       quizLog: [],
+      daily: [],
     };
   }
 
@@ -170,6 +171,7 @@ const Store = (() => {
           if (!Array.isArray(st.decks)) st.decks = [];
           if (!Array.isArray(st.usage)) st.usage = [];
           if (!Array.isArray(st.quizLog)) st.quizLog = [];
+          if (!Array.isArray(st.daily)) st.daily = [];
           return st;
         }
       }
@@ -970,6 +972,48 @@ const Store = (() => {
     return { xp, recorde, levelUp: !!(res && res.levelUp) };
   }
 
+  /* ---------- desafios do dia (palavrinha, contexto, teia) ---------- */
+  /** número do dia, usado para escolher sempre o mesmo desafio para todo mundo */
+  function dayNumber(iso) {
+    const d = fromISO(iso || today());
+    return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+  }
+
+  /** o que já foi jogado hoje nesse desafio */
+  function dailyGame(childId, jogo, date) {
+    const dia = date || today();
+    const linha = state.daily.find((d) => d.childId === childId && d.jogo === jogo && d.date === dia);
+    return linha ? linha.dados : null;
+  }
+
+  /** guarda o andamento do desafio do dia; só o dia de hoje importa */
+  function saveDailyGame(childId, jogo, dados) {
+    const dia = today();
+    let linha = state.daily.find((d) => d.childId === childId && d.jogo === jogo && d.date === dia);
+    if (!linha) {
+      linha = { childId, jogo, date: dia };
+      state.daily.push(linha);
+    }
+    linha.dados = dados;
+    // guarda pouca coisa: só os últimos 60 dias de cada filho
+    const limite = addDays(dia, -60);
+    if (state.daily.length > 240) state.daily = state.daily.filter((d) => d.date >= limite);
+    save();
+    return linha.dados;
+  }
+
+  /** quantos dias seguidos ela terminou esse desafio, contando de hoje para trás */
+  function dailyStreak(childId, jogo) {
+    let n = 0;
+    for (let i = 0; i < 60; i += 1) {
+      const dados = dailyGame(childId, jogo, addDays(today(), -i));
+      if (dados && dados.ganhou) { n += 1; continue; }
+      if (i === 0) continue; // hoje ela ainda pode jogar, então não quebra a sequência
+      break;
+    }
+    return n;
+  }
+
   /* ---------- gastos do filho (o que ele comprou) ---------- */
   const PURCHASE_KINDS = [
     { id: 'lanche', label: 'Lanche', icon: 'apple', grad: 'g2' },
@@ -1378,6 +1422,8 @@ const Store = (() => {
     // bichinho
     petOf, savePet, petAddXp, petCare, petCareLeft, petGamesToday, petGameResult,
     petNap, petSleeping, petChat, petSay,
+    // desafios do dia
+    dayNumber, dailyGame, saveDailyGame, dailyStreak,
     // estudos
     saveDeck, removeDeck, deckById, decksOf, addCard, removeCard, allCards, quizResult,
     parseCards, subject, SUBJECTS,

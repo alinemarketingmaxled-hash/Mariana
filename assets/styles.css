@@ -1177,8 +1177,27 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 .pet-buddy.is-menu .pet-buddy-art{transform:scale(.94)}
 @media (prefers-reduced-motion:reduce){.pet-menu-bolha{animation:none}}
 .pick-grid.swatches{grid-template-columns:repeat(8,1fr)}
-.pick-grid.swatches button{aspect-ratio:1;box-shadow:var(--neu-out-sm)}
-.pick-grid.swatches button[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:2px}
+.pick-grid.swatches button{aspect-ratio:1;box-shadow:var(--neu-out-sm);border-radius:16px}
+/* a bolinha precisa mostrar a própria cor: o fundo neutro de .pick-grid button
+   é mais específico que .g1, então cada cor é repetida aqui */
+.pick-grid.swatches button.g1{background:var(--violet)}
+.pick-grid.swatches button.g2{background:var(--orange)}
+.pick-grid.swatches button.g3{background:var(--mint)}
+.pick-grid.swatches button.g4{background:var(--blue)}
+.pick-grid.swatches button.g5{background:var(--pink)}
+.pick-grid.swatches button.g6{background:var(--sky)}
+.pick-grid.swatches button.g7{background:var(--sun)}
+.pick-grid.swatches button.g8{background:var(--lime)}
+.pick-grid.swatches button[aria-pressed="true"]{
+  outline:3px solid var(--panel);outline-offset:3px;transform:scale(1.06)
+}
+/* o certinho só aparece na cor escolhida */
+.pick-grid.swatches button::after{
+  content:"";width:14px;height:14px;margin:auto;border-radius:50%;
+  background:rgba(255,255,255,.9);box-shadow:0 0 0 2px rgba(19,19,56,.35);
+  opacity:0;transform:scale(.4);transition:.18s var(--ease)
+}
+.pick-grid.swatches button[aria-pressed="true"]::after{opacity:1;transform:scale(1)}
 
 /* ===== painel de dinheiro ===== */
 .dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
@@ -1367,6 +1386,7 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
   .seg-tabs button svg{width:16px;height:16px}
   .pick-grid.shape,.pick-grid.outfit,.pick-grid.accessory,
   .pick-grid.color,.pick-grid.parede,.pick-grid.piso{grid-template-columns:repeat(4,1fr)}
+  .pick-grid.swatches{grid-template-columns:repeat(4,1fr)}
   .pick-grid.bed,.pick-grid.temas,.pick-grid.movel{grid-template-columns:repeat(3,1fr)}
   .pick-grid.movel button svg,.pick-grid.temas button svg,.pick-grid.bed button svg{height:82px}
   /* cartão do bichinho compacto: bonequinho e anel lado a lado */
@@ -1501,4 +1521,135 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
   .pet-svg.mood-rindo .pet-body,.pet-svg.mood-enjoado .pet-body,
   .pet-haha,.pet-jorro,.pet-buddy.is-vomitando .pet-buddy-art,
   .pet-buddy.is-rindo .pet-buddy-art{animation:none}
+}
+
+/* =========================================================
+   desafios do dia: palavrinha, contexto e teia
+   ========================================================= */
+.game-card{position:relative}
+.game-selo{
+  position:absolute;top:10px;right:10px;padding:3px 9px;border-radius:99px;
+  background:rgba(255,255,255,.9);color:var(--panel);
+  font-size:9.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase
+}
+.game-selo ~ .grow{padding-right:62px}
+
+/* ---------- palavrinha ---------- */
+.pl-board{display:flex;flex-direction:column;gap:7px;align-items:center;margin-top:14px}
+.pl-linha{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;width:100%;max-width:320px}
+.pl-letra{
+  aspect-ratio:1;border-radius:14px;display:grid;place-items:center;
+  font-size:23px;font-weight:900;letter-spacing:0;font-variation-settings:'wdth' 112;
+  background:var(--surface);box-shadow:var(--neu-in-sm);color:var(--ink);
+  transition:background .2s var(--ease),color .2s var(--ease)
+}
+.pl-letra.digitando{box-shadow:var(--neu-out-sm);outline:2px solid var(--accent);outline-offset:-2px}
+.pl-letra.certa{background:var(--ok);color:#fff;box-shadow:none;animation:pl-vira .45s var(--ease) both}
+.pl-letra.quase{background:var(--sun);color:var(--panel);box-shadow:none;animation:pl-vira .45s var(--ease) both}
+.pl-letra.fora{background:var(--panel);color:rgba(255,255,255,.55);box-shadow:none;animation:pl-vira .45s var(--ease) both}
+@keyframes pl-vira{
+  0%{transform:rotateX(0deg)}
+  50%{transform:rotateX(90deg)}
+  100%{transform:rotateX(0deg)}
+}
+.pl-linha.treme{animation:pl-treme .4s var(--ease)}
+@keyframes pl-treme{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-8px)}
+  40%{transform:translateX(8px)}
+  60%{transform:translateX(-5px)}
+  80%{transform:translateX(5px)}
+}
+.pl-aviso{margin-top:12px;color:var(--muted);text-transform:none;font-variation-settings:'wdth' 104;line-height:1.4}
+.pl-aviso.ruim{color:var(--bad);font-weight:700}
+.pl-teclado{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+.pl-teclado-linha{display:flex;gap:5px;justify-content:center}
+.pl-tecla{
+  flex:1 1 0;min-width:0;height:48px;border-radius:11px;
+  background:var(--surface);box-shadow:var(--neu-out-sm);color:var(--ink);
+  font-size:14px;font-weight:800;font-variation-settings:'wdth' 108;
+  display:grid;place-items:center;transition:.15s var(--ease)
+}
+.pl-tecla:active{transform:translateY(2px);box-shadow:var(--neu-in-sm)}
+.pl-tecla.larga{flex:1.7 1 0;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+.pl-tecla.certa{background:var(--ok);color:#fff;box-shadow:none}
+.pl-tecla.quase{background:var(--sun);color:var(--panel);box-shadow:none}
+.pl-tecla.fora{background:var(--panel);color:rgba(255,255,255,.45);box-shadow:none}
+
+/* ---------- contexto ---------- */
+.ctx-form{display:flex;gap:8px;align-items:stretch;margin-top:14px}
+.ctx-form .input{flex:1 1 auto;min-width:0}
+.ctx-form .btn{flex:0 0 auto;padding-left:20px;padding-right:20px}
+.ctx-status{margin-top:12px;display:flex;justify-content:center;min-height:26px}
+.ctx-status .chip{text-transform:none;font-variation-settings:'wdth' 104;letter-spacing:0}
+.ctx-dicas{display:flex;flex-direction:column;gap:8px}
+.ctx-dicas:not(:empty){margin-top:10px}
+.ctx-lista{display:flex;flex-direction:column;gap:7px;margin-top:12px}
+.ctx-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;
+  background:var(--surface);box-shadow:var(--neu-out-sm)
+}
+.ctx-item.novo{animation:ctx-entra .35s var(--ease)}
+@keyframes ctx-entra{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}
+.ctx-pos{
+  min-width:44px;text-align:center;font-size:13px;font-weight:900;
+  padding:3px 6px;border-radius:9px;background:var(--panel);color:#fff
+}
+.ctx-item.acertou .ctx-pos{background:var(--ok)}
+.ctx-item.quente .ctx-pos{background:var(--bad)}
+.ctx-item.morno .ctx-pos{background:var(--orange)}
+.ctx-item.frio .ctx-pos{background:var(--sky);color:var(--panel)}
+.ctx-palavra{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;font-variation-settings:'wdth' 108}
+.ctx-barra{width:74px;height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;flex:0 0 auto}
+.ctx-barra i{display:block;height:100%;border-radius:99px;background:var(--sky)}
+.ctx-item.quente .ctx-barra i{background:var(--bad)}
+.ctx-item.morno .ctx-barra i{background:var(--orange)}
+.ctx-item.acertou .ctx-barra i{background:var(--ok)}
+.ctx-recado{flex:0 0 auto;color:var(--muted);text-transform:none;font-variation-settings:'wdth' 104}
+
+/* ---------- teia ---------- */
+.teia-achados{display:flex;flex-direction:column;gap:8px}
+.teia-achados:not(:empty){margin-top:14px}
+.teia-achado{
+  padding:12px 14px;border-radius:18px;color:#fff;text-align:center;
+  animation:teia-fecha .4s var(--ease)
+}
+.teia-achado.g7,.teia-achado.g8{color:var(--panel)}
+.teia-achado .nm{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
+.teia-achado .tiny{opacity:.85;text-transform:none;font-variation-settings:'wdth' 104;margin-top:2px}
+@keyframes teia-fecha{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
+.teia-grade{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}
+.teia-peca{
+  min-height:64px;padding:6px 4px;border-radius:15px;display:grid;place-items:center;
+  background:var(--surface);box-shadow:var(--neu-out-sm);color:var(--ink);
+  font-size:11px;font-weight:800;line-height:1.15;text-align:center;
+  text-transform:uppercase;letter-spacing:.02em;font-variation-settings:'wdth' 102;
+  overflow-wrap:anywhere;transition:.15s var(--ease)
+}
+.teia-peca.on{background:var(--panel);color:#fff;box-shadow:none;transform:scale(.96)}
+.teia-peca.treme{animation:pl-treme .4s var(--ease)}
+.teia-rodape{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px}
+.teia-rodape .tiny{color:var(--muted);text-transform:none;font-variation-settings:'wdth' 104}
+.teia-vidas{display:flex;gap:6px}
+.teia-vida{width:11px;height:11px;border-radius:50%;background:var(--panel)}
+.teia-vida.gasta{background:var(--surface-2);box-shadow:var(--neu-in-sm)}
+
+@media (max-width:999px){
+  .pl-tecla{height:46px;font-size:13px}
+  .pl-tecla.larga{font-size:10px}
+  .pl-linha{max-width:290px}
+  .pl-letra{font-size:20px;border-radius:12px}
+  .teia-peca{min-height:60px;font-size:10px}
+  .ctx-barra{width:52px}
+  .ctx-recado{display:none}
+}
+@media (max-width:400px){
+  .pl-teclado-linha{gap:4px}
+  .pl-tecla{height:42px;font-size:12px;border-radius:9px}
+  .teia-grade{gap:5px}
+  .teia-peca{min-height:56px;font-size:9.5px;border-radius:12px}
+}
+@media (prefers-reduced-motion:reduce){
+  .pl-letra.certa,.pl-letra.quase,.pl-letra.fora,.pl-linha.treme,
+  .ctx-item.novo,.teia-achado,.teia-peca.treme{animation:none}
 }

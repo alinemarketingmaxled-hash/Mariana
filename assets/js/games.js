@@ -6,6 +6,30 @@
 const Games = (() => {
   const LISTA = [
     {
+      id: 'palavrinha',
+      nome: 'Palavrinha',
+      desc: 'Uma palavra nova de cinco letras por dia. Seis tentativas para achar.',
+      icon: 'pencil',
+      grad: 'g4',
+      diario: true,
+    },
+    {
+      id: 'contexto',
+      nome: 'Contexto',
+      desc: 'Existe uma palavra secreta. Cada palpite mostra o quanto você chegou perto.',
+      icon: 'target',
+      grad: 'g5',
+      diario: true,
+    },
+    {
+      id: 'teia',
+      nome: 'Teia',
+      desc: 'Dezesseis palavras para separar em quatro grupos que combinam.',
+      icon: 'grid',
+      grad: 'g6',
+      diario: true,
+    },
+    {
       id: 'matematica',
       nome: 'Conta rápida',
       desc: 'Contas e equações no nível da sua série, do 5º ao 9º ano, em 60 segundos.',
@@ -72,12 +96,18 @@ const Games = (() => {
       <div class="list">
         ${LISTA.map((g) => `
           <button class="game-card ${g.grad}" data-game="${g.id}">
+            ${g.diario ? '<span class="game-selo">todo dia</span>' : ''}
             <span class="game-ico">${Icons.svg(g.icon)}</span>
             <span class="grow">
               <span class="nm block">${UI.esc(g.nome)}</span>
               <span class="tiny block game-desc">${UI.esc(g.desc)}</span>
               <span class="tiny block game-best">
                 ${(() => {
+                  if (g.diario) {
+                    const seq = Store.dailyStreak(child.id, g.id);
+                    const situacao = WordGames.situacao(child, g.id);
+                    return seq > 1 ? `${situacao} • ${seq} dias seguidos` : situacao;
+                  }
                   const chaves = Object.keys(recordes).filter((k) => k.split('_')[0] === g.id);
                   const melhor = chaves.reduce((m, k) => Math.max(m, recordes[k]), 0);
                   return melhor ? `Seu recorde: ${melhor}` : 'Ainda sem recorde';
@@ -90,18 +120,18 @@ const Games = (() => {
   }
 
   /* ---------- fim de partida ---------- */
-  function terminar(child, gameId, pontos, xpBruto, resumo) {
+  function terminar(child, gameId, pontos, xpBruto, resumo, opcoes) {
+    const op = opcoes || {};
     const res = Store.petGameResult(child.id, gameId, pontos, xpBruto);
     Store.logQuiz(child.id, {
       kind: 'jogo', name: jogo(gameId).nome,
       acertos: pontos, total: pontos, ms: jogoDesde ? jogoDesde() : 0,
     });
     jogoDesde = null;
-    Uso.sair();
     UI.closeSheet();
     const pet = Store.petOf(child.id);
     UI.openSheet({
-      title: res.recorde ? 'Recorde novo!' : 'Fim de jogo',
+      title: op.titulo || (res.recorde ? 'Recorde novo!' : 'Fim de jogo'),
       subtitle: `${jogo(gameId).nome} • ${resumo}`,
       body: `
         <div class="game-end">
@@ -111,14 +141,16 @@ const Games = (() => {
             <div class="stat"><div class="k">recorde</div><div class="v">${(pet.best || {})[gameId] || pontos}</div></div>
             <div class="stat"><div class="k">amizade</div><div class="v">+${res.xp}</div></div>
           </div>
+          ${op.extra || ''}
           ${res.xp === 0 ? `<div class="note">${UI.esc(pet.name)} já ganhou todos os pontos de hoje, mas adorou jogar de novo.</div>` : ''}
         </div>`,
       actions: `
-        <button class="btn btn-ghost" data-again>Jogar de novo</button>
+        ${jogo(gameId).diario ? '' : '<button class="btn btn-ghost" data-again>Jogar de novo</button>'}
         <button class="btn btn-primary" data-ok>Pronto</button>`,
       onMount(sheet) {
         sheet.querySelector('[data-ok]').addEventListener('click', () => { UI.closeSheet(); App.render(); });
-        sheet.querySelector('[data-again]').addEventListener('click', () => { UI.closeSheet(); abrir(child, gameId); });
+        const denovo = sheet.querySelector('[data-again]');
+        if (denovo) denovo.addEventListener('click', () => { UI.closeSheet(); abrir(child, gameId); });
       },
       onClose() { App.render(); },
     });
@@ -604,10 +636,21 @@ const Games = (() => {
   function abrir(child, id) {
     Uso.entrar('jogos');
     jogoDesde = Uso.cronometro();
-    if (id === 'matematica') return matematica(child);
-    if (id === 'memoria') return memoria(child);
-    if (id === 'sequencia') return sequencia(child);
-    return bola(child);
+    const saida = id === 'palavrinha' ? WordGames.palavrinha(child)
+      : id === 'contexto' ? WordGames.contexto(child)
+      : id === 'teia' ? WordGames.teia(child)
+      : id === 'matematica' ? matematica(child)
+      : id === 'memoria' ? memoria(child)
+      : id === 'sequencia' ? sequencia(child)
+      : bola(child);
+    // sair no meio da partida também precisa devolver o relógio para a aba
+    let dentro = true;
+    UI.aoFechar(() => {
+      if (!dentro) return;
+      dentro = false;
+      Uso.sair();
+    });
+    return saida;
   }
 
   const abaAtual = () => aba;
@@ -622,5 +665,5 @@ const Games = (() => {
     Quiz.bind(root, child);
   }
 
-  return { view, bind, abrir, abaAtual, LISTA, aba: () => aba };
+  return { view, bind, abrir, abaAtual, fim: terminar, LISTA, aba: () => aba };
 })();

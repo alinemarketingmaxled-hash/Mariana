@@ -36,10 +36,22 @@ const UI = (() => {
     if (!root) return;
     fecharRadial();
     if (typeof Pet !== 'undefined' && Pet.Voz) Pet.Voz.parar();
+    // a folha vai embora, mas quem se despede ainda precisa dela para
+    // desligar o que tiver ligado (ouvintes de teclado, relógios e afins)
+    const folha = root.querySelector('.sheet');
     root.innerHTML = '';
     root.hidden = true;
     document.removeEventListener('keydown', escHandler);
-    if (onCloseHook) { const f = onCloseHook; onCloseHook = null; f(); }
+    if (onCloseHook) { const f = onCloseHook; onCloseHook = null; f(folha); }
+  }
+
+  /** pendura mais uma despedida na folha aberta, sem apagar a que já existe */
+  function aoFechar(fn) {
+    const anterior = onCloseHook;
+    onCloseHook = (folha) => {
+      if (anterior) anterior(folha);
+      fn(folha);
+    };
   }
 
   function escHandler(ev) { if (ev.key === 'Escape') closeSheet(); }
@@ -51,7 +63,7 @@ const UI = (() => {
   function openSheet({ title = '', subtitle = '', body = '', actions = '', size = '', onMount, onClose } = {}) {
     const root = sheetRoot();
     // se já havia uma folha aberta, avisa que ela fechou antes de trocar
-    if (onCloseHook) { const f = onCloseHook; onCloseHook = null; f(); }
+    if (onCloseHook) { const f = onCloseHook; onCloseHook = null; f(root.querySelector('.sheet')); }
     root.hidden = false;
     onCloseHook = onClose || null;
     root.innerHTML = `
@@ -514,7 +526,7 @@ const UI = (() => {
     esc, toast, openSheet, closeSheet, confirm, openRadial, fecharRadial,
     iconPicker, gradPicker, bindPickers, bindSwitches,
     photoField, bindPhotos, photoStrip, bindPhotoViewers, avatar, catVisual, entryVisual,
-    shell, bindShell, panel,
+    shell, bindShell, panel, aoFechar,
     field, input, empty, statusChip, formData,
     GRADS,
   };

@@ -63,6 +63,7 @@ const Icons = (() => {
     trophy: '<path d="M7.4 4.6h9.2v4.8a4.6 4.6 0 0 1-9.2 0z"/><path d="M7.4 6.4H5a2 2 0 0 0 2.4 3.8M16.6 6.4H19a2 2 0 0 1-2.4 3.8M10 14v2.4h4V14M8 20h8"/>',
     palette: '<path d="M12 3.6a8.4 8.4 0 0 0 0 16.8c1.4 0 2-1 2-2s-.6-1.6-.6-2.4c0-.8.6-1.4 1.4-1.4h1.6a3.6 3.6 0 0 0 3.6-3.6c0-4-3.6-7.4-8-7.4z"/><circle cx="8" cy="10.4" r="1"/><circle cx="12" cy="7.6" r="1"/><circle cx="15.8" cy="10" r="1"/>',
     hourglass: '<path d="M7 3.6h10M7 20.4h10"/><path d="M8 3.6c0 4 4 4.6 4 8.4s-4 4.4-4 8.4M16 3.6c0 4-4 4.6-4 8.4s4 4.4 4 8.4"/>',
+    grid: '<rect x="3.6" y="3.6" width="7.4" height="7.4" rx="2.2"/><rect x="13" y="3.6" width="7.4" height="7.4" rx="2.2"/><rect x="3.6" y="13" width="7.4" height="7.4" rx="2.2"/><rect x="13" y="13" width="7.4" height="7.4" rx="2.2"/>',
   };
 
   const CATEGORY_ICONS = [

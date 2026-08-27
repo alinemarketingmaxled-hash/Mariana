@@ -82,6 +82,22 @@ quantos filhos quiser, cada um com o próprio login e senha.
   Tudo o que ainda está bloqueado aparece com cadeado e o nível que falta, e o botão **Ver tudo**
   abre o catálogo completo com o que já foi liberado e qual é a próxima peça.
 - **Jogos e estudo**: uma aba com dois espaços.
+  - *Desafios do dia*: três jogos de palavra que **trocam sozinhos toda meia-noite** e são
+    **iguais para todo mundo no mesmo dia**. O andamento fica salvo, então dá para fechar o app
+    no meio e voltar depois, e a aba mostra **quantos dias seguidos** ela vem fechando cada um.
+    - **Palavrinha**: uma palavra de **cinco letras** por dia, em até **seis tentativas**.
+      Verde é letra certa no lugar certo, amarelo é letra certa no lugar errado e escuro é letra
+      que não entra. O teclado da tela vai guardando o que já foi descoberto, e no computador dá
+      para digitar direto. Acento não atrapalha: "avião" e "aviao" valem a mesma coisa.
+      São **216 palavras** no rodízio.
+    - **Contexto**: existe uma palavra secreta e cada palpite recebe uma **posição**. Quanto menor
+      o número, mais perto ela chegou, com a barra e o aviso de "tá frio", "tá morno" e "tá quente".
+      São **16 palavras secretas**, cada uma com o campo de palavras que gira em volta dela, e dá
+      para **pedir dica** quando empacar.
+    - **Teia**: **dezesseis palavras** para separar em **quatro grupos de quatro**, com **quatro
+      tentativas**. Quando três das quatro escolhidas são do mesmo grupo, o jogo avisa que
+      "faltou uma". Tem pegadinha de propósito: em um dos desafios *março* aparece entre palavras
+      que também são verbos, e não entre os meses. São **12 teias** no rodízio.
   - *Joguinhos*: **Conta rápida**, com **níveis por série** (até o 5º ano, 6º, 7º, 8º e 9º) e
     questões próprias de cada ano: quatro operações, frações, porcentagem, MMC e MDC, números
     negativos, **equações do 1º grau**, potências e raízes, regra de três, **equações do 2º grau**,
@@ -279,6 +295,8 @@ assets/
     effects.js        # animações de resposta (moedas, livros, estrelas)
     agenda.js         # calendário compartilhado de provas, trabalhos e eventos
     bank.js           # banco de conteúdo da escola (matérias, submatérias e questões)
+    wordbank.js       # palavras dos desafios do dia (palavrinha, contexto e teia)
+    wordgames.js      # os três desafios do dia
     dash.js           # painel de ganhos, gastos e tempo de uso
     usage.js          # relógio de uso: conta o tempo em cada parte do app
     pet.js            # o bichinho: desenho, quartos, menu em bolinhas, voz e lojinha
