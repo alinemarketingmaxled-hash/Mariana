@@ -86,7 +86,8 @@ quantos filhos quiser, cada um com o próprio login e senha.
   falta ("faltam 3 tarefas e a leitura"). Se o aviso não sair na hora, ele aparece assim que ela
   abre o app, e nunca sai duas vezes no mesmo dia. Tem também **"pôr no calendário"**, que salva
   um lembrete que se repete todo dia no calendário do próprio celular: esse funciona em qualquer
-  aparelho, sem internet e sem o app aberto.
+  aparelho, sem internet e sem o app aberto. A tela do calendário traz o passo a passo, o botão
+  de baixar e o texto do arquivo para copiar na mão, caso o navegador bloqueie o download.
 - **Minha mesada**: o cartão da tela inicial mostra o valor combinado do mês, quanto já foi
   validado, quanto está esperando e quanto falta para fechar. Também lembra que a leitura é a
   parte que mais rende.

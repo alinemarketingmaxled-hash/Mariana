@@ -597,9 +597,59 @@ const ChildScreen = (() => {
       return undefined;
     });
     const agenda = root.querySelector('[data-lembrete-agenda]');
-    if (agenda) agenda.addEventListener('click', () => {
-      Notify.baixarCalendario(user);
-      UI.toast('Abra o arquivo baixado para o celular guardar o lembrete', 'ok');
+    if (agenda) agenda.addEventListener('click', () => openCalendario(user));
+  }
+
+  /**
+   * Lembrete no calendário do celular. O caminho normal é baixar o
+   * arquivo, mas alguns visualizadores bloqueiam download, então o texto
+   * fica aqui do lado para ela copiar e nunca ficar sem saída.
+   */
+  function openCalendario(user) {
+    const texto = Notify.calendario(user);
+    const r = Store.reminderOf(user.id);
+    UI.openSheet({
+      title: 'Pôr o lembrete no calendário',
+      subtitle: `Todo dia às ${r.hora}, direto no celular`,
+      body: `
+        <div class="note">
+          Esse é o jeito que funciona em <b>qualquer celular</b>, mesmo com o app fechado e sem
+          internet: quem avisa passa a ser o calendário do próprio aparelho.
+        </div>
+        <ol class="passos">
+          <li>Toque em <b>Baixar o arquivo</b> aqui embaixo.</li>
+          <li>Abra o arquivo que baixou (ele se chama <b>lembrete-da-mesada.ics</b>).</li>
+          <li>O celular pergunta se quer guardar no calendário. Diga que sim.</li>
+        </ol>
+        <div class="note aviso">
+          Se o botão não baixar nada, use o <b>Copiar o texto</b>: cole num arquivo chamado
+          <b>lembrete.ics</b> e abra ele no celular. Dá no mesmo.
+        </div>
+        <details class="mt12">
+          <summary class="small bold">Ver o texto do lembrete</summary>
+          <textarea class="ics-texto mt8" rows="10" readonly data-ics>${UI.esc(texto)}</textarea>
+        </details>`,
+      actions: `
+        <button class="btn btn-ghost" data-copiar>Copiar o texto</button>
+        <button class="btn btn-primary" data-baixar>Baixar o arquivo</button>`,
+      onMount(sheet) {
+        sheet.querySelector('[data-baixar]').addEventListener('click', () => {
+          Notify.baixarCalendario(user);
+          UI.toast('Abra o arquivo baixado para o celular guardar o lembrete', 'ok');
+        });
+        sheet.querySelector('[data-copiar]').addEventListener('click', async () => {
+          const campo = sheet.querySelector('[data-ics]');
+          try {
+            await navigator.clipboard.writeText(texto);
+            UI.toast('Texto copiado', 'ok');
+          } catch (e) {
+            campo.closest('details').open = true;
+            campo.focus();
+            campo.select();
+            UI.toast('Selecione o texto e copie na mão');
+          }
+        });
+      },
     });
   }
 
