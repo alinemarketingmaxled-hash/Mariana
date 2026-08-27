@@ -100,6 +100,22 @@ const ParentScreen = (() => {
       </article>`;
   }
 
+  /** o registro de leitura como a mãe vê: livro, páginas, resumo e grifos */
+  function leituraBloco(e) {
+    const r = e.reading || {};
+    const paginas = r.paginaDe && r.paginaAte ? `páginas ${r.paginaDe} a ${r.paginaAte}` : '';
+    const quantas = (e.photos || []).length;
+    return `
+      <div class="leitura-selo">
+        <span class="chip lime">${Icons.svg('book')} ${UI.esc(r.livro || 'leitura')}</span>
+        ${paginas ? `<span class="chip neutral">${paginas}</span>` : ''}
+        ${r.grifou ? '<span class="chip approved">grifou a lápis</span>' : '<span class="chip warn">não grifou</span>'}
+        <span class="chip neutral">${quantas} ${quantas === 1 ? 'página fotografada' : 'páginas fotografadas'}</span>
+      </div>
+      ${r.resumo ? `<div class="leitura-resumo">${UI.esc(r.resumo)}</div>` : ''}
+      ${r.partes ? `<div class="note mt8"><b>O que ela mais gostou:</b> ${UI.esc(r.partes)}</div>` : ''}`;
+  }
+
   function approvalCard(e) {
     const kid = Store.userById(e.childId);
     return `
@@ -110,12 +126,13 @@ const ParentScreen = (() => {
             <div class="nm bold" style="font-size:14px">${UI.esc(e.name)}</div>
             <div class="mt small muted">${UI.esc(e.catName || '')} • ${kid ? UI.esc(kid.name.split(' ')[0]) : ''}</div>
             ${Store.entryNeedsPhoto(e) ? '<div class="mt"><span class="chip warn">sem a foto obrigatória</span></div>' : ''}
+            ${Store.entryReadingPending(e) ? '<div class="mt"><span class="chip warn">registro de leitura incompleto</span></div>' : ''}
           </div>
           <span class="val ${e.kind === 'penalty' ? 'pen' : 'earn'}">
             ${e.kind === 'penalty' ? '-' : '+'}${Store.money(e.value).replace('R$ ', '')}
           </span>
         </div>
-        ${e.note ? `<div class="note">${UI.esc(e.note)}</div>` : ''}
+        ${e.reading ? leituraBloco(e) : (e.note ? `<div class="note">${UI.esc(e.note)}</div>` : '')}
         ${UI.photoStrip(e.photos)}
         <div class="acts">
           <button class="btn btn-ghost btn-sm" data-reject="${e.id}">${Icons.svg('close')} Recusar</button>
@@ -180,6 +197,26 @@ const ParentScreen = (() => {
         </button>
       </section>
 
+      <section class="panel mt16">
+        <header class="panel-head"><h3>${Icons.svg('banknote')} Valor da mesada</h3></header>
+        ${Store.children().length ? Store.children().map((k) => {
+          const valor = Store.allowanceOf(k.id);
+          const pl = valor ? Store.planoMesada(k.id) : null;
+          return `
+            <button class="up-row" data-mesada-kid="${k.id}">
+              <span class="grow" style="text-align:left">
+                <span class="bold small block">${UI.esc(k.name)}</span>
+                <span class="tiny muted block">
+                  ${valor
+                    ? `${Store.money(valor)} por mês. Fazendo tudo dá ${Store.money(pl.total)}, com ${pl.leituraPct}% em leitura.`
+                    : 'Ainda sem valor. Toque para dizer quanto vale a mesada do mês.'}
+                </span>
+              </span>
+              ${Icons.svg('chevron', 'ico-sm dim')}
+            </button>`;
+        }).join('') : '<p class="small muted" style="padding:0 2px">Cadastre um filho para dividir a mesada.</p>'}
+      </section>
+
       <div class="section-title">
         <h3>Ações da mesada</h3>
         <button class="link" data-new-cat>+ categoria</button>
@@ -209,7 +246,12 @@ const ParentScreen = (() => {
                 <span class="chip ${it.kind === 'penalty' ? 'rejected' : 'approved'}">${it.kind === 'penalty' ? '-' : '+'} ${Store.money(it.value)}</span>
                 <div class="grow">
                   <div class="small bold">${UI.esc(it.name)}</div>
-                  ${it.daily ? '<div class="tiny muted">obrigatória todo dia</div>' : ''}
+                  <div class="tiny muted">
+                    ${it.kind === 'penalty' ? 'desconto'
+                      : `${it.daily ? 'todo dia' : `${it.vezesMes || 8}x no mês`}`
+                        + `${(it.esforco || 1) > 1 ? ` • esforço ${it.esforco}` : ''}`
+                        + ` • ${Store.money((it.value || 0) * (it.vezesMes || 0))} no mês`}
+                  </div>
                 </div>
                 <button class="icon-btn sm" data-edit-item="${c.id}:${it.id}" aria-label="Editar ação">${Icons.svg('pencil')}</button>
               </div>`).join('')}
@@ -829,6 +871,14 @@ const ParentScreen = (() => {
           ${UI.field('Nome', UI.input('name', { value: editing ? cat.name : '', placeholder: 'ex.: Estudos' }))}
           ${UI.iconPicker('icon', editing ? cat.icon : 'star')}
           ${UI.gradPicker('grad', editing ? cat.grad : 'g1')}
+          <div class="mini-row">
+            <div class="grow">
+              <div class="small bold">Esta é a parte de leitura</div>
+              <div class="tiny muted">as ações novas já nascem pedindo o resumo e as páginas grifadas</div>
+            </div>
+            <button type="button" class="switch" data-switch="leitura"
+                    aria-pressed="${editing ? !!cat.leitura : false}" aria-label="Esta é a parte de leitura"></button>
+          </div>
           ${UI.photoField('Foto de capa (opcional)', editing && cat.photo ? [cat.photo] : [])}
           ${editing ? `<input type="hidden" name="id" value="${UI.esc(cat.id)}" />` : ''}
         </form>`,
@@ -837,6 +887,7 @@ const ParentScreen = (() => {
         <button class="btn btn-primary" data-save>Salvar</button>`,
       onMount(sheet) {
         UI.bindPickers(sheet);
+        UI.bindSwitches(sheet);
         picker = UI.bindPhotos(sheet);
         sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
         sheet.querySelector('[data-save]').addEventListener('click', () => {
@@ -877,6 +928,24 @@ const ParentScreen = (() => {
             </div>
             <button type="button" class="switch" data-switch="daily" aria-pressed="${editing ? !!item.daily : false}" aria-label="Obrigatória todo dia"></button>
           </div>
+          <div class="mini-row">
+            <div class="grow">
+              <div class="small bold">Pedir a ficha de leitura</div>
+              <div class="tiny muted">resumo do capítulo, grifar a lápis e a foto de cada página grifada</div>
+            </div>
+            <button type="button" class="switch" data-switch="ficha"
+                    aria-pressed="${editing ? !!item.ficha : !!(Store.categoryById(catId) || {}).leitura}"
+                    aria-label="Pedir a ficha de leitura"></button>
+          </div>
+          ${editing ? '' : `
+            <div class="dois-campos">
+              ${UI.field('Vezes por mês', UI.input('vezesMes', {
+                type: 'number', value: 8, attrs: `min="1" max="${Store.DIAS_MES}" step="1"`,
+              }))}
+              ${UI.field('Esforço (1 a 10)', UI.input('esforco', {
+                type: 'number', value: 1, attrs: 'min="1" max="10" step="1"',
+              }))}
+            </div>`}
           <input type="hidden" name="catId" value="${UI.esc(catId)}" />
           ${editing ? `<input type="hidden" name="id" value="${UI.esc(item.id)}" />` : ''}
         </form>`,
@@ -912,6 +981,246 @@ const ParentScreen = (() => {
         });
       },
     });
+  }
+
+  /* =========================================================
+     Planejador da mesada.
+
+     A mãe diz quanto vale a mesada no mês. O app divide esse valor
+     entre as partes pelo peso de cada uma (a leitura tem o maior) e
+     mostra, ação por ação, o que o filho precisa fazer para fechar.
+     ========================================================= */
+  function openMesada(kidInicial) {
+    const kids = Store.children();
+    if (!kids.length) return UI.toast('Cadastre um filho(a) primeiro', 'bad');
+
+    let kid = kidInicial && kids.find((k) => k.id === kidInicial.id) ? kidInicial : kids[0];
+    let mesada = Store.allowanceOf(kid.id) || 100;
+    const pesos = {};
+    const vezes = {};
+    const esforcos = {};
+    let aberta = null;   // categoria com os detalhes abertos
+
+    const opcoes = () => ({ mesada, pesos, vezes, esforcos });
+    const plano = () => Store.planoMesada(kid.id, opcoes());
+
+    const NIVEIS = [
+      { v: 1, rot: 'pouco' }, { v: 2, rot: 'normal' }, { v: 3, rot: 'bastante' },
+      { v: 4, rot: 'muito' }, { v: 5, rot: 'o que mais vale' },
+    ];
+
+    function resumoHtml(pl) {
+      const perto = Math.abs(pl.diferenca) < 0.06;
+      return `
+        <section class="hero mesada-hero">
+          <div class="hero-top">
+            <div class="hero-ico">${Icons.svg('banknote')}</div>
+            <div class="grow">
+              <div class="label">Fazendo tudo o que foi combinado</div>
+              <div class="value">${Store.money(pl.total)}<small style="margin-left:6px">no mês</small></div>
+            </div>
+          </div>
+          <div class="bar mt16"><i style="width:${Math.min(100, pl.mesada ? (pl.total / pl.mesada) * 100 : 0)}%"></i></div>
+          <p class="tiny mt8" style="color:var(--panel-muted);line-height:1.6">
+            ${perto
+              ? `Fecha certinho nos ${Store.money(pl.mesada)} combinados.`
+              : `A mesada combinada é ${Store.money(pl.mesada)}. A diferença de ${Store.money(Math.abs(pl.diferenca))} é do arredondamento dos centavos.`}
+            A leitura leva ${Store.money(pl.leitura)}, ou ${pl.leituraPct}% do total.
+          </p>
+        </section>`;
+    }
+
+    function fatiasHtml(pl) {
+      return `
+        <div class="section-title mt16"><h3>Como o dinheiro se divide</h3></div>
+        <div class="mesada-fatias">
+          ${pl.categorias.map((c) => `
+            <div class="mesada-fatia">
+              <span class="em ${c.grad}" style="width:34px;height:34px;border-radius:12px;display:grid;place-items:center">${Icons.svg(c.icon)}</span>
+              <div class="grow">
+                <div class="small bold">${UI.esc(c.name)}${c.leitura ? ' <span class="chip lime tiny">a que mais vale</span>' : ''}</div>
+                <div class="barrinha"><i class="${c.grad}" style="width:${c.pct}%"></i></div>
+              </div>
+              <div class="mesada-fatia-val">
+                <div class="small bold">${Store.money(c.noMes)}</div>
+                <div class="tiny muted">${c.pct}%</div>
+              </div>
+            </div>`).join('')}
+        </div>`;
+    }
+
+    function pesosHtml(pl) {
+      return `
+        <div class="section-title mt16"><h3>O que vale mais</h3></div>
+        <p class="small muted" style="line-height:1.6;padding:0 2px">
+          Quanto maior o peso, maior a fatia da mesada que vai para aquela parte.
+        </p>
+        <div class="list mt12">
+          ${pl.categorias.map((c) => `
+            <div class="card mesada-cat">
+              <div class="between">
+                <div class="row">
+                  <span class="em ${c.grad}" style="width:38px;height:38px;border-radius:13px;display:grid;place-items:center">${Icons.svg(c.icon)}</span>
+                  <div>
+                    <div class="bold small">${UI.esc(c.name)}</div>
+                    <div class="tiny muted">${Store.money(c.noMes)} no mês</div>
+                  </div>
+                </div>
+                <button class="btn btn-soft btn-sm" data-abrir="${c.id}">
+                  ${aberta === c.id ? 'Fechar' : 'Ver ações'}
+                </button>
+              </div>
+              <div class="seg-mini mt12" data-peso-grupo="${c.id}">
+                ${NIVEIS.map((n) => `
+                  <button type="button" data-peso="${c.id}:${n.v}" aria-pressed="${c.peso === n.v}">${n.rot}</button>`).join('')}
+              </div>
+              ${aberta === c.id ? `
+                <div class="list mt12">
+                  ${c.itens.map((i) => `
+                    <div class="mesada-item">
+                      <div class="grow">
+                        <div class="small bold">${UI.esc(i.name)}</div>
+                        <div class="tiny muted">
+                          ${i.kind === 'penalty'
+                            ? `desconto de ${Store.money(i.valor)}`
+                            : `${Store.money(i.valor)} por vez, ${i.vezesMes}x no mês = <b>${Store.money(i.noMes)}</b>`}
+                        </div>
+                      </div>
+                      ${i.kind === 'penalty' ? '' : `
+                        <label class="mesada-campo">
+                          <span class="tiny muted">vezes</span>
+                          <input type="number" min="1" max="${Store.DIAS_MES}" step="1"
+                                 value="${i.vezesMes}" data-vezes="${i.id}"
+                                 ${i.daily ? 'disabled title="ação de todo dia"' : ''} />
+                        </label>
+                        <label class="mesada-campo">
+                          <span class="tiny muted">esforço</span>
+                          <input type="number" min="1" max="10" step="1" value="${i.esforco}" data-esforco="${i.id}" />
+                        </label>`}
+                    </div>`).join('')}
+                </div>` : ''}
+            </div>`).join('')}
+        </div>`;
+    }
+
+    function corpo() {
+      const pl = plano();
+      return `
+        ${kids.length > 1 ? `
+          <div class="seg-mini" data-kid-grupo>
+            ${kids.map((k) => `<button type="button" data-kid="${k.id}" aria-pressed="${k.id === kid.id}">${UI.esc(k.name)}</button>`).join('')}
+          </div>` : ''}
+        <div class="field mt12">
+          <label>Quanto ${UI.esc(kid.name)} recebe por mês</label>
+          <div class="mesada-valor">
+            <span class="prefixo">R$</span>
+            <input class="input" type="number" min="1" step="1" value="${mesada}" data-mesada
+                   inputmode="decimal" aria-label="Valor da mesada por mês" />
+          </div>
+          <p class="tiny muted mt8" style="line-height:1.5">
+            O mês de conta tem ${Store.DIAS_MES} dias. As ações e os valores são os mesmos para todos os filhos.
+          </p>
+        </div>
+        ${resumoHtml(pl)}
+        ${fatiasHtml(pl)}
+        ${pesosHtml(pl)}`;
+    }
+
+    function montar(sheet) {
+      const corpoEl = sheet.querySelector('.sheet-body');
+      const redesenhar = () => {
+        const rolagem = corpoEl.scrollTop;
+        corpoEl.innerHTML = corpo();
+        corpoEl.scrollTop = rolagem;
+        ligar(sheet);
+      };
+      sheet._redesenhar = redesenhar;
+      ligar(sheet);
+    }
+
+    function ligar(sheet) {
+      const redesenhar = sheet._redesenhar || (() => {});
+
+      sheet.querySelectorAll('[data-kid]').forEach((b) => b.addEventListener('click', () => {
+        kid = kids.find((k) => k.id === b.getAttribute('data-kid')) || kid;
+        mesada = Store.allowanceOf(kid.id) || mesada;
+        redesenhar();
+      }));
+
+      const campo = sheet.querySelector('[data-mesada]');
+      if (campo) {
+        let relogio = null;
+        campo.addEventListener('input', () => {
+          clearTimeout(relogio);
+          relogio = setTimeout(() => {
+            const v = Math.abs(Number(String(campo.value).replace(',', '.'))) || 0;
+            if (!v) return;
+            mesada = v;
+            const foco = document.activeElement === campo;
+            redesenhar();
+            // campo de número não aceita mexer no cursor, então só devolve o foco
+            if (foco) {
+              const novo = sheet.querySelector('[data-mesada]');
+              if (novo) novo.focus();
+            }
+          }, 450);
+        });
+      }
+
+      sheet.querySelectorAll('[data-peso]').forEach((b) => b.addEventListener('click', () => {
+        const [catId, valor] = b.getAttribute('data-peso').split(':');
+        pesos[catId] = Number(valor);
+        redesenhar();
+      }));
+
+      sheet.querySelectorAll('[data-abrir]').forEach((b) => b.addEventListener('click', () => {
+        const id = b.getAttribute('data-abrir');
+        aberta = aberta === id ? null : id;
+        redesenhar();
+      }));
+
+      sheet.querySelectorAll('[data-vezes]').forEach((el) => el.addEventListener('change', () => {
+        vezes[el.getAttribute('data-vezes')] = el.value;
+        redesenhar();
+      }));
+      sheet.querySelectorAll('[data-esforco]').forEach((el) => el.addEventListener('change', () => {
+        esforcos[el.getAttribute('data-esforco')] = el.value;
+        redesenhar();
+      }));
+    }
+
+    UI.openSheet({
+      title: 'Planejador da mesada',
+      subtitle: 'Diga o valor do mês e o app divide entre as ações',
+      size: 'larga',
+      body: corpo(),
+      actions: `
+        <button class="btn btn-ghost" data-cancel>Cancelar</button>
+        <button class="btn btn-primary" data-aplicar>Aplicar na mesada</button>`,
+      onMount(sheet) {
+        montar(sheet);
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-aplicar]').addEventListener('click', async () => {
+          const pl = plano();
+          const ok = await UI.confirm({
+            title: `Valer ${Store.money(pl.mesada)} por mês?`,
+            text: `Os valores de todas as ${pl.categorias.reduce((n, c) => n + c.itens.length, 0)} ações vão ser trocados. `
+              + `Fazendo tudo, ${kid.name} fecha o mês em ${Store.money(pl.total)}, sendo ${Store.money(pl.leitura)} de leitura. `
+              + 'Os lançamentos que já foram feitos continuam com o valor antigo.',
+            okLabel: 'Aplicar',
+          });
+          if (!ok) return;
+          const res = Store.aplicarPlano(kid.id, opcoes());
+          if (!res.ok) return UI.toast(res.error, 'bad');
+          UI.closeSheet();
+          UI.toast('Mesada dividida entre as ações', 'ok');
+          Effects.burst('goal');
+          App.render();
+          return undefined;
+        });
+      },
+    });
+    return undefined;
   }
 
   /** a cor de cada gradiente, para pintar as bolinhas */
@@ -954,10 +1263,14 @@ const ParentScreen = (() => {
           }]));
         },
       },
+      {
+        id: 'mesada', label: 'Mesada', icone: 'banknote', cor: '#d6f154',
+        onClick: () => escolherFilho('dividir a mesada', (k) => openMesada(k)),
+      },
       { id: 'cat', label: 'Categoria', icone: 'folder', cor: '#a98cff', onClick: () => openCatForm(null) },
       { id: 'filho', label: 'Filho', icone: 'users', cor: '#6fd3ff', onClick: () => openChildForm(null) },
       {
-        id: 'pagar', label: 'Pagar', icone: 'banknote', cor: '#79e3b5',
+        id: 'pagar', label: 'Pagar', icone: 'wallet', cor: '#79e3b5',
         onClick: () => escolherFilho('registrar o pagamento', (k) => openPayouts(k)),
       },
       {
@@ -1182,6 +1495,10 @@ const ParentScreen = (() => {
     }));
     root.querySelectorAll('[data-new-child]').forEach((b) =>
       b.addEventListener('click', () => openChildForm(null)));
+    root.querySelectorAll('[data-mesada-kid]').forEach((b) => b.addEventListener('click', () => {
+      const k = Store.children().find((x) => x.id === b.getAttribute('data-mesada-kid'));
+      if (k) openMesada(k);
+    }));
     root.querySelectorAll('[data-new-cat]').forEach((b) =>
       b.addEventListener('click', () => openCatForm(null)));
     root.querySelectorAll('[data-edit-cat]').forEach((b) =>

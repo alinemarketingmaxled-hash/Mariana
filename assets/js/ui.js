@@ -401,19 +401,22 @@ const UI = (() => {
   }
 
   /** campo de fotos para formulários (câmera ou galeria) */
-  const photoField = (label, ids = []) => `
+  const photoField = (label, ids = [], max) => {
+    const teto = Math.max(1, Number(max) || Photos.MAX_PER_RECORD);
+    return `
     <div class="field">
       <label>${esc(label)}</label>
-      <div class="photo-picker" data-photo-picker>
+      <div class="photo-picker" data-photo-picker data-max="${teto}">
         <div class="thumbs" data-thumbs></div>
         <label class="photo-add">
           <input type="file" accept="image/*" multiple hidden data-file />
           <span class="photo-add-in">Adicionar foto</span>
         </label>
-        <p class="tiny muted" data-photo-hint>Até ${Photos.MAX_PER_RECORD} fotos. Elas ficam salvas neste aparelho.</p>
+        <p class="tiny muted" data-photo-hint>Até ${teto} fotos. Elas ficam salvas neste aparelho.</p>
       </div>
       <input type="hidden" name="photos" value="${esc((ids || []).join(','))}" />
     </div>`;
+  };
 
   /**
    * Liga o campo de fotos. Devolve { ids, commit, discard }: as fotos novas
@@ -426,6 +429,7 @@ const UI = (() => {
     const hidden = scope.querySelector('input[name="photos"]');
     const thumbs = box.querySelector('[data-thumbs]');
     const file = box.querySelector('[data-file]');
+    const teto = Math.max(1, Number(box.getAttribute('data-max')) || Photos.MAX_PER_RECORD);
     let ids = (hidden.value ? hidden.value.split(',') : []).filter(Boolean);
     const added = [];
     const removed = [];
@@ -441,7 +445,7 @@ const UI = (() => {
           </button>
         </div>`).join('');
       Photos.hydrate(thumbs);
-      box.querySelector('.photo-add').classList.toggle('hidden', ids.length >= Photos.MAX_PER_RECORD);
+      box.querySelector('.photo-add').classList.toggle('hidden', ids.length >= teto);
       if (aoMudar) aoMudar(ids.length);
     }
 
@@ -458,8 +462,8 @@ const UI = (() => {
       const chosen = Array.from(file.files || []);
       file.value = '';
       for (const f of chosen) {
-        if (ids.length >= Photos.MAX_PER_RECORD) {
-          toast(`Máximo de ${Photos.MAX_PER_RECORD} fotos por registro`, 'bad');
+        if (ids.length >= teto) {
+          toast(`Máximo de ${teto} fotos por registro`, 'bad');
           break;
         }
         try {

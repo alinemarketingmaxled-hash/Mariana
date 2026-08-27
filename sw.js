@@ -1,5 +1,5 @@
 /* Service worker: deixa o app abrir offline depois da primeira visita. */
-const CACHE = 'mesada-v17';
+const CACHE = 'mesada-v18';
 const ASSETS = [
   './', './index.html', './manifest.json',
   './assets/styles.css', './assets/icon.svg',

@@ -1653,3 +1653,61 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
   .pl-letra.certa,.pl-letra.quase,.pl-letra.fora,.pl-linha.treme,
   .ctx-item.novo,.teia-achado,.teia-peca.treme{animation:none}
 }
+
+/* =========================================================
+   planejador da mesada
+   ========================================================= */
+.mesada-valor{display:flex;align-items:center;gap:10px}
+.mesada-valor .prefixo{
+  font-size:19px;font-weight:900;color:var(--muted);
+  font-variation-settings:'wdth' 112;flex:0 0 auto
+}
+.mesada-valor .input{flex:1 1 auto;font-size:21px;font-weight:800;letter-spacing:-.4px}
+.mesada-hero{margin-top:16px}
+
+.mesada-fatias{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.mesada-fatia{
+  display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:18px;
+  background:var(--surface);box-shadow:var(--neu-out-sm)
+}
+.mesada-fatia .chip.tiny{padding:2px 7px;font-size:9px;margin-left:5px;vertical-align:1px}
+.barrinha{height:7px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:5px}
+.barrinha i{display:block;height:100%;border-radius:99px;background:var(--accent)}
+.mesada-fatia-val{text-align:right;flex:0 0 auto;min-width:70px}
+
+.mesada-cat .seg-mini{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.mesada-cat .seg-mini button{flex:1 0 auto;font-size:10.5px;padding:8px 9px;white-space:nowrap}
+.mesada-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:15px;
+  background:var(--surface-2)
+}
+.mesada-campo{display:flex;flex-direction:column;gap:3px;flex:0 0 auto;width:64px}
+.mesada-campo .tiny{text-transform:uppercase;letter-spacing:.4px}
+.mesada-campo input{
+  width:100%;height:38px;border-radius:11px;text-align:center;
+  background:var(--surface);box-shadow:var(--neu-in-sm);color:var(--ink);
+  font-size:15px;font-weight:800;padding:0 4px
+}
+.mesada-campo input:disabled{opacity:.45}
+
+@media (max-width:999px){
+  .mesada-item{flex-wrap:wrap}
+  .mesada-item .grow{flex:1 1 100%}
+  .mesada-campo{width:calc(50% - 5px)}
+  .mesada-campo input{height:44px}
+  .mesada-fatia-val{min-width:62px}
+}
+
+/* ---------- registro de leitura ---------- */
+.dois-campos{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* sem o min-width:0 os campos usam o tamanho do conteúdo e estouram a folha */
+.dois-campos .field,.dois-campos .input-wrap,.dois-campos input{min-width:0;margin:0}
+.leitura-faltas{margin-top:4px}
+.leitura-lista{margin:7px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+.leitura-lista li{line-height:1.45}
+.note.ok-note{background:var(--ok-soft);color:#1f8f69;border-color:transparent}
+.leitura-resumo{
+  white-space:pre-wrap;line-height:1.65;font-size:13px;
+  background:var(--surface-2);border-radius:16px;padding:13px 15px;margin-top:9px
+}
+.leitura-selo{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}

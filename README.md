@@ -81,6 +81,9 @@ quantos filhos quiser, cada um com o próprio login e senha.
 
   Tudo o que ainda está bloqueado aparece com cadeado e o nível que falta, e o botão **Ver tudo**
   abre o catálogo completo com o que já foi liberado e qual é a próxima peça.
+- **Minha mesada**: o cartão da tela inicial mostra o valor combinado do mês, quanto já foi
+  validado, quanto está esperando e quanto falta para fechar. Também lembra que a leitura é a
+  parte que mais rende.
 - **Jogos e estudo**: uma aba com dois espaços.
   - *Desafios do dia*: três jogos de palavra que **trocam sozinhos toda meia-noite** e são
     **iguais para todo mundo no mesmo dia**. O andamento fica salvo, então dá para fechar o app
@@ -139,6 +142,18 @@ quantos filhos quiser, cada um com o próprio login e senha.
   validação, sobe de nível e libera roupinhas, camas, acessórios e quartos. Ele também **fala em
   voz alta** as perguntas e as respostas (dá para desligar no alto-falante do painel).
 - **Hoje**: saldo disponível, progresso da meta, tira dos últimos 7 dias e o quanto já rendeu no dia.
+- **Registro de leitura**: as ações da categoria **Leitura** não contam só com um toque. Ao marcar
+  uma delas o app abre a folha de leitura, e o botão de salvar só libera quando estiver tudo lá:
+  - o **livro e o capítulo** e de que **página até que página** ele vai;
+  - o **resumo do capítulo** escrito por ela, com pelo menos 140 letras;
+  - a confirmação de que ela **grifou a lápis** as partes que mais gostou, e um campo para contar
+    quais foram;
+  - a **foto de cada página grifada**: o app conta as páginas que ela informou e cobra uma foto
+    para cada uma, aceitando até 30.
+
+  Enquanto falta alguma coisa, a lista de pendências fica à vista dizendo exatamente o que é
+  ("faltam 2 de 5 fotos", "faltam 40 letras no resumo"). Se ela desistir no meio, a ação volta a
+  ficar desmarcada. O responsável vê o resumo inteiro, as páginas e as fotos na hora de validar.
 - **Diário de livros e lições**: escreve um registro por atividade com **tipo** (livro, lição ou
   atividade), título, detalhe (ex.: páginas lidas), **data**, **horário**, tempo em minutos,
   o texto do que fez e **até 4 fotos**. Enquanto está aguardando, dá para editar ou apagar.
@@ -189,6 +204,18 @@ Depois que o responsável valida ou recusa, o item fica **travado**: a criança 
   com **uma bolinha por categoria, cada uma na cor dela**: escolhendo a categoria, o formulário
   já abre dentro dela para escrever o nome, o **valor**, se ganha ou desconta e se é obrigatória
   todo dia. O leque abre para o lado com mais espaço na tela e fecha tocando fora ou no Esc.
+- **Planejador da mesada**: o responsável digita **quanto vale a mesada no mês** e o app divide
+  esse valor entre as ações, para que o mês feche exatamente nesse número se o filho fizer tudo
+  o que foi combinado.
+  - Cada categoria tem um **peso** de *pouco* a *o que mais vale*. A **Leitura** já vem com o
+    maior de todos e fica com cerca de **um terço da mesada**.
+  - Cada ação tem **quantas vezes por mês** se espera (as de todo dia valem os 30 dias) e um
+    **esforço** de 1 a 10, para separar "ler 20 minutos" de "terminar um livro".
+  - A tela mostra ao vivo a divisão em porcentagem, o valor de cada ação, quantas vezes ela
+    rende no mês e o total, com o quanto a leitura leva. O acerto de centavos fecha o mês na
+    diferença de no máximo cinco centavos.
+  - Ao aplicar, os valores de todas as ações são reescritos. Os lançamentos já feitos continuam
+    com o valor antigo.
 - **Painel do filho**: tocar no filho abre um painel com tudo dele: o bichinho no quarto, o que
   tem a receber, o que está na carteira e quantos itens aguardam validação; o progresso das
   tarefas de hoje (com aviso das que estão sem a foto obrigatória); validado, aguardando e

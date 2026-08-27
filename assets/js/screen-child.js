@@ -611,9 +611,11 @@ const ChildScreen = (() => {
           }
           const res = Store.toggleEntry(user.id, date, cat.id, btn.getAttribute('data-item'));
           if (!res.ok) return UI.toast(res.error, 'bad');
-          const pedeFoto = res.added && res.entry && Store.entryNeedsPhoto(res.entry);
+          const pedeLeitura = res.added && res.entry && Store.entryIsReading(res.entry);
+          const pedeFoto = !pedeLeitura && res.added && res.entry && Store.entryNeedsPhoto(res.entry);
           UI.toast(!res.added ? 'Desmarcado'
-            : pedeFoto ? 'Agora mande a foto desta tarefa' : 'Marcado. Aguardando validação.');
+            : pedeLeitura ? 'Agora conte o que você leu'
+              : pedeFoto ? 'Agora mande a foto desta tarefa' : 'Marcado. Aguardando validação.');
           if (res.added) {
             const item = cat.items.find((i) => i.id === btn.getAttribute('data-item'));
             const cena = item && item.kind === 'penalty' ? 'spend'
@@ -631,8 +633,11 @@ const ChildScreen = (() => {
           sheet.querySelector('.sheet-body').innerHTML = body();
           bindItems(sheet);
 
-          // tarefa de todo dia recém-marcada: a foto vem já
-          if (pedeFoto) {
+          // leitura recém-marcada: o resumo e as páginas grifadas vêm já
+          if (pedeLeitura) {
+            openLeitura(res.entry.id, { novaMarca: true, voltarPara: { user, catId: cat.id } });
+          } else if (pedeFoto) {
+            // tarefa de todo dia recém-marcada: a foto vem já
             openNote(res.entry.id, {
               novaMarca: true, exigeFoto: true,
               voltarPara: { user, catId: cat.id },
@@ -655,6 +660,126 @@ const ChildScreen = (() => {
   }
 
   /**
+   * Registro de leitura.
+   *
+   * Ler não é só marcar: ela escreve o resumo do capítulo, grifa a lápis
+   * as partes que mais gostou e manda a foto de cada página grifada. A
+   * lista de pendências fica sempre à vista e o botão só libera quando
+   * tudo está lá.
+   */
+  function openLeitura(entryId, opcoes = {}) {
+    const st = Store.get();
+    const e = st.entries.find((x) => x.id === entryId);
+    if (!e) return;
+    const novaMarca = !!opcoes.novaMarca;
+    const antigo = e.reading || {};
+    let picker = null;
+    let salvo = false;
+
+    const dados = () => {
+      const f = document.querySelector('#leitura-form');
+      if (!f) return antigo;
+      return {
+        livro: f.livro.value,
+        paginaDe: f.paginaDe.value,
+        paginaAte: f.paginaAte.value,
+        resumo: f.resumo.value,
+        partes: f.partes.value,
+        grifou: f.querySelector('[data-switch="grifou"]').getAttribute('aria-pressed') === 'true',
+      };
+    };
+
+    UI.openSheet({
+      title: 'O que você leu',
+      subtitle: e.name,
+      size: 'larga',
+      body: `
+        <div class="note aviso">
+          Para esta valer, faltam três coisas: <b>escrever o resumo</b> do capítulo,
+          <b>grifar a lápis</b> as partes que você mais gostou e mandar a
+          <b>foto de cada página</b> que você grifou.
+        </div>
+        <form id="leitura-form">
+          ${UI.field('Livro e capítulo', UI.input('livro', {
+            value: antigo.livro || '', placeholder: 'ex.: O Pequeno Príncipe, capítulo 4',
+          }))}
+          <div class="dois-campos">
+            ${UI.field('Da página', UI.input('paginaDe', {
+              type: 'number', value: antigo.paginaDe || '', attrs: 'min="1" step="1"', placeholder: '12',
+            }))}
+            ${UI.field('Até a página', UI.input('paginaAte', {
+              type: 'number', value: antigo.paginaAte || '', attrs: 'min="1" step="1"', placeholder: '20',
+            }))}
+          </div>
+          ${UI.field(`Resumo do capítulo (pelo menos ${Store.RESUMO_MINIMO} letras)`, `
+            <textarea name="resumo" rows="7" placeholder="Conte com as suas palavras o que aconteceu no capítulo: quem apareceu, o que fizeram e como terminou.">${UI.esc(antigo.resumo || '')}</textarea>`)}
+          <div class="mini-row">
+            <div class="grow">
+              <div class="small bold">Grifei a lápis o que mais gostei</div>
+              <div class="tiny muted">passe o lápis nas partes que você mais gostou antes de fotografar</div>
+            </div>
+            <button type="button" class="switch" data-switch="grifou"
+                    aria-pressed="${antigo.grifou ? 'true' : 'false'}" aria-label="Grifei a lápis"></button>
+          </div>
+          ${UI.field('As partes que você grifou (opcional)', `
+            <textarea name="partes" rows="3" placeholder="ex.: a parte em que ele encontra a raposa">${UI.esc(antigo.partes || '')}</textarea>`)}
+          ${UI.photoField('Foto de cada página grifada', e.photos || [], Store.FOTOS_LEITURA)}
+        </form>
+        <div class="leitura-faltas" data-faltas></div>`,
+      actions: `
+        <button class="btn btn-ghost" data-cancel>${novaMarca ? 'Desmarcar' : 'Cancelar'}</button>
+        <button class="btn btn-primary" data-save disabled>Salvar leitura</button>`,
+      onMount(sheet) {
+        const btnSalvar = sheet.querySelector('[data-save]');
+        const caixa = sheet.querySelector('[data-faltas]');
+        UI.bindSwitches(sheet);
+
+        function conferir() {
+          const check = Store.checarLeitura(dados(), picker ? picker.ids() : []);
+          btnSalvar.disabled = !check.ok;
+          caixa.innerHTML = check.ok
+            ? '<div class="note ok-note">Está tudo aí. Pode salvar.</div>'
+            : `<div class="note aviso">
+                 <b>Ainda falta:</b>
+                 <ul class="leitura-lista">${check.faltas.map((f) => `<li>${UI.esc(f)}</li>`).join('')}</ul>
+               </div>`;
+        }
+
+        picker = UI.bindPhotos(sheet, conferir);
+        sheet.querySelectorAll('#leitura-form input, #leitura-form textarea')
+          .forEach((el) => el.addEventListener('input', conferir));
+        sheet.querySelectorAll('#leitura-form [data-switch]')
+          .forEach((el) => el.addEventListener('click', () => setTimeout(conferir, 0)));
+        conferir();
+
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        btnSalvar.addEventListener('click', () => {
+          const res = Store.setEntryReading(entryId, dados(), picker.ids());
+          if (!res.ok) return UI.toast(res.error, 'bad');
+          picker.commit();
+          salvo = true;
+          UI.closeSheet();
+          UI.toast('Leitura registrada. Aguardando validação.', 'ok');
+          Effects.burst('book');
+          App.render();
+          if (opcoes.voltarPara) openCategory(opcoes.voltarPara.user, opcoes.voltarPara.catId);
+          return undefined;
+        });
+      },
+      onClose() {
+        if (picker) picker.discard();
+        // desistiu no meio de uma leitura recém-marcada: desmarca
+        if (!salvo && novaMarca) {
+          Store.removeEntry(entryId);
+          UI.toast('Leitura desmarcada: sem o resumo e as páginas ela não conta');
+          App.render();
+          if (opcoes.voltarPara) openCategory(opcoes.voltarPara.user, opcoes.voltarPara.catId);
+        }
+      },
+    });
+  }
+
+  /**
    * Comentário e fotos de um lançamento.
    * Nas tarefas de todo dia a foto é obrigatória: sem foto o botão não
    * libera, e se ela desistir a tarefa volta a ficar desmarcada.
@@ -663,6 +788,7 @@ const ChildScreen = (() => {
     const state = Store.get();
     const e = state.entries.find((x) => x.id === entryId);
     if (!e) return;
+    if (Store.entryIsReading(e) && e.status === 'pending') { openLeitura(entryId, opcoes); return; }
     const exige = Store.entryNeedsPhoto(e) || (opcoes.exigeFoto && Store.photoRequired());
     const novaMarca = !!opcoes.novaMarca;
     let picker = null;
@@ -799,6 +925,26 @@ const ChildScreen = (() => {
       <p class="tiny muted mt8">Faltam ${Store.money(Math.max(0, goal - bal))} para chegar lá.</p>`);
   }
 
+  /** o combinado do mês: quanto vale a mesada e o quanto já foi conquistado */
+  function mesadaPanel(user) {
+    const m = Store.mesadaStatus(user.id);
+    if (!m.mesada) return '';
+    const pl = Store.planoMesada(user.id);
+    const leitura = pl.categorias.filter((c) => c.leitura).reduce((sum, c) => sum + c.noMes, 0);
+    return UI.panel('Minha mesada', 'banknote', `
+      <div class="between">
+        <span class="bold small">Combinado do mês</span>
+        <span class="bold small">${Store.money(m.mesada)}</span>
+      </div>
+      <div class="bar mt12" style="background:var(--surface-2)"><i style="width:${m.pct}%"></i></div>
+      <p class="tiny muted mt8">
+        ${m.liquido > 0 ? `Você já garantiu ${Store.money(m.liquido)}.` : 'Ainda não tem nada validado neste mês.'}
+        ${m.falta > 0 ? ` Faltam ${Store.money(m.falta)} para fechar.` : ' Mesada fechada!'}
+      </p>
+      ${m.esperando > 0 ? `<p class="tiny muted mt8">${Store.money(m.esperando)} esperando a validação.</p>` : ''}
+      ${leitura > 0 ? `<p class="tiny muted mt8">A leitura sozinha vale ${Store.money(leitura)} no mês: é a parte que mais rende.</p>` : ''}`);
+  }
+
   function resumoPanel(user) {
     const t = Store.totals(user.id, Store.monthOf(Store.today()));
     const st = Store.dayStatus(user.id, date);
@@ -844,7 +990,7 @@ const ChildScreen = (() => {
     const semColuna = tab === 'agenda' || tab === 'jogos'
       || (tab === 'extrato' && moneyTab === 'painel');
     const aside = semColuna ? ''
-      : `${metaPanel(user)}${Agenda.upcoming(user.id, false)}` +
+      : `${tab === 'home' ? mesadaPanel(user) : ''}${metaPanel(user)}${Agenda.upcoming(user.id, false)}` +
         `${tab === 'home' ? resumoPanel(user) : ''}${Pet.panel(user)}`;
 
     const actions = tab === 'agenda'

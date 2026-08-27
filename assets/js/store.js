@@ -74,44 +74,54 @@ const Store = (() => {
           id: childId, role: 'child', name: 'Mariana',
           username: 'mariana', pass: hash('1234'), color: 'g1',
           goalName: 'Patins novos', goalAmount: 150,
+          allowance: 120,
         },
       ],
       categories: [
         {
-          id: uid('c'), name: 'Estudos', icon: 'book', grad: 'g1', items: [
-            { id: uid('s'), name: 'Fazer a lição de casa', value: 3, kind: 'earn', daily: true },
-            { id: uid('s'), name: 'Estudar 30 minutos', value: 2, kind: 'earn', daily: true },
-            { id: uid('s'), name: 'Ler um capítulo', value: 2, kind: 'earn', daily: false },
+          // a leitura é a parte que mais vale: peso 5 contra 2 das outras
+          id: uid('c'), name: 'Leitura', icon: 'book', grad: 'g6', peso: 5, leitura: true, items: [
+            { id: uid('s'), name: 'Ler 20 minutos', value: 3, kind: 'earn', daily: true, vezesMes: 30, ficha: false },
+            { id: uid('s'), name: 'Terminar um capítulo', value: 3, kind: 'earn', daily: false, vezesMes: 12, esforco: 2, ficha: true },
+            { id: uid('s'), name: 'Ler em voz alta para alguém', value: 3, kind: 'earn', daily: false, vezesMes: 8, ficha: false },
+            { id: uid('s'), name: 'Terminar um livro', value: 10, kind: 'earn', daily: false, vezesMes: 1, esforco: 8, ficha: true },
           ],
         },
         {
-          id: uid('c'), name: 'Casa', icon: 'house', grad: 'g2', items: [
-            { id: uid('s'), name: 'Arrumar a cama', value: 1, kind: 'earn', daily: true },
-            { id: uid('s'), name: 'Organizar o quarto', value: 2, kind: 'earn', daily: false },
-            { id: uid('s'), name: 'Ajudar na louça', value: 3, kind: 'earn', daily: false },
-            { id: uid('s'), name: 'Tirar o lixo', value: 1, kind: 'earn', daily: false },
+          id: uid('c'), name: 'Estudos', icon: 'pencil', grad: 'g1', peso: 3, items: [
+            { id: uid('s'), name: 'Fazer a lição de casa', value: 3, kind: 'earn', daily: true, vezesMes: 30 },
+            { id: uid('s'), name: 'Estudar 30 minutos', value: 2, kind: 'earn', daily: true, vezesMes: 30 },
+            { id: uid('s'), name: 'Revisar para a prova', value: 2, kind: 'earn', daily: false, vezesMes: 6, esforco: 2 },
           ],
         },
         {
-          id: uid('c'), name: 'Saúde', icon: 'heart', grad: 'g3', items: [
-            { id: uid('s'), name: 'Escovar os dentes 3x', value: 1, kind: 'earn', daily: true },
-            { id: uid('s'), name: 'Tomar banho', value: 1, kind: 'earn', daily: true },
-            { id: uid('s'), name: 'Beber bastante água', value: 1, kind: 'earn', daily: true },
+          id: uid('c'), name: 'Casa', icon: 'house', grad: 'g2', peso: 2, items: [
+            { id: uid('s'), name: 'Arrumar a cama', value: 1, kind: 'earn', daily: true, vezesMes: 30 },
+            { id: uid('s'), name: 'Organizar o quarto', value: 2, kind: 'earn', daily: false, vezesMes: 8 },
+            { id: uid('s'), name: 'Ajudar na louça', value: 3, kind: 'earn', daily: false, vezesMes: 12, esforco: 2 },
+            { id: uid('s'), name: 'Tirar o lixo', value: 1, kind: 'earn', daily: false, vezesMes: 12 },
           ],
         },
         {
-          id: uid('c'), name: 'Atitude', icon: 'star', grad: 'g4', items: [
-            { id: uid('s'), name: 'Ajudar sem pedirem', value: 3, kind: 'earn', daily: false },
-            { id: uid('s'), name: 'Cumprir os combinados', value: 2, kind: 'earn', daily: true },
-            { id: uid('s'), name: 'Faltar com respeito', value: 3, kind: 'penalty', daily: false },
-            { id: uid('s'), name: 'Passar do tempo de tela', value: 2, kind: 'penalty', daily: false },
+          id: uid('c'), name: 'Saúde', icon: 'heart', grad: 'g3', peso: 1, items: [
+            { id: uid('s'), name: 'Escovar os dentes 3x', value: 1, kind: 'earn', daily: true, vezesMes: 30 },
+            { id: uid('s'), name: 'Tomar banho', value: 1, kind: 'earn', daily: true, vezesMes: 30 },
+            { id: uid('s'), name: 'Beber bastante água', value: 1, kind: 'earn', daily: true, vezesMes: 30 },
           ],
         },
         {
-          id: uid('c'), name: 'Extras', icon: 'target', grad: 'g5', items: [
-            { id: uid('s'), name: 'Atividade física', value: 2, kind: 'earn', daily: false },
-            { id: uid('s'), name: 'Ajudar nas compras', value: 3, kind: 'earn', daily: false },
-            { id: uid('s'), name: 'Cuidar do pet', value: 2, kind: 'earn', daily: true },
+          id: uid('c'), name: 'Atitude', icon: 'star', grad: 'g4', peso: 2, items: [
+            { id: uid('s'), name: 'Ajudar sem pedirem', value: 3, kind: 'earn', daily: false, vezesMes: 8, esforco: 2 },
+            { id: uid('s'), name: 'Cumprir os combinados', value: 2, kind: 'earn', daily: true, vezesMes: 30 },
+            { id: uid('s'), name: 'Faltar com respeito', value: 3, kind: 'penalty', daily: false, vezesMes: 0 },
+            { id: uid('s'), name: 'Passar do tempo de tela', value: 2, kind: 'penalty', daily: false, vezesMes: 0 },
+          ],
+        },
+        {
+          id: uid('c'), name: 'Extras', icon: 'target', grad: 'g5', peso: 2, items: [
+            { id: uid('s'), name: 'Atividade física', value: 2, kind: 'earn', daily: false, vezesMes: 8 },
+            { id: uid('s'), name: 'Ajudar nas compras', value: 3, kind: 'earn', daily: false, vezesMes: 4, esforco: 2 },
+            { id: uid('s'), name: 'Cuidar do pet', value: 2, kind: 'earn', daily: true, vezesMes: 30 },
           ],
         },
       ],
@@ -158,6 +168,33 @@ const Store = (() => {
     return old;
   }
 
+  /** DIAS_MES: o mês de referência do planejador. Trinta dias deixa a conta
+   *  redonda e não muda de mês para mês, o que ajuda a explicar o valor. */
+  const DIAS_MES = 30;
+  const VEZES_PADRAO = 8;   // ações que não são de todo dia: duas vezes por semana
+
+  /** completa os campos do planejador em dados salvos antes dele existir */
+  function ajustarPlano(st) {
+    (st.categories || []).forEach((c) => {
+      if (typeof c.peso !== 'number' || !(c.peso > 0)) {
+        c.peso = /leitur|livro|ler\b/i.test(c.name) ? 5 : 2;
+      }
+      if (c.leitura === undefined) c.leitura = /leitur|livro|ler\b/i.test(c.name);
+      (c.items || []).forEach((it) => {
+        if (typeof it.vezesMes !== 'number') {
+          it.vezesMes = it.kind === 'penalty' ? 0 : (it.daily ? DIAS_MES : VEZES_PADRAO);
+        }
+        if (typeof it.esforco !== 'number' || !(it.esforco > 0)) it.esforco = 1;
+        // a ficha de leitura (resumo, grifos e fotos das páginas) começa
+        // ligada nas ações de leitura que não são de todo dia
+        if (it.ficha === undefined) it.ficha = !!c.leitura && !it.daily && it.kind !== 'penalty';
+      });
+    });
+    (st.users || []).forEach((u) => {
+      if (u.role === 'child' && typeof u.allowance !== 'number') u.allowance = 0;
+    });
+  }
+
   function load() {
     try {
       const raw = localStorage.getItem(KEY) || localStorage.getItem(OLD_KEY);
@@ -172,6 +209,7 @@ const Store = (() => {
           if (!Array.isArray(st.usage)) st.usage = [];
           if (!Array.isArray(st.quizLog)) st.quizLog = [];
           if (!Array.isArray(st.daily)) st.daily = [];
+          ajustarPlano(st);
           return st;
         }
       }
@@ -315,6 +353,9 @@ const Store = (() => {
   const categories = () => state.categories;
   const categoryById = (id) => state.categories.find((c) => c.id === id) || null;
 
+  /** o peso vai de 1 a 5: quanto maior, mais aquela parte vale na mesada */
+  const pesoValido = (v) => Math.max(1, Math.min(5, Math.round(Number(v) || 2)));
+
   function saveCategory(data) {
     if (!data.name || !data.name.trim()) return { ok: false, error: 'Informe o nome da categoria.' };
     if (data.id) {
@@ -326,6 +367,8 @@ const Store = (() => {
       c.icon = data.icon || c.icon;
       c.grad = data.grad || c.grad;
       c.photo = photo;
+      if (data.peso !== undefined) c.peso = pesoValido(data.peso);
+      if (data.leitura !== undefined) c.leitura = !!data.leitura;
       save();
       return { ok: true, category: c };
     }
@@ -333,6 +376,8 @@ const Store = (() => {
       id: uid('c'), name: data.name.trim(), icon: data.icon || 'star',
       grad: data.grad || 'g1', items: [],
       photo: String(data.photos || '').split(',').filter(Boolean)[0] || '',
+      peso: data.peso === undefined ? 2 : pesoValido(data.peso),
+      leitura: !!data.leitura,
     };
     state.categories.push(c);
     save();
@@ -346,6 +391,23 @@ const Store = (() => {
     save();
   }
 
+  /**
+   * Quantas vezes no mês se espera aquela ação. Desconto não entra na conta,
+   * ação de todo dia vale o mês inteiro e o resto fica entre 1 e 30.
+   */
+  /** o esforço da ação: 1 é uma ação comum, e vai até 10 para o que dá muito trabalho */
+  const esforcoValido = (v) => Math.max(1, Math.min(10, Math.round(Number(v) || 1)));
+
+  function vezesValidas(bruto, kind, daily, anterior) {
+    if (kind === 'penalty') return 0;
+    if (daily) return DIAS_MES;
+    const n = Math.round(Number(String(bruto === undefined || bruto === '' ? '' : bruto).replace(',', '.')));
+    if (!Number.isFinite(n) || n <= 0) {
+      return typeof anterior === 'number' && anterior > 0 ? anterior : VEZES_PADRAO;
+    }
+    return Math.max(1, Math.min(DIAS_MES, n));
+  }
+
   function saveItem(catId, data) {
     const c = categoryById(catId);
     if (!c) return { ok: false, error: 'Categoria não encontrada.' };
@@ -354,18 +416,22 @@ const Store = (() => {
     if (data.id) {
       const it = c.items.find((i) => i.id === data.id);
       if (!it) return { ok: false, error: 'Ação não encontrada.' };
+      const tipo = data.kind === 'penalty' ? 'penalty' : 'earn';
       Object.assign(it, {
-        name: data.name.trim(), value,
-        kind: data.kind === 'penalty' ? 'penalty' : 'earn',
-        daily: !!data.daily,
+        name: data.name.trim(), value, kind: tipo, daily: !!data.daily,
+        vezesMes: vezesValidas(data.vezesMes, tipo, data.daily, it.vezesMes),
+        esforco: data.esforco === undefined ? (it.esforco || 1) : esforcoValido(data.esforco),
+        ficha: data.ficha === undefined ? !!it.ficha : !!data.ficha,
       });
       save();
       return { ok: true, item: it };
     }
+    const tipo = data.kind === 'penalty' ? 'penalty' : 'earn';
     const it = {
-      id: uid('s'), name: data.name.trim(), value,
-      kind: data.kind === 'penalty' ? 'penalty' : 'earn',
-      daily: !!data.daily,
+      id: uid('s'), name: data.name.trim(), value, kind: tipo, daily: !!data.daily,
+      vezesMes: vezesValidas(data.vezesMes, tipo, data.daily),
+      esforco: esforcoValido(data.esforco),
+      ficha: data.ficha === undefined ? (!!c.leitura && !data.daily && tipo !== 'penalty') : !!data.ficha,
     };
     c.items.push(it);
     save();
@@ -407,7 +473,7 @@ const Store = (() => {
     const nova = {
       id: uid('e'), childId, date, catId, itemId,
       name: item.name, value: item.value, kind: item.kind, daily: !!item.daily,
-      icon: cat.icon, grad: cat.grad, catName: cat.name,
+      icon: cat.icon, grad: cat.grad, catName: cat.name, leitura: !!item.ficha,
       note: '', photos: [], status: 'pending',
       reviewNote: '', reviewedBy: null, reviewedAt: null,
       createdAt: new Date().toISOString(),
@@ -421,9 +487,94 @@ const Store = (() => {
     const e = state.entries.find((x) => x.id === entryId);
     if (!e) return;
     e.note = String(note || '').slice(0, 240);
-    if (photos) e.photos = photos.filter(Boolean).slice(0, 8);
+    if (photos) e.photos = photos.filter(Boolean).slice(0, entryIsReading(e) ? FOTOS_LEITURA : 8);
     save();
   }
+
+  /* =========================================================
+     Registro de leitura.
+
+     Ler não é só marcar a tarefa: ela escreve o resumo do capítulo,
+     grifa a lápis o que mais gostou e manda a foto de cada página que
+     grifou. Só assim o lançamento vai para a validação.
+     ========================================================= */
+  const FOTOS_LEITURA = 30;      // um capítulo cabe em trinta páginas
+  const RESUMO_MINIMO = 140;     // caracteres: o bastante para um resumo de verdade
+
+  /** essa tarefa pede a ficha de leitura (resumo, grifos e fotos das páginas)? */
+  function entryIsReading(e) {
+    if (!e) return false;
+    if (e.leitura !== undefined) return !!e.leitura;
+    const cat = categoryById(e.catId);
+    const item = cat && cat.items.find((i) => i.id === e.itemId);
+    return !!(item && item.ficha);
+  }
+
+  /** quantas páginas o capítulo tem, pelo que ela informou */
+  function paginasDe(dados) {
+    const de = Math.max(0, Math.round(Number(dados && dados.paginaDe) || 0));
+    const ate = Math.max(0, Math.round(Number(dados && dados.paginaAte) || 0));
+    if (!de || !ate || ate < de) return 0;
+    return Math.min(FOTOS_LEITURA, ate - de + 1);
+  }
+
+  /**
+   * Confere o registro de leitura e diz o que ainda falta. Devolve
+   * { ok, faltas: [...], paginas } para a tela mostrar a lista.
+   */
+  function checarLeitura(dados, fotos) {
+    const d = dados || {};
+    const faltas = [];
+    const livro = String(d.livro || '').trim();
+    const resumo = String(d.resumo || '').trim();
+    const paginas = paginasDe(d);
+    const n = (fotos || []).filter(Boolean).length;
+
+    if (!livro) faltas.push('Escreva o nome do livro e do capítulo.');
+    if (!paginas) faltas.push('Diga de que página até que página vai o capítulo.');
+    if (resumo.length < RESUMO_MINIMO) {
+      faltas.push(`Falta escrever o resumo do capítulo: ${resumo.length} de ${RESUMO_MINIMO} letras.`);
+    }
+    if (!d.grifou) faltas.push('Marque que você grifou a lápis as partes que mais gostou.');
+    if (paginas && n < paginas) {
+      faltas.push(`Mande a foto de cada página grifada: ${n} de ${paginas}.`);
+    } else if (!paginas && !n) {
+      faltas.push('Mande as fotos das páginas grifadas.');
+    }
+    return { ok: !faltas.length, faltas, paginas, fotos: n, resumo: resumo.length };
+  }
+
+  /** guarda o registro de leitura junto do lançamento */
+  function setEntryReading(entryId, dados, fotos) {
+    const e = state.entries.find((x) => x.id === entryId);
+    if (!e) return { ok: false, error: 'Lançamento não encontrado.' };
+    if (e.status !== 'pending') return { ok: false, error: 'Já validado, não dá para alterar.' };
+    const d = dados || {};
+    const lista = (fotos || []).filter(Boolean).slice(0, FOTOS_LEITURA);
+    const gone = (e.photos || []).filter((id) => lista.indexOf(id) === -1);
+    if (gone.length) Photos.removeMany(gone);
+    e.photos = lista;
+    e.reading = {
+      livro: String(d.livro || '').trim().slice(0, 120),
+      paginaDe: Math.max(0, Math.round(Number(d.paginaDe) || 0)),
+      paginaAte: Math.max(0, Math.round(Number(d.paginaAte) || 0)),
+      resumo: String(d.resumo || '').trim().slice(0, 4000),
+      grifou: !!d.grifou,
+      partes: String(d.partes || '').trim().slice(0, 1000),
+    };
+    e.note = e.reading.livro;
+    save();
+    return { ok: true, entry: e, check: checarLeitura(e.reading, e.photos) };
+  }
+
+  /** o lançamento de leitura ainda está incompleto? */
+  const entryReadingPending = (e) =>
+    !!e && entryIsReading(e) && e.status === 'pending'
+    && !checarLeitura(e.reading, e.photos).ok;
+
+  /** quantos registros de leitura do dia ainda estão pela metade */
+  const missingReading = (childId, date) =>
+    entriesOf(childId, date).filter(entryReadingPending).length;
 
   /** o responsável corrige valor, descrição, observação ou fotos de um lançamento */
   function adjustEntry(entryId, data) {
@@ -1347,19 +1498,229 @@ const Store = (() => {
     const required = state.categories.flatMap((c) => c.items.filter((i) => i.daily).map((i) => i.id));
     const entries = entriesOf(childId, date);
     const marcadas = entries.filter((e) => required.includes(e.itemId));
-    // uma tarefa de todo dia só conta como feita quando tem a foto
-    const filled = marcadas.filter((e) => !entryNeedsPhoto(e)).length;
+    // uma tarefa de todo dia só conta como feita quando tem a foto,
+    // e a de leitura só quando o resumo e as páginas grifadas estão lá
+    const incompleta = (e) => entryNeedsPhoto(e) || entryReadingPending(e);
+    const filled = marcadas.filter((e) => !incompleta(e)).length;
     const semFoto = marcadas.filter(entryNeedsPhoto).length;
+    const semLeitura = entries.filter(entryReadingPending).length;
     const pending = entries.filter((e) => e.status === 'pending').length;
     return {
       required: required.length,
       filled,
       marcadas: marcadas.length,
       semFoto,
+      semLeitura,
       complete: required.length > 0 && filled >= required.length,
       total: entries.length,
       pending,
       value: entries.filter((e) => e.status !== 'rejected').reduce((s, e) => s + signed(e), 0),
+    };
+  }
+
+  /* =========================================================
+     Planejador da mesada.
+
+     O responsável diz quanto vale a mesada no mês. A partir daí o app
+     divide esse valor entre as categorias pelo peso de cada uma (a
+     leitura tem o maior) e depois entre as ações, na conta de quantas
+     vezes por mês se espera cada uma. Assim, se o filho fizer tudo o
+     que foi combinado, o mês fecha exatamente na mesada.
+     ========================================================= */
+
+  /** arredonda para o múltiplo de 5 centavos, nunca abaixo de 5 centavos */
+  const arredondar = (v) => Math.max(0.05, Math.round(v * 20) / 20);
+
+  const pesoDe = (cat) => pesoValido(cat && cat.peso);
+  const vezesDe = (item) => {
+    if (!item || item.kind === 'penalty') return 0;
+    if (item.daily) return DIAS_MES;
+    return typeof item.vezesMes === 'number' && item.vezesMes > 0 ? item.vezesMes : VEZES_PADRAO;
+  };
+
+  /** o valor combinado da mesada do filho */
+  function allowanceOf(childId) {
+    const c = userById(childId);
+    return c && typeof c.allowance === 'number' ? c.allowance : 0;
+  }
+
+  function setAllowance(childId, valor) {
+    const c = userById(childId);
+    if (!c) return { ok: false, error: 'Filho não encontrado.' };
+    const v = Math.abs(Number(String(valor).replace(',', '.'))) || 0;
+    if (!v) return { ok: false, error: 'Informe um valor maior que zero.' };
+    c.allowance = Math.round(v * 100) / 100;
+    save();
+    return { ok: true, allowance: c.allowance };
+  }
+
+  /**
+   * Monta o plano sem gravar nada: devolve quanto cada categoria e cada
+   * ação passariam a valer para o mês fechar na mesada.
+   * opcoes: { mesada, pesos: {catId: peso}, vezes: {itemId: n} }
+   */
+  function planoMesada(childId, opcoes) {
+    const op = opcoes || {};
+    const mesada = op.mesada !== undefined
+      ? Math.abs(Number(String(op.mesada).replace(',', '.'))) || 0
+      : allowanceOf(childId);
+
+    const peso = (c) => (op.pesos && op.pesos[c.id] !== undefined ? pesoValido(op.pesos[c.id]) : pesoDe(c));
+    const vezes = (it) => (op.vezes && op.vezes[it.id] !== undefined
+      ? vezesValidas(op.vezes[it.id], it.kind, it.daily)
+      : vezesDe(it));
+    const esforco = (it) => (op.esforcos && op.esforcos[it.id] !== undefined
+      ? esforcoValido(op.esforcos[it.id])
+      : esforcoValido(it.esforco));
+
+    // total de "pontos do mês": cada ação vale o peso da categoria dela,
+    // multiplicado pelas vezes que se espera no mês
+    let pontos = 0;
+    state.categories.forEach((c) => {
+      c.items.forEach((it) => {
+        if (it.kind === 'penalty') return;
+        pontos += peso(c) * esforco(it) * vezes(it);
+      });
+    });
+
+    /* O valor de cada ação sai arredondado em 10 centavos, e arredondar
+       para cima empurraria o mês para longe da mesada. Então o app procura,
+       por tentativa, o valor por ponto em que o total arredondado fica o
+       mais perto possível do combinado. */
+    function totalCom(vp) {
+      let soma = 0;
+      state.categories.forEach((c) => {
+        const p = peso(c);
+        c.items.forEach((it) => {
+          if (it.kind === 'penalty') return;
+          soma += arredondar(vp * p * esforco(it)) * vezes(it);
+        });
+      });
+      return soma;
+    }
+
+    let porPonto = pontos > 0 ? mesada / pontos : 0;
+    if (pontos > 0 && mesada > 0) {
+      let baixo = 0;
+      let alto = porPonto * 4 + 1;
+      for (let i = 0; i < 40; i += 1) {
+        const meio = (baixo + alto) / 2;
+        if (totalCom(meio) > mesada) alto = meio; else baixo = meio;
+      }
+      // entre a tentativa que fica abaixo e a que passa, fica a que erra menos
+      porPonto = Math.abs(totalCom(baixo) - mesada) <= Math.abs(totalCom(alto) - mesada) ? baixo : alto;
+    }
+
+    const categorias = state.categories.map((c) => {
+      const p = peso(c);
+      const itens = c.items.map((it) => {
+        const n = vezes(it);
+        const f = esforco(it);
+        // desconto custa o dobro de uma ação normal daquela categoria
+        const valor = it.kind === 'penalty'
+          ? arredondar(porPonto * p * 2)
+          : arredondar(porPonto * p * f);
+        return {
+          id: it.id, name: it.name, kind: it.kind, daily: !!it.daily,
+          vezesMes: n, esforco: f, valorAtual: it.value, valor,
+          noMes: it.kind === 'penalty' ? 0 : Math.round(valor * n * 100) / 100,
+        };
+      });
+      const noMes = itens.reduce((sum, i) => sum + i.noMes, 0);
+      return {
+        id: c.id, name: c.name, icon: c.icon, grad: c.grad, photo: c.photo,
+        peso: p, leitura: !!c.leitura, itens, noMes,
+      };
+    });
+
+    /* Depois do arredondamento ainda sobra (ou falta) troco. O acerto final
+       mexe no máximo cinco centavos por ação, das que mais se repetem para as
+       que menos, até o mês encostar no valor combinado. */
+    if (mesada > 0) {
+      const todas = categorias.flatMap((c) => c.itens.filter((i) => i.kind !== 'penalty'))
+        .sort((a2, b2) => b2.vezesMes - a2.vezesMes);
+      for (let volta = 0; volta < 3; volta += 1) {
+        let sobra = mesada - categorias.reduce((sum, c) => sum + c.noMes, 0);
+        if (Math.abs(sobra) < 0.05) break;
+        todas.forEach((i) => {
+          const passo = sobra > 0 ? 0.05 : -0.05;
+          const mexe = passo * i.vezesMes;
+          if (Math.abs(mexe) > Math.abs(sobra) + 0.0001) return;
+          if (i.valor + passo < 0.05) return;
+          i.valor = Math.round((i.valor + passo) * 100) / 100;
+          i.noMes = Math.round(i.valor * i.vezesMes * 100) / 100;
+          sobra = Math.round((sobra - mexe) * 100) / 100;
+        });
+        categorias.forEach((c) => {
+          c.noMes = Math.round(c.itens.reduce((sum, i) => sum + i.noMes, 0) * 100) / 100;
+        });
+      }
+    }
+
+    const total = categorias.reduce((sum, c) => sum + c.noMes, 0);
+    const leitura = categorias.filter((c) => c.leitura).reduce((sum, c) => sum + c.noMes, 0);
+    return {
+      mesada,
+      total: Math.round(total * 100) / 100,
+      diferenca: Math.round((total - mesada) * 100) / 100,
+      leitura: Math.round(leitura * 100) / 100,
+      leituraPct: total > 0 ? Math.round((leitura / total) * 100) : 0,
+      categorias: categorias.map((c) => Object.assign({}, c, {
+        pct: total > 0 ? Math.round((c.noMes / total) * 100) : 0,
+      })),
+      pontos,
+    };
+  }
+
+  /** grava o plano: guarda a mesada, os pesos, as vezes e os valores novos */
+  function aplicarPlano(childId, opcoes) {
+    const op = opcoes || {};
+    const plano = planoMesada(childId, op);
+    if (!plano.mesada) return { ok: false, error: 'Informe o valor da mesada.' };
+    if (!plano.pontos) return { ok: false, error: 'Crie pelo menos uma ação antes de dividir a mesada.' };
+
+    const kid = userById(childId);
+    if (kid) kid.allowance = Math.round(plano.mesada * 100) / 100;
+
+    plano.categorias.forEach((pc) => {
+      const c = categoryById(pc.id);
+      if (!c) return;
+      c.peso = pc.peso;
+      pc.itens.forEach((pi) => {
+        const it = c.items.find((i) => i.id === pi.id);
+        if (!it) return;
+        it.value = pi.valor;
+        it.vezesMes = pi.vezesMes;
+        it.esforco = pi.esforco;
+      });
+    });
+    save();
+    return { ok: true, plano };
+  }
+
+  /**
+   * Como está a mesada do mês: o combinado, o que já foi validado, o que
+   * ainda espera validação e o quanto falta para fechar.
+   */
+  function mesadaStatus(childId, mes) {
+    const alvo = mes || monthOf(today());
+    const mesada = allowanceOf(childId);
+    let validado = 0;
+    let esperando = 0;
+    let descontos = 0;
+    state.entries.filter((e) => e.childId === childId && monthOf(e.date) === alvo).forEach((e) => {
+      if (e.status === 'approved') {
+        if (e.kind === 'penalty') descontos += e.value;
+        else validado += e.value;
+      } else if (e.status === 'pending') {
+        if (e.kind !== 'penalty') esperando += e.value;
+      }
+    });
+    const liquido = Math.max(0, validado - descontos);
+    return {
+      mes: alvo, mesada, validado, esperando, descontos, liquido,
+      falta: Math.max(0, Math.round((mesada - liquido) * 100) / 100),
+      pct: mesada > 0 ? Math.min(100, Math.round((liquido / mesada) * 100)) : 0,
     };
   }
 
@@ -1436,8 +1797,13 @@ const Store = (() => {
     totals, balance, dashboard, savePayout,
     // tempo de uso e histórico de estudo
     trackUse, usageOf, usageToday, logQuiz, quizStats, duracao, area, quizKind, AREAS, QUIZ_KINDS, removePayout, payoutById, payoutsOf,
+    // planejador da mesada
+    allowanceOf, setAllowance, planoMesada, aplicarPlano, mesadaStatus, DIAS_MES,
     // tema e regras
     setTheme, theme, setPhotoRequired, photoRequired, entryIsDaily, entryNeedsPhoto, missingPhotos,
+    // registro de leitura
+    entryIsReading, setEntryReading, checarLeitura, entryReadingPending, missingReading,
+    FOTOS_LEITURA, RESUMO_MINIMO,
     // helpers
     uid, today, toISO, fromISO, addDays, monthOf, labelDate, labelMonth, money,
     WEEKDAYS, MONTHS,
