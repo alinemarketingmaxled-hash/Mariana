@@ -482,6 +482,48 @@ const Pet = (() => {
   }
 
   function face(moodId) {
+    // rindo: olhos fechados de tanto rir, boca escancarada e "ha ha" saindo
+    if (moodId === 'rindo') {
+      return `
+        <g fill="none" stroke="#131338" stroke-width="7" stroke-linecap="round">
+          <path d="M60 104q14-18 28 0"/>
+          <path d="M112 104q14-18 28 0"/>
+        </g>
+        <g class="pet-mouth">
+          <path d="M70 128q30 40 60 0q-30 16-60 0z" fill="#131338"/>
+          <path d="M92 152q8 10 16 0z" fill="#ff8fc8"/>
+        </g>
+        <g fill="#ff8fc8" opacity=".55">
+          <ellipse cx="52" cy="122" rx="13" ry="8"/>
+          <ellipse cx="148" cy="122" rx="13" ry="8"/>
+        </g>
+        <g class="pet-haha" fill="#131338" font-family="Archivo,Arial" font-weight="900"
+           stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke">
+          <text x="148" y="44" font-size="26">ha</text>
+          <text x="10" y="64" font-size="20">ha</text>
+        </g>`;
+    }
+    // enjoado: olhos apertados, boca aberta e o jorro saindo
+    if (moodId === 'enjoado') {
+      return `
+        <g fill="none" stroke="#131338" stroke-width="7" stroke-linecap="round">
+          <path d="M62 88l24 16M86 88l-24 16"/>
+          <path d="M114 88l24 16M138 88l-24 16"/>
+        </g>
+        <g fill="#79e3b5" opacity=".75">
+          <ellipse cx="48" cy="116" rx="14" ry="9"/>
+          <ellipse cx="152" cy="116" rx="14" ry="9"/>
+        </g>
+        <g class="pet-mouth">
+          <path d="M76 122q24 22 48 0 2 32-24 32t-24-32z" fill="#131338"/>
+        </g>
+        <g class="pet-jorro" fill="#4fc78f" stroke="#131338" stroke-width="4" stroke-linejoin="round">
+          <path d="M82 138q18 18 36 0 8 24-18 52-26-28-18-52z"/>
+          <circle cx="70" cy="172" r="6"/>
+          <circle cx="130" cy="166" r="5"/>
+          <circle cx="100" cy="194" r="6"/>
+        </g>`;
+    }
     if (moodId === 'tonto') {
       return `
         <g fill="none" stroke="#131338" stroke-width="6" stroke-linecap="round">
@@ -562,7 +604,7 @@ const Pet = (() => {
           ${outfitSvg(pet.outfit, pet.shape)}
           <ellipse cx="52" cy="120" rx="11" ry="7" fill="#131338" opacity=".16"/>
           <ellipse cx="148" cy="120" rx="11" ry="7" fill="#131338" opacity=".16"/>
-          ${face(m)}
+          <g class="pet-face">${face(m)}</g>
           ${accessorySvg(pet.accessory, c.hex)}
         </g>
         </g>
@@ -588,7 +630,7 @@ const Pet = (() => {
             ${outfitSvg(data.outfit, data.shape)}
             <ellipse cx="52" cy="120" rx="11" ry="7" fill="#131338" opacity=".16"/>
             <ellipse cx="148" cy="120" rx="11" ry="7" fill="#131338" opacity=".16"/>
-            ${face(moodId)}
+            <g class="pet-face">${face(moodId)}</g>
             ${accessorySvg(data.accessory, c.hex)}
           </g>
         </g>
@@ -1122,6 +1164,28 @@ const Pet = (() => {
   }
 
   /* ---------- interação ---------- */
+  /** troca a carinha do desenho por alguns instantes e depois volta ao normal */
+  function humorRelampago(svgEl, moodId, ms = 1800) {
+    if (!svgEl) return;
+    const rosto = svgEl.querySelector('.pet-face');
+    if (!rosto) return;
+    if (!svgEl._humorAntigo) {
+      const base = (svgEl.getAttribute('class') || '').replace(/\bis-happy\b/g, '').trim();
+      svgEl._humorAntigo = { classe: base, rosto: rosto.innerHTML };
+    }
+    clearTimeout(svgEl._humorTimer);
+    svgEl.setAttribute('class', `pet-svg mood-${moodId}`);
+    rosto.innerHTML = face(moodId);
+    svgEl._humorTimer = setTimeout(() => {
+      const antigo = svgEl._humorAntigo;
+      if (!antigo) return;
+      svgEl.setAttribute('class', antigo.classe);
+      const atual = svgEl.querySelector('.pet-face');
+      if (atual) atual.innerHTML = antigo.rosto;
+      svgEl._humorAntigo = null;
+    }, ms);
+  }
+
   function touch(child, el) {
     const res = Store.petCare(child.id);
     const stage = (el && el.closest('.pet-panel')) || document;
@@ -1136,11 +1200,14 @@ const Pet = (() => {
       return;
     }
     Effects.burst('task', svgEl || el);
+    // carinho faz cócegas: ele abre o sorrisão e cai na gargalhada
+    humorRelampago(svgEl, 'rindo', 2000);
+    Buddy.rir();
     const bubble = stage.querySelector ? stage.querySelector('[data-pet-bubble]') : null;
     if (bubble) {
       const falas = [
-        'Que carinho bom!', 'Hihi, faz de novo!', 'Você é minha pessoa favorita.',
-        'Tô cheio de energia agora!', 'Vamos fazer uma tarefa juntos?',
+        'Ha ha ha! Que cócegas!', 'Hihi, faz de novo!', 'Ha ha! Você é minha pessoa favorita.',
+        'Ha ha ha! Tô cheio de energia agora!', 'Hihihi! Vamos fazer uma tarefa juntos?',
       ];
       const escolhida = falas[Math.floor(res.count % falas.length)];
       bubble.textContent = escolhida;
@@ -1234,6 +1301,8 @@ const Pet = (() => {
       el.className = `pet-buddy is-${novo}`;
       const m = novo === 'dormindo' ? 'dormindo'
         : novo === 'tonto' || novo === 'derretendo' ? 'tonto'
+        : novo === 'vomitando' ? 'enjoado'
+        : novo === 'rindo' ? 'rindo'
         : novo === 'estudando' ? 'estudando'
         : novo === 'brincando' || novo === 'pulando' ? 'festa'
         : mood(child).id;
@@ -1311,6 +1380,29 @@ const Pet = (() => {
       Effects.burst('spend', el);
       clearTimeout(dizzyTimer);
       dizzyTimer = setTimeout(() => ficarTonto('Ufa, voltei. Que tontura!'), 1800);
+    }
+
+    /** chacoalhou demais: ele passa mal, vomita e depois fica tonto */
+    function vomitar(texto) {
+      setEstado('vomitando');
+      fala(texto || 'Blergh... para de me sacudir!');
+      Voz.falar('Blergh! Tô enjoado.', child);
+      Effects.burst('spend', el);
+      clearTimeout(dizzyTimer);
+      dizzyTimer = setTimeout(() => ficarTonto('Ufa... que enjoo.'), 2200);
+    }
+
+    /** carinho no painel: o bichinho da tela também cai na risada */
+    function rir(texto) {
+      if (!el || estado === 'dormindo' || estado === 'vomitando') return;
+      const anterior = estado === 'rindo' ? 'parado' : estado;
+      setEstado('rindo');
+      fala(texto || 'Ha ha ha! Que cócegas!');
+      clearTimeout(dizzyTimer);
+      dizzyTimer = setTimeout(() => {
+        setEstado(anterior === 'segurado' || anterior === 'caindo' ? 'parado' : anterior);
+        agendarBrincadeira();
+      }, 2000);
     }
 
     /* ---------- menu em bolinhas em volta dele ---------- */
@@ -1478,7 +1570,7 @@ const Pet = (() => {
         dragging = true;
         clearTimeout(holdTimer);
         if (menuAberto) fecharMenu();
-        if (estado !== 'tonto' && estado !== 'derretendo') setEstado('segurado');
+        if (estado !== 'tonto' && estado !== 'derretendo' && estado !== 'vomitando') setEstado('segurado');
       }
       if (!dragging) return;
 
@@ -1496,9 +1588,9 @@ const Pet = (() => {
       }
       shake.dist += Math.abs(dx);
       if (Date.now() - shake.since > 900) shake = { dirs: 0, lastSign: sinal, dist: 0, since: Date.now() };
-      if (shake.dirs >= 5 && shake.dist > 130 && estado !== 'tonto') {
+      if (shake.dirs >= 5 && shake.dist > 130 && estado !== 'tonto' && estado !== 'vomitando') {
         shake = { dirs: 0, lastSign: 0, dist: 0, since: Date.now() };
-        ficarTonto('Ei, para de me sacudir!');
+        vomitar();
       }
     }
 
@@ -1600,12 +1692,13 @@ const Pet = (() => {
       estado = 'parado';
     }
 
-    return { mount, unmount, fala, setEstado, registrarInteracao };
+    return { mount, unmount, fala, setEstado, registrarInteracao, rir, vomitar };
   })();
 
   return {
     svg, panel, bind, openSheet, openChat, touch, mood, phrase, Voz,
     mountBuddy: Buddy.mount, unmountBuddy: Buddy.unmount, buddySay: Buddy.fala,
+    buddyRir: Buddy.rir, buddyVomitar: Buddy.vomitar,
     openShop, outfit, bed, roomSvg, movelSvg, quartoDe, ringSvg, previewSvg, faltaParaSubir,
     level, progress, COLORS, SHAPES, ACCESSORIES, OUTFITS, BEDS, ROOMS, PAREDES, CHAOS, MOVEIS, SLOTS,
     XP_POR_NIVEL, CARINHOS_POR_DIA,

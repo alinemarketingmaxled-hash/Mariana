@@ -63,8 +63,9 @@ quantos filhos quiser, cada um com o próprio login e senha.
   bola, anda, estuda e só **dorme de madrugada** (das 22h às 6h) ou depois de muito tempo sem
   ninguém por perto, e quando dorme aparece na **cama** dele. **Um toque** abre **cinco bolinhas
   em volta dele**: *dormir* (ou acordar), *brincar*, *estudar*, *conversar* e *atualizar*;
-  **segurar por 4 segundos** faz ele derreter e ficar tonto; **sacudir** deixa ele
-  zonzo; e dá para **arrastar e jogar de qualquer altura** (ele cai, quica no chão, bate no teto e,
+  **segurar por 4 segundos** faz ele derreter e ficar tonto; **sacudir ele deixa enjoado e ele
+  vomita** (olho em X, bochecha verde e um jorro caindo, e depois fica tonto até se recuperar); e
+  dá para **arrastar e jogar de qualquer altura** (ele cai, quica no chão, bate no teto e,
   se a queda for feia, fica vendo estrelinhas).
 - **Atualizar o bichinho**: a bolinha de atualizar abre uma tela grande com ele dentro do
   **quarto** e, ao lado, um **gráfico de círculo** que mostra o **nível no meio** e quantos pontos
@@ -116,7 +117,9 @@ quantos filhos quiser, cada um com o próprio login e senha.
 - **Bichinho**: o mesmo personagem também aparece no cartão da tela inicial, reage ao que acontece no dia (dorme quando
   nada foi feito, fica animado quando tem tarefa marcada, comemora quando o dia está completo,
   fica preocupado com compromisso atrasado) e fala frases ligadas ao que está pendente. Recebe
-  carinho (até 5 por dia), ganha **pontos de amizade** a cada tarefa, livro, compromisso e
+  carinho (até 5 por dia) e, quando recebe, **cai na gargalhada**: fecha os olhinhos, abre o
+  sorrisão, solta um "ha ha" e ri em voz alta (o bichinho solto na tela ri junto). Ganha
+  **pontos de amizade** a cada tarefa, livro, compromisso e
   validação, sobe de nível e libera roupinhas, camas, acessórios e quartos. Ele também **fala em
   voz alta** as perguntas e as respostas (dá para desligar no alto-falante do painel).
 - **Hoje**: saldo disponível, progresso da meta, tira dos últimos 7 dias e o quanto já rendeu no dia.
@@ -243,7 +246,7 @@ O app foi ajustado para ser usado principalmente no celular:
   topo** e os **botões fixos embaixo**: dá para rolar uma lista longa sem perder o Salvar de vista.
 - **Avisos aparecem embaixo**, acima da barra de navegação, e sobem mais quando há uma folha
   aberta, para não taparem os botões.
-- **O bichinho** continua podendo ser arrastado, sacudido e jogado para qualquer canto.
+- **O bichinho** continua podendo ser arrastado, sacudido (aí ele vomita) e jogado para qualquer canto.
 - **Tira de dias com deslize** e o dia de hoje já centralizado.
 - **Sem atraso no toque** e sem o retângulo cinza que alguns navegadores desenham ao tocar.
 - **Nada some no celular**: o desenho do bichinho no quarto continua no painel lateral, os
