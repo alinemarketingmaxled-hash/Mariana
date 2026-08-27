@@ -1259,6 +1259,10 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
   .icon-btn{width:46px;height:46px}
   .icon-btn.sm{width:40px;height:40px}
   .icon-btn.sm .ico{width:18px;height:18px}
+  /* a chavinha de ligar/desligar também precisa caber no dedo */
+  .switch{width:56px;height:34px}
+  .switch::after{width:26px;height:26px}
+  .switch[aria-pressed="true"]::after{left:26px}
   /* o X de apagar foto precisa caber no dedo */
   .thumb-x{width:34px;height:34px;top:5px;right:5px;border-radius:11px}
   .thumb-x .ico{width:16px;height:16px}
@@ -1420,3 +1424,40 @@ h1,.hero .value,.day .dd,.stat .v,.sheet-head h3{letter-spacing:-.02em;font-weig
 [aria-pressed="true"] > .switch{background:var(--lime);box-shadow:none}
 [aria-pressed="true"] > .switch::after{left:24px;background:#fff}
 .up-row .switch{margin-left:8px}
+
+/* ===== menu em bolinhas em volta de um botão ===== */
+.radial{position:fixed;inset:0;z-index:60}
+.radial-bg{position:absolute;inset:0;background:rgba(19,19,56,.28);backdrop-filter:blur(2px);
+  animation:fade .2s var(--ease)}
+.radial-bolha{
+  position:absolute;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;
+  color:#131338;box-shadow:0 0 0 3px #131338, 0 12px 24px rgba(19,19,56,.34);
+  animation:bolha-entra .26s var(--ease) both;
+}
+.radial-bolha svg{width:24px;height:24px;stroke-width:2.2}
+.radial-bolha:hover,.radial-bolha:focus-visible{transform:scale(1.12)}
+.radial-nome{
+  position:absolute;white-space:nowrap;pointer-events:none;
+  font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  background:#fff;color:#131338;padding:4px 8px;border-radius:9px;box-shadow:0 0 0 2px #131338;
+}
+.radial-nome[data-pos="dir"]{left:calc(100% + 7px);top:50%;transform:translateY(-50%)}
+.radial-nome[data-pos="esq"]{right:calc(100% + 7px);top:50%;transform:translateY(-50%)}
+.radial-nome[data-pos="cima"]{bottom:calc(100% + 6px);left:50%;transform:translateX(-50%)}
+.radial-nome[data-pos="baixo"]{top:calc(100% + 6px);left:50%;transform:translateX(-50%)}
+@media (max-width:999px){
+  .radial-bolha{width:58px;height:58px}
+  .radial-bolha svg{width:25px;height:25px}
+  .radial-nome{font-size:9.5px;padding:4px 8px}
+}
+@media (prefers-reduced-motion:reduce){.radial-bolha,.radial-bg{animation:none}}
+
+/* o cartão do filho no painel do responsável empilha no celular */
+@media (max-width:640px){
+  .pet-atualiza.cartao-filho{flex-wrap:wrap;justify-content:center}
+  .pet-atualiza.cartao-filho .pet-atualiza-art{flex:0 0 auto}
+  .pet-atualiza.cartao-filho .pet-atualiza-side{min-width:100%}
+  .pet-atualiza.cartao-filho .stat-row{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pet-atualiza.cartao-filho .stat{padding:11px 6px}
+  .pet-atualiza.cartao-filho .stat .v{font-size:14px}
+}

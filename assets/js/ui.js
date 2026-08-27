@@ -34,6 +34,7 @@ const UI = (() => {
   function closeSheet() {
     const root = sheetRoot();
     if (!root) return;
+    fecharRadial();
     if (typeof Pet !== 'undefined' && Pet.Voz) Pet.Voz.parar();
     root.innerHTML = '';
     root.hidden = true;
@@ -76,6 +77,115 @@ const UI = (() => {
     const firstInput = sheet.querySelector('input:not([type=hidden]), textarea');
     if (firstInput && window.matchMedia('(min-width:900px)').matches) firstInput.focus();
     return sheet;
+  }
+
+  /* ---------- menu em bolinhas em volta de um botão ---------- */
+  let radialAberto = null;
+
+  function fecharRadial() {
+    if (!radialAberto) return;
+    radialAberto.remove();
+    radialAberto = null;
+    document.removeEventListener('pointerdown', foraDoRadial, true);
+    document.removeEventListener('keydown', escRadial, true);
+  }
+  function foraDoRadial(ev) {
+    if (radialAberto && !radialAberto.contains(ev.target)) fecharRadial();
+  }
+  function escRadial(ev) { if (ev.key === 'Escape') fecharRadial(); }
+
+  /**
+   * Abre bolinhas coloridas em volta de um botão.
+   * O leque abre para o lado onde há espaço na tela.
+   * itens: [{ id, label, icone, cor, onClick }]
+   */
+  function openRadial(ancora, itens) {
+    if (radialAberto) { fecharRadial(); return null; }
+    if (!ancora || !itens || !itens.length) return null;
+
+    const r = ancora.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const TAM = 54;
+    const ESPACO = 80;          // distância mínima entre as bolinhas
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+
+    // o leque abre na direção onde há mais tela livre
+    const dx = cx < W / 2 ? 1 : -1;
+    const dy = cy < H / 2 ? 1 : -1;
+    const centro = (Math.atan2(dy, dx) * 180) / Math.PI;
+    const abertura = 120;   // um leque mais fechado não volta para cima da tela
+    // o raio cresce com a quantidade, para as bolinhas não se encostarem
+    const arco = (abertura * Math.PI) / 180;
+    const raio = Math.max(92, Math.min(210,
+      itens.length > 1 ? ((itens.length - 1) * ESPACO) / arco : 96));
+    const inicio = centro - abertura / 2;
+    const passo = itens.length > 1 ? abertura / (itens.length - 1) : 0;
+    const dentro = (v, min, max) => Math.max(min, Math.min(max, v));
+    // no celular a barra de baixo é fixa: as bolinhas param acima dela
+    const barra = document.querySelector('.side');
+    const rodape = barra && getComputedStyle(barra).position === 'fixed'
+      ? barra.getBoundingClientRect().height + 26 : 36;
+
+    const caixa = document.createElement('div');
+    caixa.className = 'radial';
+    caixa.innerHTML = `<span class="radial-bg"></span>` + itens.map((it, i) => {
+      const ang = ((inicio + i * passo) * Math.PI) / 180;
+      const x = Math.round(dentro(cx + raio * Math.cos(ang) - TAM / 2, 8, W - TAM - 8));
+      const y = Math.round(dentro(cy + raio * Math.sin(ang) - TAM / 2, 8, H - TAM - rodape));
+      /* O nome sai para fora do leque, longe do vizinho. Entre os quatro
+         lados, fica no primeiro que couber inteiro na tela. */
+      const cos = Math.cos(ang);
+      const largura = it.label.length * 7.6 + 24;   // estimativa da etiqueta
+      const meio = x + TAM / 2;
+      const cabeMeio = meio - largura / 2 >= 6 && meio + largura / 2 <= W - 6;
+      const cabe = {
+        dir: x + TAM + 8 + largura <= W - 6,
+        esq: x - 8 - largura >= 6,
+        cima: cabeMeio && y - 26 >= 6,
+        baixo: cabeMeio && y + TAM + 26 <= H - 6,
+      };
+      const ordem = cos > 0.4 ? ['dir', 'baixo', 'cima', 'esq']
+        : cos < -0.4 ? ['esq', 'baixo', 'cima', 'dir']
+        : (Math.sin(ang) < 0 ? ['cima', 'dir', 'esq', 'baixo'] : ['baixo', 'dir', 'esq', 'cima']);
+      const pos = ordem.find((k) => cabe[k]) || 'baixo';
+      return `
+        <button type="button" class="radial-bolha" data-radial="${esc(it.id)}"
+                style="left:${x}px; top:${y}px; background:${it.cor}; animation-delay:${i * 40}ms"
+                aria-label="${esc(it.label)}">
+          ${Icons.svg(it.icone)}
+          <span class="radial-nome" data-pos="${pos}">${esc(it.label)}</span>
+        </button>`;
+    }).join('');
+    document.body.appendChild(caixa);
+    radialAberto = caixa;
+
+    // depois da animação, ajusta qualquer etiqueta que ainda passe da borda
+    setTimeout(() => {
+      if (radialAberto !== caixa) return;
+      caixa.querySelectorAll('.radial-nome').forEach((nome) => {
+        const r = nome.getBoundingClientRect();
+        if (r.right > W - 6) nome.style.marginLeft = `${Math.round(W - 6 - r.right)}px`;
+        else if (r.left < 6) nome.style.marginLeft = `${Math.round(6 - r.left)}px`;
+      });
+    }, 340);
+
+    // tocar no fundo escurecido fecha o leque
+    caixa.querySelector('.radial-bg').addEventListener('click', fecharRadial);
+    caixa.querySelectorAll('[data-radial]').forEach((b) => {
+      b.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const item = itens.find((x) => x.id === b.getAttribute('data-radial'));
+        fecharRadial();
+        if (item && item.onClick) item.onClick();
+      });
+    });
+    setTimeout(() => {
+      document.addEventListener('pointerdown', foraDoRadial, true);
+      document.addEventListener('keydown', escRadial, true);
+    }, 0);
+    return caixa;
   }
 
   /** confirmação com visual do app (substitui window.confirm) */
@@ -401,7 +511,7 @@ const UI = (() => {
   }
 
   return {
-    esc, toast, openSheet, closeSheet, confirm,
+    esc, toast, openSheet, closeSheet, confirm, openRadial, fecharRadial,
     iconPicker, gradPicker, bindPickers, bindSwitches,
     photoField, bindPhotos, photoStrip, bindPhotoViewers, avatar, catVisual, entryVisual,
     shell, bindShell, panel,

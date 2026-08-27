@@ -163,6 +163,20 @@ Depois que o responsável valida ou recusa, o item fica **travado**: a criança 
 
 ### Responsável
 
+
+- **Botão de mais com bolinhas**: o botão redondo abre um leque de bolinhas coloridas em volta
+  dele, uma para cada ação: *Nova ação*, *Categoria*, *Filho*, *Pagar*, *Bônus* e *Validar*
+  (mostrando quantos itens estão esperando). A bolinha de **Nova ação** abre um segundo leque
+  com **uma bolinha por categoria, cada uma na cor dela**: escolhendo a categoria, o formulário
+  já abre dentro dela para escrever o nome, o **valor**, se ganha ou desconta e se é obrigatória
+  todo dia. O leque abre para o lado com mais espaço na tela e fecha tocando fora ou no Esc.
+- **Painel do filho**: tocar no filho abre um painel com tudo dele: o bichinho no quarto, o que
+  tem a receber, o que está na carteira e quantos itens aguardam validação; o progresso das
+  tarefas de hoje (com aviso das que estão sem a foto obrigatória); validado, aguardando e
+  gasto no mês; o tempo no app, em joguinhos e estudando nos últimos 7 dias com o aproveitamento
+  dos quizzes; os próximos compromissos, os últimos lançamentos e os últimos gastos. Embaixo
+  ficam os atalhos: pagamentos, gastos, lançamento avulso, foto, diário, histórico, tempo de uso
+  completo, editar e excluir.
 - **Validar**: lista tudo o que está pendente, agrupado por filho e por dia, com as fotos anexadas.
   Valida item a item, recusa com justificativa ou valida o dia inteiro de uma vez. Em **Ajustar**
   dá para corrigir o valor, a descrição e o tipo do lançamento, anexar fotos, deixar uma

@@ -558,17 +558,118 @@ const ParentScreen = (() => {
   }
 
   function openChildDetail(kid) {
+    const hoje = Store.today();
     const bal = Store.balance(kid.id);
-    const t = Store.totals(kid.id, Store.monthOf(Store.today()));
+    const t = Store.totals(kid.id, Store.monthOf(hoje));
+    const caixa = Store.cash(kid.id);
+    const st = Store.dayStatus(kid.id, hoje);
+    const uso = Store.usageOf(kid.id, 7);
+    const estudo = Store.quizStats(kid.id, 30);
+    const pet = Store.petOf(kid.id);
+    const proximos = Store.upcomingEvents(kid.id).filter((e) => !e.done).slice(0, 3);
+    const ultimos = Store.historyOf(kid.id, 14).slice(0, 6);
+    const compras = Store.purchasesOf(kid.id).slice(0, 3);
+    const linha = (icone, texto, valor, grad) => `
+      <div class="mini-row">
+        <span class="em ${grad || 'g7'}" style="width:34px;height:34px;border-radius:12px;display:grid;place-items:center;color:#fff">
+          ${Icons.svg(icone)}
+        </span>
+        <span class="grow small bold" style="text-align:left">${texto}</span>
+        <span class="bold small">${valor}</span>
+      </div>`;
+
     UI.openSheet({
+      size: 'larga',
       title: kid.name,
-      subtitle: `@${kid.username}`,
+      subtitle: `@${kid.username} • ${pet.name} nível ${Pet.level(pet.xp)}`,
       body: `
-        <div class="stat-row">
-          <div class="stat"><div class="k">saldo</div><div class="v">${Store.money(bal)}</div></div>
-          <div class="stat"><div class="k">validado no mês</div><div class="v">${Store.money(t.approved)}</div></div>
-          <div class="stat"><div class="k">aguardando</div><div class="v">${t.pendingCount}</div></div>
+        <div class="pet-atualiza cartao-filho">
+          <div class="pet-atualiza-art">${Pet.svg(kid, 150, 'feliz', { room: true })}</div>
+          <div class="pet-atualiza-side">
+            <div class="stat-row" style="width:100%">
+              <div class="stat"><div class="k">a receber</div><div class="v">${Store.money(bal)}</div></div>
+              <div class="stat"><div class="k">na carteira</div><div class="v">${Store.money(caixa.left)}</div></div>
+              <div class="stat"><div class="k">aguardando</div><div class="v">${t.pendingCount}</div></div>
+            </div>
+            <div class="pet-atualiza-tags">
+              <span class="chip lime">${Store.duracao(Store.usageToday(kid.id))} no app hoje</span>
+              ${st.semFoto ? `<span class="chip warn">${st.semFoto} sem foto</span>` : ''}
+            </div>
+          </div>
         </div>
+
+        <section class="panel">
+          <header class="panel-head"><h3>${Icons.svg('check')} Tarefas de hoje</h3>
+            <span class="tiny muted">${st.filled} de ${st.required}</span>
+          </header>
+          <div class="bar" style="background:var(--surface-2)">
+            <i style="width:${st.required ? Math.min(100, (st.filled / st.required) * 100) : 0}%"></i>
+          </div>
+          <p class="tiny muted mt8">
+            ${st.required === 0 ? 'Nenhuma tarefa marcada como obrigatória todo dia.'
+              : st.complete ? 'Tudo o que era obrigatório já foi feito hoje.'
+              : `Faltam ${st.required - st.filled} tarefa(s) do dia${st.semFoto
+                ? `, e ${st.semFoto} marcada(s) ainda estão sem a foto obrigatória` : ''}.`}
+          </p>
+          <div class="panel-list mt12">
+            ${linha('coins', 'Validado no mês', Store.money(t.approved), 'g3')}
+            ${linha('clock', 'Aguardando validação', Store.money(t.pending), 'g2')}
+            ${linha('basket', 'Já gastou', Store.money(caixa.spent), 'g5')}
+          </div>
+        </section>
+
+        <section class="panel">
+          <header class="panel-head"><h3>${Icons.svg('chart')} Tempo e estudo</h3>
+            <span class="tiny muted">últimos 7 dias</span>
+          </header>
+          <div class="stat-row">
+            <div class="stat"><div class="k">no app</div><div class="v">${Store.duracao(uso.total)}</div></div>
+            <div class="stat"><div class="k">joguinhos</div><div class="v">${Store.duracao(uso.jogos)}</div></div>
+            <div class="stat"><div class="k">estudando</div><div class="v">${Store.duracao(uso.estudo)}</div></div>
+          </div>
+          <p class="tiny muted mt8">
+            ${estudo.quizzes
+              ? `${estudo.quizzes} quiz(zes) e prova(s) no mês, com ${Math.round(estudo.aproveitamento)}% de acerto.`
+              : 'Nenhum quiz ou prova feito no último mês.'}
+          </p>
+          <button class="btn btn-ghost btn-sm btn-block mt12" data-a="tempo">
+            ${Icons.svg('clock')} Ver o tempo de uso completo
+          </button>
+        </section>
+
+        ${proximos.length ? `
+          <section class="panel">
+            <header class="panel-head"><h3>${Icons.svg('calendar')} Próximos compromissos</h3></header>
+            <div class="panel-list">
+              ${proximos.map((e) => {
+                const k = Store.eventKind(e.kind);
+                return linha(k.icon, UI.esc(e.title), Store.labelDate(e.date), k.grad);
+              }).join('')}
+            </div>
+          </section>` : ''}
+
+        ${ultimos.length ? `
+          <section class="panel">
+            <header class="panel-head"><h3>${Icons.svg('star')} Últimos lançamentos</h3></header>
+            <div class="panel-list">
+              ${ultimos.map((e) => linha(e.icon || 'star', UI.esc(e.name),
+                `${e.kind === 'penalty' ? '-' : '+'}${Store.money(e.value).replace('R$ ', '')}`,
+                e.grad || 'g7')).join('')}
+            </div>
+          </section>` : ''}
+
+        ${compras.length ? `
+          <section class="panel">
+            <header class="panel-head"><h3>${Icons.svg('basket')} Últimos gastos</h3></header>
+            <div class="panel-list">
+              ${compras.map((c) => {
+                const k = Store.purchaseKind(c.kind);
+                return linha(k.icon, UI.esc(c.title), '-' + Store.money(c.value).replace('R$ ', ''), k.grad);
+              }).join('')}
+            </div>
+          </section>` : ''}
+
+        <div class="section-title"><h3>O que dá para fazer</h3></div>
         <div class="list">
           <button class="mini-row" data-a="pay">${Icons.svg('banknote')}<span class="grow bold small" style="text-align:left">Pagamentos e comprovantes</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-a="gastos">${Icons.svg('coins')}<span class="grow bold small" style="text-align:left">Gastos do filho(a)</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
@@ -589,6 +690,7 @@ const ParentScreen = (() => {
           if (a === 'photo') return App.openProfilePhoto(kid);
           if (a === 'history') return openHistory(kid);
           if (a === 'diary') return openDiary(kid);
+          if (a === 'tempo') return openTempo(kid);
           if (a === 'edit') return openChildForm(kid);
           if (a === 'del') {
             const ok = await UI.confirm({
@@ -812,60 +914,72 @@ const ParentScreen = (() => {
     });
   }
 
-  function openQuickAdd(user) {
-    UI.openSheet({
-      title: 'O que você quer fazer?',
-      body: `
-        <div class="list">
-          <button class="mini-row" data-q="child">${Icons.svg('users')}<span class="grow bold small" style="text-align:left">Cadastrar filho(a)</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
-          <button class="mini-row" data-q="cat">${Icons.svg('folder')}<span class="grow bold small" style="text-align:left">Criar categoria</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
-          <button class="mini-row" data-q="pay">${Icons.svg('banknote')}<span class="grow bold small" style="text-align:left">Registrar pagamento</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
-          <button class="mini-row" data-q="manual">${Icons.svg('coins')}<span class="grow bold small" style="text-align:left">Lançamento avulso (bônus ou desconto)</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
-          <button class="mini-row" data-q="approve">${Icons.svg('check')}<span class="grow bold small" style="text-align:left">Validar tudo que está pendente</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
-        </div>`,
-      onMount(sheet) {
-        sheet.querySelectorAll('[data-q]').forEach((b) => b.addEventListener('click', async () => {
-          const q = b.getAttribute('data-q');
-          UI.closeSheet();
-          if (q === 'child') return openChildForm(null);
-          if (q === 'cat') return openCatForm(null);
-          if (q === 'manual') {
-            const kids = Store.children();
-            if (!kids.length) return UI.toast('Cadastre um filho(a) primeiro', 'bad');
-            if (kids.length === 1) return openManualEntry(kids[0], user.id);
-            tab = 'filhos';
-            App.render();
-            return UI.toast('Escolha o filho(a) para o lançamento');
-          }
-          if (q === 'pay') {
-            const kids = Store.children();
-            if (!kids.length) return UI.toast('Cadastre um filho(a) primeiro', 'bad');
-            if (kids.length === 1) return openPayouts(kids[0]);
-            tab = 'filhos';
-            App.render();
-            return UI.toast('Escolha o filho(a) para registrar o pagamento');
-          }
-          if (q === 'approve') {
-            const ids = Store.pendingEntries().map((e) => e.id);
-            const diaryIds = Store.pendingDiary().map((d) => d.id);
-            const total = ids.length + diaryIds.length;
-            if (!total) return UI.toast('Não há nada pendente');
-            const ok = await UI.confirm({
-              title: `Validar ${total} ${total === 1 ? 'item' : 'itens'}?`,
-              text: 'Todos os lançamentos e registros pendentes serão aprovados de uma vez.',
-              okLabel: 'Validar tudo',
-            });
-            if (ok) {
-              Store.reviewMany(ids, 'approved', user.id);
-              diaryIds.forEach((id) => Store.reviewDiary(id, 'approved', '', user.id));
-              UI.toast('Tudo validado', 'ok');
-              App.render();
-            }
-          }
-        }));
+  /** a cor de cada gradiente, para pintar as bolinhas */
+  const COR = {
+    g1: '#a98cff', g2: '#ffa24b', g3: '#79e3b5', g4: '#3b4fe4',
+    g5: '#ff8fc8', g6: '#6fd3ff', g7: '#ffd84b', g8: '#d6f154',
+  };
+  const corDe = (grad) => COR[grad] || COR.g7;
+
+  /**
+   * Bolinhas em volta do botão de mais: as ações rápidas do responsável.
+   * "Nova ação" abre um segundo leque com as categorias, cada uma na sua cor,
+   * para ele criar a subcategoria já dentro dela e com valor.
+   */
+  function abrirBolinhas(user, ancora) {
+    const kids = Store.children();
+    const cats = Store.categories();
+    const pendentes = Store.pendingEntries().length + Store.pendingDiary().length;
+
+    const escolherFilho = (oQue, acao) => {
+      if (!kids.length) return UI.toast('Cadastre um filho(a) primeiro', 'bad');
+      if (kids.length === 1) return acao(kids[0]);
+      tab = 'filhos';
+      App.render();
+      UI.toast(`Escolha o filho(a) para ${oQue}`);
+    };
+
+    UI.openRadial(ancora, [
+      {
+        id: 'acao', label: 'Nova ação', icone: 'plus', cor: '#d6f154',
+        onClick() {
+          if (!cats.length) return openCatForm(null);
+          // segundo leque: uma bolinha por categoria, na cor dela
+          UI.openRadial(ancora, cats.slice(0, 8).map((c) => ({
+            id: c.id, label: c.name, icone: c.icon, cor: corDe(c.grad),
+            onClick: () => openItemForm(c.id, null),
+          })).concat([{
+            id: 'nova-cat', label: 'Nova categoria', icone: 'folder', cor: '#ffffff',
+            onClick: () => openCatForm(null),
+          }]));
+        },
       },
-    });
+      { id: 'cat', label: 'Categoria', icone: 'folder', cor: '#a98cff', onClick: () => openCatForm(null) },
+      { id: 'filho', label: 'Filho', icone: 'users', cor: '#6fd3ff', onClick: () => openChildForm(null) },
+      {
+        id: 'pagar', label: 'Pagar', icone: 'banknote', cor: '#79e3b5',
+        onClick: () => escolherFilho('registrar o pagamento', (k) => openPayouts(k)),
+      },
+      {
+        id: 'ajuste', label: 'Bônus', icone: 'coins', cor: '#ffa24b',
+        onClick: () => escolherFilho('o lançamento', (k) => openManualEntry(k, user.id)),
+      },
+      {
+        id: 'validar', label: pendentes ? `Validar ${pendentes}` : 'Validar', icone: 'check', cor: '#ff8fc8',
+        onClick() {
+          if (!pendentes) { tab = 'validar'; return App.render(); }
+          const ids = Store.pendingEntries().map((e) => e.id);
+          const diaryIds = Store.pendingDiary().map((d) => d.id);
+          Store.reviewMany(ids, 'approved', user.id);
+          diaryIds.forEach((id) => Store.reviewDiary(id, 'approved', '', user.id));
+          UI.toast(`${ids.length + diaryIds.length} item(ns) validado(s)`, 'ok');
+          Effects.burst('approved');
+          App.render();
+        },
+      },
+    ]);
   }
+
 
   function openMenu(user) {
     UI.openSheet({
@@ -992,7 +1106,8 @@ const ParentScreen = (() => {
       onMenu() { openMenu(user); },
       onFab() {
         if (tab === 'agenda') return Agenda.openForm(user, null, { date: Agenda.selectedDate() });
-        return openQuickAdd(user);
+        const botao = root.querySelector('[data-fab]');
+        return abrirBolinhas(user, botao);
       },
     });
     Agenda.bind(root, user, rerender);
