@@ -1230,7 +1230,7 @@ const ChildScreen = (() => {
       subtitle: l ? UI.esc(l.materia) : 'o que a professora passou',
       body: `
         <form id="licao-form">
-          ${UI.field('Matéria', UI.input('materia', { value: l ? l.materia : '', placeholder: 'Matemática' }))}
+          ${UI.field('Matéria', UI.listaPronta('materia', Store.materias(), l ? l.materia : '', 'outra matéria'))}
           ${UI.field('O que foi passado', `
             <textarea name="oque" rows="3" placeholder="Página 42, exercícios 1 a 8">${l ? UI.esc(l.oque) : ''}</textarea>`)}
           ${UI.field('Entregar em', UI.input('entrega', {
@@ -1241,6 +1241,7 @@ const ChildScreen = (() => {
         <button class="btn btn-ghost" data-cancel>Cancelar</button>
         <button class="btn btn-primary" data-save>${l ? 'Salvar' : 'Anotar'}</button>`,
       onMount(sheet) {
+        UI.bindListasProntas(sheet);
         sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
         sheet.querySelector('[data-save]').addEventListener('click', () => {
           const dados = UI.formData(sheet.querySelector('#licao-form'));
@@ -1303,14 +1304,14 @@ const ChildScreen = (() => {
       subtitle: 'a nota de uma prova ou trabalho',
       body: `
         <form id="nota-form">
-          ${UI.field('Matéria', UI.input('materia', { placeholder: 'Matemática' }))}
+          ${UI.field('Matéria', UI.listaPronta('materia', Store.materias(), '', 'outra matéria'))}
           <div class="dois-campos">
             ${UI.field(`Nota (0 a ${String(r.maxima).replace('.', ',')})`, UI.input('nota', {
               type: 'number', attrs: `min="0" max="${r.maxima}" step="0.1" inputmode="decimal"`,
             }))}
             ${UI.field('Data', UI.input('data', { type: 'date', value: Store.today() }))}
           </div>
-          ${UI.field('Qual avaliação (opcional)', UI.input('avaliacao', { placeholder: '2º bimestre, prova de frações' }))}
+          ${UI.field('Qual avaliação', UI.listaPronta('avaliacao', Store.AVALIACOES, '', 'outra'))}
           ${UI.photoField('Foto da prova ou do boletim', [], 4)}
         </form>
         <div class="note" data-previa>Escreva a nota para eu mostrar quanto vale.</div>`,
@@ -1319,6 +1320,7 @@ const ChildScreen = (() => {
         <button class="btn btn-primary" data-save>Registrar</button>`,
       onMount(sheet) {
         picker = UI.bindPhotos(sheet);
+        UI.bindListasProntas(sheet);
         const previa = sheet.querySelector('[data-previa]');
         const campo = sheet.querySelector('input[name=nota]');
         const atualizar = () => {

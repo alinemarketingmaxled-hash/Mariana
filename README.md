@@ -155,6 +155,11 @@ quantos filhos quiser, cada um com o próprio login e senha.
   Quando ele passa de fase o app abre uma tela mostrando **o antes e o depois lado a lado**, e
   na tela de atualizar tem a **linha do tempo das cinco fases**, com as que já passaram
   desenhadas e as que ainda vêm com cadeado.
+- **Materias ja prontas**: as nove materias da escola vem prontas nos dois formularios (nota e
+  licao) - e so tocar, ninguem digita "Matematica" toda vez. As avaliacoes tambem
+  (1o a 4o bimestre, prova, trabalho, recuperacao, simulado). A materia que faltar e escrita
+  uma vez e **entra sozinha na lista**, e o responsavel edita a lista em Menu -> Notas da escola,
+  porque cada escola tem as suas.
 - **Notas da escola**: o combinado e' da mae (Menu -> Notas da escola): a partir de tal nota ganha
   um extra, a partir de tal outra ganha menos, e abaixo do combinado **desconta**. A filha
   registra a nota com a materia, a avaliacao e a **foto da prova**; o app calcula o valor pela

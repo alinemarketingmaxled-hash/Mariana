@@ -1981,3 +1981,23 @@ details summary{cursor:pointer;padding:6px 0}
 .nota-row.faixa-otima{border-left:4px solid var(--lime)}
 .nota-row.faixa-boa{border-left:4px solid var(--accent)}
 .nota-row.faixa-ruim{border-left:4px solid var(--danger,#e5484d)}
+
+/* ---------- escolher de uma lista pronta ---------- */
+.pronta-chips{display:flex;flex-wrap:wrap;gap:6px}
+.pronta-chip{
+  padding:7px 12px;border-radius:99px;border:1px solid var(--line);
+  background:var(--surface-2);color:var(--ink);font-size:12px;font-weight:700;
+  cursor:pointer;transition:.15s var(--ease)
+}
+.pronta-chip:hover{border-color:var(--accent)}
+.pronta-chip[aria-pressed=true]{background:var(--lime);border-color:var(--lime);color:var(--panel)}
+.pronta-chip.outra{border-style:dashed}
+.pronta-livre{
+  width:100%;margin-top:8px;padding:11px 13px;border-radius:13px;
+  border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font-size:14px
+}
+.pronta-livre:focus{outline:none;border-color:var(--accent)}
+.materias-edit{display:flex;flex-wrap:wrap;gap:6px}
+.materias-edit .pronta-chip{display:inline-flex;align-items:center;gap:5px}
+.materias-edit .pronta-chip svg{width:12px;height:12px;opacity:.55}
+.materias-edit .pronta-chip:hover svg{opacity:1}

@@ -1517,6 +1517,19 @@ const ParentScreen = (() => {
           }))}
         </form>
 
+        <h4 class="mt16">As matérias da escola</h4>
+        <p class="tiny muted">Já vêm prontas para ela não digitar toda vez. Toque para tirar
+          da lista, ou acrescente a que faltar.</p>
+        <div class="materias-edit mt8" data-materias>
+          ${Store.materias().map((m) => `
+            <button type="button" class="pronta-chip" data-tirar="${UI.esc(m)}">
+              ${UI.esc(m)} ${Icons.svg('close', 'ico-sm')}</button>`).join('')}
+        </div>
+        <div class="row mt8" style="gap:8px">
+          <input class="pronta-livre grow" data-nova-materia type="text" placeholder="Acrescentar uma matéria">
+          <button type="button" class="btn btn-soft btn-sm" data-add-materia>${Icons.svg('plus')} Pôr</button>
+        </div>
+
         <div class="note" data-exemplo></div>
         <p class="tiny muted mt8">
           A nota registrada vira um lançamento igual aos outros: fica esperando a sua
@@ -1527,6 +1540,37 @@ const ParentScreen = (() => {
         <button class="btn btn-primary" data-ok>Salvar</button>`,
       onMount(sheet) {
         UI.bindSwitches(sheet);
+
+        // a lista de matérias é editada aqui mesmo, sem sair da folha
+        const caixa = sheet.querySelector('[data-materias]');
+        const campoNova = sheet.querySelector('[data-nova-materia]');
+        const desenhar = () => {
+          caixa.innerHTML = Store.materias().map((m) => `
+            <button type="button" class="pronta-chip" data-tirar="${UI.esc(m)}">
+              ${UI.esc(m)} ${Icons.svg('close', 'ico-sm')}</button>`).join('');
+          caixa.querySelectorAll('[data-tirar]').forEach((b2) => b2.addEventListener('click', () => {
+            const fora = b2.getAttribute('data-tirar');
+            const resta = Store.materias().filter((m) => m !== fora);
+            if (!resta.length) return UI.toast('Deixe ao menos uma matéria.', 'bad');
+            Store.setMaterias(resta);
+            desenhar();
+          }));
+        };
+        desenhar();
+        const acrescentar = () => {
+          const nome = campoNova.value.trim();
+          if (!nome) return;
+          Store.setMaterias(Store.materias().concat(nome));
+          campoNova.value = '';
+          desenhar();
+        };
+        sheet.querySelector('[data-add-materia]').addEventListener('click', acrescentar);
+        campoNova.addEventListener('keydown', (ev) => {
+          if (ev.key !== 'Enter') return;
+          ev.preventDefault();
+          acrescentar();
+        });
+
         const exemplo = sheet.querySelector('[data-exemplo]');
         const lido = () => {
           const d = UI.formData(sheet.querySelector('#notas-form'));

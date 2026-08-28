@@ -1913,6 +1913,50 @@ const Store = (() => {
     ruim: { valor: -8 },
   };
 
+  /* As matérias já vêm prontas, para ela não ter que digitar "Matemática"
+     toda vez. São as mesmas do banco de conteúdo da escola, então a
+     matéria da nota é a mesma matéria do quiz. A lista é editável: o
+     responsável tira o que a escola não tem e põe o que falta, e uma
+     matéria escrita na mão entra sozinha na lista. */
+  const MATERIAS_PADRAO = [
+    'Português', 'Matemática', 'Ciências', 'História', 'Geografia',
+    'Inglês', 'Redação', 'Artes', 'Educação Física',
+  ];
+
+  const materias = () => {
+    const guardadas = Array.isArray(state.materias) ? state.materias : null;
+    return (guardadas && guardadas.length ? guardadas : MATERIAS_PADRAO).slice();
+  };
+
+  /** guarda a lista, sem repetidas e sem vazias */
+  function setMaterias(lista) {
+    const limpa = [];
+    (lista || []).forEach((m) => {
+      const nome = String(m || '').trim();
+      if (!nome) return;
+      if (limpa.some((x) => x.toLowerCase() === nome.toLowerCase())) return;
+      limpa.push(nome);
+    });
+    state.materias = limpa.length ? limpa : MATERIAS_PADRAO.slice();
+    save();
+    return materias();
+  }
+
+  /** põe uma matéria nova no fim da lista, se ela ainda não estiver lá */
+  function lembrarMateria(nome) {
+    const limpo = String(nome || '').trim();
+    if (!limpo) return materias();
+    const atual = materias();
+    if (atual.some((x) => x.toLowerCase() === limpo.toLowerCase())) return atual;
+    return setMaterias(atual.concat(limpo));
+  }
+
+  /* As avaliações mais comuns, também prontas. */
+  const AVALIACOES = [
+    '1º bimestre', '2º bimestre', '3º bimestre', '4º bimestre',
+    'Prova', 'Trabalho', 'Recuperação', 'Simulado',
+  ];
+
   const regraNotas = () => {
     const r = Object.assign({}, NOTAS_PADRAO, state.notas || {});
     ['otima', 'boa', 'ok'].forEach((k) => { r[k] = Object.assign({}, NOTAS_PADRAO[k], r[k]); });
@@ -1994,6 +2038,7 @@ const Store = (() => {
     };
     state.entries.push(nova);
     if (conta.valor > 0) petAddXp(childId, 4);
+    lembrarMateria(materia);
     save();
     return { ok: true, entry: nova, valor: conta.valor, faixa: conta.faixa };
   }
@@ -2062,6 +2107,7 @@ const Store = (() => {
       entrega: d.entrega, criadaEm: today(),
       feitaEm: '', entryId: '',
     };
+    lembrarMateria(materia);
     licoes().push(nova);
     save();
     return { ok: true, licao: nova };
@@ -2240,6 +2286,7 @@ const Store = (() => {
     avisoOf, setAviso, avisoPronto, numeroLimpo,
     // notas da escola
     regraNotas, setRegraNotas, valorDaNota, registrarNota, notasOf, mediaNotas, FAIXA_LABEL,
+    materias, setMaterias, lembrarMateria, MATERIAS_PADRAO, AVALIACOES,
     // lição de casa
     regraLicao, setRegraLicao, saveLicao, removeLicao, entregarLicao, licoesOf,
     situacaoLicao, licaoStatus,

@@ -263,6 +263,56 @@ const UI = (() => {
     });
   }
 
+  /**
+   * Escolher de uma lista pronta, sem digitar. A última opção é "outra",
+   * que abre um campo para escrever o que não estiver na lista. O valor
+   * final fica sempre no input escondido, que é o que o formulário lê.
+   */
+  function listaPronta(name, opcoes, valor, rotuloOutra = 'outra') {
+    const naLista = opcoes.some((o) => o.toLowerCase() === String(valor || '').toLowerCase());
+    const escolhida = naLista ? valor : '';
+    return `
+      <div class="pronta" data-pronta="${esc(name)}">
+        <input type="hidden" name="${esc(name)}" value="${esc(valor || '')}">
+        <div class="pronta-chips">
+          ${opcoes.map((o) => `
+            <button type="button" class="pronta-chip" data-valor="${esc(o)}"
+                    aria-pressed="${o === escolhida}">${esc(o)}</button>`).join('')}
+          <button type="button" class="pronta-chip outra" data-outra
+                  aria-pressed="${valor && !naLista ? 'true' : 'false'}">${esc(rotuloOutra)}</button>
+        </div>
+        <input class="pronta-livre" data-livre type="text" placeholder="escreva aqui"
+               value="${naLista ? '' : esc(valor || '')}" ${valor && !naLista ? '' : 'hidden'}>
+      </div>`;
+  }
+
+  /** liga os botões da lista pronta ao campo escondido */
+  function bindListasProntas(scope) {
+    scope.querySelectorAll('[data-pronta]').forEach((caixa) => {
+      const alvo = caixa.querySelector('input[type=hidden]');
+      const livre = caixa.querySelector('[data-livre]');
+      const marcar = (botao) => caixa.querySelectorAll('.pronta-chip').forEach((b) =>
+        b.setAttribute('aria-pressed', String(b === botao)));
+
+      caixa.querySelectorAll('[data-valor]').forEach((b) => b.addEventListener('click', () => {
+        marcar(b);
+        alvo.value = b.getAttribute('data-valor');
+        livre.hidden = true;
+        livre.value = '';
+      }));
+
+      const botaoOutra = caixa.querySelector('[data-outra]');
+      if (botaoOutra) botaoOutra.addEventListener('click', () => {
+        marcar(botaoOutra);
+        livre.hidden = false;
+        alvo.value = livre.value.trim();
+        livre.focus();
+      });
+
+      livre.addEventListener('input', () => { alvo.value = livre.value.trim(); });
+    });
+  }
+
   const field = (label, inner) => `
     <div class="field"><label>${esc(label)}</label><div class="input-wrap">${inner}</div></div>`;
 
@@ -537,7 +587,7 @@ const UI = (() => {
     iconPicker, gradPicker, bindPickers, bindSwitches,
     photoField, bindPhotos, photoStrip, bindPhotoViewers, avatar, catVisual, entryVisual,
     shell, bindShell, panel, aoFechar, folhaAberta,
-    field, input, empty, statusChip, formData,
+    field, input, empty, statusChip, formData, listaPronta, bindListasProntas,
     GRADS,
   };
 })();
