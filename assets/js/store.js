@@ -1737,6 +1737,43 @@ const Store = (() => {
     };
   }
 
+  /* ---------- aviso para a mãe quando a filha manda para confirmar ----------
+     O app não tem servidor, então nada sai daqui sozinho para outro
+     celular. O que dá para fazer é o celular dela abrir o WhatsApp (ou o
+     SMS) com o recado já escrito, e ela tocar em enviar. O número de quem
+     confirma fica guardado aqui, posto uma vez pelo responsável. */
+  const AVISO_PADRAO = { on: true, canal: 'whatsapp', numero: '', nome: '' };
+
+  /** só os dígitos, já com o 55 do Brasil quando faltar */
+  function numeroLimpo(bruto) {
+    let d = String(bruto || '').replace(/\D/g, '');
+    if (!d) return '';
+    if (d.length === 10 || d.length === 11) d = '55' + d;  // veio sem o país
+    return d;
+  }
+
+  const avisoOf = () => Object.assign({}, AVISO_PADRAO, state.aviso || {});
+
+  /** guarda o aviso; só mexe no que vier */
+  function setAviso(dados) {
+    const atual = avisoOf();
+    const d = dados || {};
+    state.aviso = {
+      on: d.on === undefined ? atual.on : !!d.on,
+      canal: d.canal === 'sms' || d.canal === 'whatsapp' ? d.canal : atual.canal,
+      numero: d.numero === undefined ? atual.numero : numeroLimpo(d.numero),
+      nome: d.nome === undefined ? atual.nome : String(d.nome || '').trim(),
+    };
+    save();
+    return state.aviso;
+  }
+
+  /** o aviso está pronto para funcionar? */
+  const avisoPronto = () => {
+    const a = avisoOf();
+    return !!(a.on && a.numero && a.numero.length >= 12);
+  };
+
   /* ---------- lembrete diário no celular do filho ---------- */
   const LEMBRETE_PADRAO = { on: false, hora: '19:00', ultimo: '' };
 
@@ -1837,6 +1874,7 @@ const Store = (() => {
     allowanceOf, setAllowance, planoMesada, aplicarPlano, mesadaStatus, DIAS_MES,
     // lembrete diário
     reminderOf, setReminder,
+    avisoOf, setAviso, avisoPronto, numeroLimpo,
     // tema e regras
     setTheme, theme, setPhotoRequired, photoRequired, entryIsDaily, entryNeedsPhoto, missingPhotos,
     // registro de leitura

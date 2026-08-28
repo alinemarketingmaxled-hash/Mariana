@@ -197,6 +197,92 @@ const Notify = (() => {
     relogio = null;
   }
 
+  /* ---------- aviso para quem confirma ----------
+     Quando a filha toca em "Enviar para validação", duas coisas
+     acontecem: aparece um aviso aqui no aparelho (que resolve quando mãe
+     e filha usam o mesmo celular) e o WhatsApp abre com o recado já
+     escrito para ela mandar (que resolve quando são celulares
+     diferentes). Sem servidor não existe um terceiro caminho: nada sai
+     daqui sozinho para outro aparelho. */
+
+  /** o texto do recado, montado com o que foi mandado de verdade */
+  function recadoEnvio(child, date) {
+    const lista = Store.entriesOf(child.id, date).filter((e) => e.status === 'pending');
+    const st = Store.dayStatus(child.id, date);
+    const nome = String(child.name || '').split(' ')[0];
+    const dia = Store.labelDate(date).toLowerCase();
+    const quanto = Store.money(lista.reduce((t, e) => t + Store.signed(e), 0));
+
+    const itens = lista.map((e) => `\u2022 ${e.name}`).join('\n');
+    const leu = lista.some((e) => Store.entryIsReading(e));
+    const linhas = [
+      `${nome} mandou ${lista.length} ${lista.length === 1 ? 'tarefa' : 'tarefas'} para você confirmar (${dia}):`,
+      '',
+      itens,
+      '',
+      `Total: ${quanto}`,
+    ];
+    if (leu) linhas.push('Tem leitura com resumo e fotos das páginas.');
+    if (st.required && !st.complete) linhas.push(`Ainda faltam ${st.required - st.filled} tarefa(s) do dia.`);
+    linhas.push('', 'Abra o app para validar.');
+
+    return {
+      titulo: `${nome} mandou para você confirmar`,
+      curto: `${lista.length} ${lista.length === 1 ? 'tarefa' : 'tarefas'} esperando validação • ${quanto}`,
+      texto: linhas.join('\n'),
+      quantos: lista.length,
+    };
+  }
+
+  /** o endereço que abre o WhatsApp (ou o SMS) com o recado pronto */
+  function linkAviso(texto) {
+    const a = Store.avisoOf();
+    if (!a.numero) return '';
+    if (a.canal === 'sms') return `sms:+${a.numero}?&body=${encodeURIComponent(texto)}`;
+    return `https://wa.me/${a.numero}?text=${encodeURIComponent(texto)}`;
+  }
+
+  /** mostra o aviso aqui no aparelho (serve quando é o mesmo celular) */
+  async function avisoLocal(r) {
+    if (!suportada() || Notification.permission !== 'granted') return false;
+    const opcoes = {
+      body: r.curto,
+      icon: 'assets/icon.svg',
+      badge: 'assets/icon.svg',
+      tag: 'mesada-validar',
+      renotify: true,
+      lang: 'pt-BR',
+      data: { url: './' },
+    };
+    try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.showNotification(r.titulo, opcoes);
+        return true;
+      }
+      // eslint-disable-next-line no-new
+      new Notification(r.titulo, opcoes);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /**
+   * Avisa quem confirma. Devolve o recado e o link, para a tela decidir
+   * o que fazer (o link precisa ser aberto no próprio toque da filha,
+   * senão o navegador bloqueia).
+   */
+  function avisarResponsavel(child, date) {
+    const r = recadoEnvio(child, date);
+    if (!r.quantos) return { ok: false, motivo: 'vazio', recado: r };
+    avisoLocal(r);
+    const a = Store.avisoOf();
+    if (!a.on) return { ok: false, motivo: 'desligado', recado: r };
+    if (!Store.avisoPronto()) return { ok: false, motivo: 'sem-numero', recado: r };
+    return { ok: true, recado: r, link: linkAviso(r.texto), canal: a.canal };
+  }
+
   /* ---------- lembrete no calendário do celular ---------- */
   /** escapa o que o formato do calendário não aceita solto */
   const ics = (t) => String(t || '').replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n');
@@ -254,5 +340,6 @@ const Notify = (() => {
   return {
     suportada, permissao, pedir, ligar, desligar, checar, agendar, parar,
     mostrar, recado, sozinho, pedirSyncPeriodico, calendario, baixarCalendario,
+    recadoEnvio, linkAviso, avisarResponsavel,
   };
 })();

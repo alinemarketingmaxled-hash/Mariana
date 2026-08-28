@@ -155,6 +155,15 @@ quantos filhos quiser, cada um com o próprio login e senha.
   Quando ele passa de fase o app abre uma tela mostrando **o antes e o depois lado a lado**, e
   na tela de atualizar tem a **linha do tempo das cinco fases**, com as que já passaram
   desenhadas e as que ainda vêm com cadeado.
+- **Aviso para quem confirma**: quando ela toca em **Enviar para validação**, o recado sai na
+  hora para o celular do responsável, com a lista do que foi mandado, o total e se tem leitura.
+  O responsável põe o número dele uma vez em **Menu → Avisar quando ela enviar**, e escolhe se
+  quer por **WhatsApp** ou por **SMS**.
+
+  > O app não tem servidor, então nada sai daqui sozinho para outro aparelho. O que acontece é
+  > que o celular **dela** abre o WhatsApp com o recado já escrito e ela toca em enviar — chega
+  > no celular da mãe como qualquer mensagem. Se as duas usam o **mesmo aparelho**, o aviso
+  > aparece sozinho na tela, sem precisar de WhatsApp nenhum.
 - **Bichinho**: o mesmo personagem também aparece no cartão da tela inicial e tem **dezoito
   sentimentos**, todos ligados ao que está acontecendo de verdade, nunca a um contador escondido:
   fica **orgulhoso** quando o dia fecha completo e com leitura, **em festa** quando fecha o dia,

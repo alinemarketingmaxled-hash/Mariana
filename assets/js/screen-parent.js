@@ -6,6 +6,25 @@ const ParentScreen = (() => {
   let childFilter = 'all';
   let relTab = 'dinheiro';   // dentro do relatório: dinheiro ou tempo de uso
 
+  /**
+   * O empurrãozinho para ligar o aviso. Fica na aba de validar, que é
+   * onde ela vem quando quer saber o que a filha mandou, e some sozinho
+   * assim que o número estiver posto.
+   */
+  function avisoNudge() {
+    if (Store.avisoPronto()) return '';
+    const a = Store.avisoOf();
+    return `
+      <button class="card aviso-nudge mt16" data-ligar-aviso>
+        <span class="aviso-nudge-ico">${Icons.svg('bell')}</span>
+        <span class="grow">
+          <span class="small bold block">${a.on ? 'Receba um aviso quando ela enviar' : 'O aviso está desligado'}</span>
+          <span class="tiny muted block">Assim você não precisa ficar abrindo o app para ver se chegou algo.</span>
+        </span>
+        ${Icons.svg('chevron', 'ico-sm dim')}
+      </button>`;
+  }
+
   /* ---------- aba: validar ---------- */
   function validarView() {
     const kids = Store.children();
@@ -33,6 +52,8 @@ const ParentScreen = (() => {
           <div class="hero-stat"><div class="k">filhos ativos</div><div class="v">${kids.length}</div></div>
         </div>
       </section>
+
+      ${avisoNudge()}
 
       ${kids.length > 1 ? `
         <div class="seg-mini mt16" role="group" aria-label="Filtrar por filho">
@@ -1294,12 +1315,117 @@ const ParentScreen = (() => {
   }
 
 
+  /**
+   * O aviso que chega no celular de quem confirma quando a filha manda as
+   * tarefas. Sem servidor nada sai daqui sozinho, então o que o app faz é
+   * abrir o WhatsApp no celular dela com o recado já escrito. Aqui a mãe
+   * diz para qual número.
+   */
+  function openAviso(user) {
+    const a = Store.avisoOf();
+    const kids = Store.children();
+    // o exemplo mostra o recado de verdade quando há algo esperando hoje;
+    // senão mostra um de mentirinha, para ela ver o formato
+    const real = kids.length ? Notify.recadoEnvio(kids[0], Store.today()) : null;
+    const primeiro = kids.length ? String(kids[0].name).split(' ')[0] : 'Mariana';
+    const exemplo = real && real.quantos ? real : {
+      texto: [
+        `${primeiro} mandou 3 tarefas para você confirmar (hoje):`, '',
+        '\u2022 Ler 20 minutos', '\u2022 Arrumar a cama', '\u2022 Terminar um capítulo', '',
+        'Total: R$ 12,50',
+        'Tem leitura com resumo e fotos das páginas.', '',
+        'Abra o app para validar.',
+      ].join('\n'),
+    };
+
+    UI.openSheet({
+      title: 'Avisar quando ela enviar',
+      subtitle: 'o recado chega no seu celular',
+      size: 'larga',
+      body: `
+        <form id="aviso-form">
+          <div class="mini-row">
+            <div class="grow">
+              <div class="small bold">Ligar o aviso</div>
+              <div class="tiny muted">quando ela toca em "Enviar para validação"</div>
+            </div>
+            <button type="button" class="switch" data-switch="on"
+                    aria-pressed="${!!a.on}" aria-label="Ligar o aviso"></button>
+          </div>
+
+          <div class="seg-mini mt12" role="group" aria-label="Por onde chega o recado">
+            <button type="button" data-canal="whatsapp" aria-pressed="${a.canal !== 'sms'}">WhatsApp</button>
+            <button type="button" data-canal="sms" aria-pressed="${a.canal === 'sms'}">Mensagem (SMS)</button>
+          </div>
+
+          ${UI.field('Seu número, com DDD', UI.input('numero', {
+            type: 'tel', value: a.numero ? a.numero.replace(/^55/, '') : '',
+            placeholder: '11 91234-5678',
+            attrs: 'inputmode="tel" autocomplete="tel"',
+          }))}
+        </form>
+
+        <div class="note">
+          <b>Como funciona, sem enrolação:</b> o app não tem servidor, então
+          nada sai daqui sozinho para outro celular. O que acontece é que o
+          celular <b>dela</b> abre o WhatsApp com o recado já escrito e ela
+          toca em enviar. Chega no seu celular como qualquer mensagem dela.
+        </div>
+        <p class="tiny muted mt8">
+          Se vocês usam o <b>mesmo aparelho</b>, o aviso também aparece
+          sozinho na tela, sem precisar de WhatsApp nenhum.
+        </p>
+
+        <div class="note mt12" style="white-space:pre-wrap">${UI.esc(exemplo.texto)}</div>
+        <p class="tiny muted mt8 center">é mais ou menos assim que o recado chega</p>`,
+      actions: `
+        <button class="btn btn-ghost" data-testar>Testar agora</button>
+        <button class="btn btn-primary" data-ok>Salvar</button>`,
+      onMount(sheet) {
+        UI.bindSwitches(sheet);
+        let canal = a.canal === 'sms' ? 'sms' : 'whatsapp';
+        sheet.querySelectorAll('[data-canal]').forEach((b2) => b2.addEventListener('click', () => {
+          canal = b2.getAttribute('data-canal');
+          sheet.querySelectorAll('[data-canal]').forEach((o) =>
+            o.setAttribute('aria-pressed', String(o === b2)));
+        }));
+
+        const lido = () => {
+          const dados = UI.formData(sheet.querySelector('#aviso-form'));
+          return { on: dados.on, canal, numero: dados.numero };
+        };
+
+        sheet.querySelector('[data-testar]').addEventListener('click', () => {
+          const d = lido();
+          const limpo = Store.numeroLimpo(d.numero);
+          if (!limpo || limpo.length < 12) return UI.toast('Escreva o número com o DDD primeiro.', 'bad');
+          Store.setAviso(d);
+          const texto = `Teste do app Minha Mesada: é assim que o aviso vai chegar quando ${
+            kids.length ? String(kids[0].name).split(' ')[0] : 'ela'} mandar as tarefas para você confirmar.`;
+          window.open(Notify.linkAviso(texto), '_blank', 'noopener');
+        });
+
+        sheet.querySelector('[data-ok]').addEventListener('click', () => {
+          const d = lido();
+          const limpo = Store.numeroLimpo(d.numero);
+          if (d.on && (!limpo || limpo.length < 12))
+            return UI.toast('Para ligar o aviso, escreva o número com o DDD.', 'bad');
+          Store.setAviso(d);
+          UI.closeSheet();
+          UI.toast(d.on ? 'Aviso ligado' : 'Aviso desligado', 'ok');
+          App.render();
+        });
+      },
+    });
+  }
+
   function openMenu(user) {
     UI.openSheet({
       title: 'Menu',
       subtitle: user.name,
       body: `
         <div class="list">
+          <button class="mini-row" data-m="aviso">${Icons.svg('bell')}<span class="grow bold small" style="text-align:left">Avisar quando ela enviar</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="theme">${Icons.svg(Store.theme() === 'dark' ? 'sun' : 'moon')}<span class="grow bold small" style="text-align:left">Trocar tema</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="photo">${Icons.svg('camera')}<span class="grow bold small" style="text-align:left">Minha foto de perfil</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="pass">${Icons.svg('lock')}<span class="grow bold small" style="text-align:left">Trocar minha senha</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
@@ -1314,6 +1440,7 @@ const ParentScreen = (() => {
           if (m === 'theme') { App.toggleTheme(); return App.render(); }
           if (m === 'pass') return App.openChangePassword(user);
           if (m === 'photo') return App.openProfilePhoto(user);
+          if (m === 'aviso') return openAviso(user);
           if (m === 'reset') {
             const ok = await UI.confirm({
               title: 'Restaurar dados de exemplo?',
@@ -1433,6 +1560,9 @@ const ParentScreen = (() => {
     }));
     root.querySelectorAll('[data-kid-filter]').forEach((b) => b.addEventListener('click', () => {
       childFilter = b.getAttribute('data-kid-filter'); rerender();
+    }));
+    root.querySelectorAll('[data-ligar-aviso]').forEach((b) => b.addEventListener('click', () => {
+      openAviso(user);
     }));
     root.querySelectorAll('[data-approve]').forEach((b) => b.addEventListener('click', () => {
       Store.review(b.getAttribute('data-approve'), 'approved', '', user.id);

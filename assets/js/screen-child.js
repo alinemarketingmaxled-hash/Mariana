@@ -1016,10 +1016,26 @@ const ChildScreen = (() => {
           openNote(b.getAttribute('data-note'));
         }));
         sheet.querySelector('[data-ok]').addEventListener('click', () => {
+          if (!list.length) {
+            UI.closeSheet();
+            return UI.toast('Marque alguma tarefa primeiro.');
+          }
+          const aviso = Notify.avisarResponsavel(user, date);
           UI.closeSheet();
-          UI.toast(list.length ? 'Enviado. O responsável já pode validar.' : 'Marque alguma tarefa primeiro.',
-            list.length ? 'ok' : '');
-          if (list.length) Effects.burst(st.complete ? 'goal' : 'task');
+          Effects.burst(st.complete ? 'goal' : 'task');
+          // o link tem que abrir no próprio toque dela, senão o navegador
+          // entende como janela indesejada e bloqueia
+          if (aviso.ok) {
+            window.open(aviso.link, '_blank', 'noopener');
+            UI.toast('Enviado. O aviso já foi para quem confirma.', 'ok');
+            return;
+          }
+          if (aviso.motivo === 'sem-numero') {
+            // ela não pode resolver isso: avisa sem transformar em sermão
+            UI.toast('Enviado! Peça para ligarem o aviso no app do responsável.', 'ok');
+            return;
+          }
+          UI.toast('Enviado. O responsável já pode validar.', 'ok');
         });
       },
     });
