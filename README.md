@@ -155,6 +155,11 @@ quantos filhos quiser, cada um com o próprio login e senha.
   Quando ele passa de fase o app abre uma tela mostrando **o antes e o depois lado a lado**, e
   na tela de atualizar tem a **linha do tempo das cinco fases**, com as que já passaram
   desenhadas e as que ainda vêm com cadeado.
+- **Levar meus dados** (Menu do responsável): o app guarda tudo **no navegador**, e o navegador
+  separa por **endereço**. Se o endereço do app mudar, ele abre zerado — **nada foi apagado**,
+  ficou no endereço antigo. Esta tela tira uma cópia completa de um lado (personalização,
+  categorias, tarefas, lançamentos e **as fotos**) e põe do outro, por **arquivo** ou por
+  **copiar e colar**. Antes de trocar, ela mostra o que veio e pergunta.
 - **A ponte entre os dois celulares**: o app guarda tudo no proprio aparelho, sem servidor. Se a
   filha usa o celular dela e a mae o dela, sao **duas copias separadas** do mesmo app: o que ela
   marca nao existe no celular da mae. E como a tarefa so entra na conta **depois de validada**,

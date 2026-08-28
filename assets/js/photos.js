@@ -151,5 +151,52 @@ const Photos = (() => {
     });
   }
 
-  return { save, get, remove, removeMany, fromFile, hydrate, view, MAX_PER_RECORD };
+  /* ---------- mudar de aparelho ou de endereço ----------
+     As fotos ficam no armazenamento do navegador, que é separado por
+     endereço. Para levar tudo junto elas precisam sair daqui e entrar lá
+     do outro lado, com o mesmo id: é pelo id que cada lançamento acha a
+     foto dele. */
+
+  /** todas as fotos guardadas, no formato { id: imagem } */
+  async function exportarTodas() {
+    const saida = {};
+    memory.forEach((valor, id) => { saida[id] = valor; });
+    try {
+      const conn = await db();
+      if (conn) {
+        await new Promise((resolve, reject) => {
+          const t = conn.transaction(STORE, 'readonly');
+          const store = t.objectStore(STORE);
+          const req = store.openCursor();
+          req.onsuccess = () => {
+            const cursor = req.result;
+            if (!cursor) return resolve();
+            saida[cursor.key] = cursor.value;
+            cursor.continue();
+          };
+          req.onerror = () => reject(req.error);
+        });
+      }
+    } catch (err) {
+      console.warn('Fotos: não consegui ler todas para exportar.', err);
+    }
+    return saida;
+  }
+
+  /** guarda de volta as fotos que vieram de outro aparelho, com os ids de lá */
+  async function importarTodas(mapa) {
+    const ids = Object.keys(mapa || {});
+    ids.forEach((id) => memory.set(id, mapa[id]));
+    try {
+      await tx('readwrite', (store) => { ids.forEach((id) => store.put(mapa[id], id)); });
+    } catch (err) {
+      console.warn('Fotos: não consegui gravar as que vieram.', err);
+    }
+    return ids.length;
+  }
+
+  return {
+    save, get, remove, removeMany, fromFile, hydrate, view, MAX_PER_RECORD,
+    exportarTodas, importarTodas,
+  };
 })();

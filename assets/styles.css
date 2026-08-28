@@ -1958,3 +1958,14 @@ details summary{cursor:pointer;padding:6px 0}
 .resposta-volta{border:1px solid var(--accent)}
 .resposta-volta .chip{background:var(--accent-soft);color:var(--accent)}
 .resposta-volta .chip svg{width:14px;height:14px}
+
+/* ---------- levar os dados para outro endereço ---------- */
+.sheet-body textarea[data-colar],
+.sheet-body input[type=file][data-arquivo]{
+  width:100%;display:block;padding:12px 14px;border-radius:14px;
+  border:1px dashed var(--line);background:var(--surface-2);color:var(--ink);
+  font-size:13px
+}
+.sheet-body textarea[data-colar]{resize:vertical;min-height:70px;font-family:ui-monospace,monospace}
+.sheet-body textarea[data-colar]:focus,
+.sheet-body input[type=file][data-arquivo]:focus{outline:none;border-color:var(--accent)}

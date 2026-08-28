@@ -231,6 +231,37 @@ const Store = (() => {
 
   const get = () => state;
 
+  /** põe no lugar tudo que veio de uma cópia de segurança */
+  function substituirTudo(novo) {
+    if (!novo || !Array.isArray(novo.users) || !novo.users.length)
+      return { ok: false, error: 'Essa cópia não tem gente dentro. Confira o arquivo.' };
+    state = novo.version === 2 ? novo : migrate(novo);
+    if (!Array.isArray(state.diary)) state.diary = [];
+    if (!Array.isArray(state.events)) state.events = [];
+    if (!Array.isArray(state.purchases)) state.purchases = [];
+    if (!Array.isArray(state.decks)) state.decks = [];
+    if (!Array.isArray(state.usage)) state.usage = [];
+    if (!Array.isArray(state.quizLog)) state.quizLog = [];
+    if (!Array.isArray(state.daily)) state.daily = [];
+    ajustarPlano(state);
+    save();
+    return { ok: true };
+  }
+
+  /** um retrato do que existe agora, para mostrar antes de trocar */
+  const retrato = (st) => {
+    const alvo = st || state;
+    const filhos = (alvo.users || []).filter((u) => u.role === 'child');
+    return {
+      filhos: filhos.length,
+      nomes: filhos.map((u) => u.name),
+      categorias: (alvo.categories || []).length,
+      tarefas: (alvo.categories || []).reduce((t, c) => t + ((c.items || []).length), 0),
+      lancamentos: (alvo.entries || []).length,
+      fotos: (alvo.entries || []).reduce((t, e) => t + ((e.photos || []).length), 0),
+    };
+  };
+
   function resetAll() {
     state = seed();
     save();
@@ -1963,6 +1994,7 @@ const Store = (() => {
     reminderOf, setReminder,
     avisoOf, setAviso, avisoPronto, numeroLimpo,
     acharOuCriarFilho, receberLancamento, receberDecisao, aguardandoResposta, marcarRespondido,
+    substituirTudo, retrato,
     // tema e regras
     setTheme, theme, setPhotoRequired, photoRequired, entryIsDaily, entryNeedsPhoto, missingPhotos,
     // registro de leitura

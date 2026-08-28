@@ -1462,12 +1462,169 @@ const ParentScreen = (() => {
     });
   }
 
+  /**
+   * Levar tudo para outro endereço ou outro aparelho.
+   *
+   * O app guarda os dados no navegador, e o navegador separa por
+   * endereço: mudou o endereço, é como se fosse outro aparelho, com o
+   * app zerado. Nada se perdeu, mas ficou lá. Isto tira uma cópia de um
+   * lado e põe do outro, com as fotos junto.
+   */
+  function openMudanca(user) {
+    const agora = Store.retrato();
+    UI.openSheet({
+      title: 'Levar meus dados',
+      subtitle: 'para outro endereço ou outro celular',
+      size: 'larga',
+      body: `
+        <div class="note">
+          O app guarda tudo <b>no navegador</b>, e o navegador separa por endereço.
+          Se o endereço mudar, o app abre zerado — <b>nada foi apagado</b>, ficou no
+          endereço antigo. Aqui você tira uma cópia de lá e põe aqui.
+        </div>
+
+        <div class="stat-row mt12">
+          <div class="stat"><div class="k">aqui tem</div><div class="v">${agora.tarefas}</div><div class="k">tarefas</div></div>
+          <div class="stat"><div class="k">lançamentos</div><div class="v">${agora.lancamentos}</div></div>
+          <div class="stat"><div class="k">fotos</div><div class="v">${agora.fotos}</div></div>
+        </div>
+
+        <h4 class="mt16">1. No endereço antigo: copiar</h4>
+        <p class="tiny muted">Abra o app no endereço onde estão os dados, venha nesta tela e toque num dos dois.</p>
+        <div class="row mt8" style="gap:8px">
+          <button class="btn btn-ghost grow" data-baixar>${Icons.svg('download')} Baixar arquivo</button>
+          <button class="btn btn-ghost grow" data-copiar>${Icons.svg('copy')} Copiar texto</button>
+        </div>
+
+        <h4 class="mt16">2. No endereço novo: colar</h4>
+        <p class="tiny muted">Aqui mesmo, escolha o arquivo que baixou ou cole o texto que copiou.</p>
+        <input type="file" accept="application/json,.json,.txt" data-arquivo class="mt8">
+        <textarea data-colar rows="4" class="mt8" placeholder="ou cole aqui o texto copiado"></textarea>
+
+        <div class="note aviso mt12">
+          Ao colar, <b>tudo que estiver neste endereço é substituído</b> pelo que veio.
+          Eu mostro o que chegou e pergunto antes.
+        </div>`,
+      actions: '<button class="btn btn-primary btn-block" data-ok>Fechar</button>',
+      onMount(sheet) {
+        sheet.querySelector('[data-ok]').addEventListener('click', UI.closeSheet);
+
+        const montarCopia = async () => {
+          const fotos = await Photos.exportarTodas();
+          return JSON.stringify({
+            appMesada: 1,
+            quando: new Date().toISOString(),
+            estado: Store.get(),
+            fotos,
+          });
+        };
+
+        sheet.querySelector('[data-baixar]').addEventListener('click', async () => {
+          UI.toast('Preparando a cópia...');
+          const txt = await montarCopia();
+          const blob = new Blob([txt], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `minha-mesada-${Store.today()}.json`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 4000);
+          UI.toast('Arquivo salvo', 'ok');
+        });
+
+        sheet.querySelector('[data-copiar]').addEventListener('click', async () => {
+          UI.toast('Preparando a cópia...');
+          const txt = await montarCopia();
+          try {
+            await navigator.clipboard.writeText(txt);
+            UI.toast('Copiado! Agora abra o endereço novo e cole.', 'ok');
+          } catch (e) {
+            // sem permissão de área de transferência: mostra para copiar na mão
+            const campo = sheet.querySelector('[data-colar]');
+            campo.value = txt;
+            campo.focus();
+            campo.select();
+            UI.toast('Copie o texto que apareceu no campo abaixo.');
+          }
+        });
+
+        const receber = (txt) => {
+          let pacote = null;
+          try {
+            pacote = JSON.parse(txt);
+          } catch (e) {
+            return UI.toast('Não consegui ler isso. Confira se copiou inteiro.', 'bad');
+          }
+          if (!pacote || !pacote.estado) return UI.toast('Isso não é uma cópia do app.', 'bad');
+          confirmarTroca(pacote);
+        };
+
+        sheet.querySelector('[data-arquivo]').addEventListener('change', (ev) => {
+          const f = ev.target.files && ev.target.files[0];
+          if (!f) return;
+          const leitor = new FileReader();
+          leitor.onload = () => receber(String(leitor.result || ''));
+          leitor.onerror = () => UI.toast('Não consegui abrir o arquivo.', 'bad');
+          leitor.readAsText(f);
+        });
+
+        sheet.querySelector('[data-colar]').addEventListener('paste', () => {
+          setTimeout(() => {
+            const v = sheet.querySelector('[data-colar]').value.trim();
+            if (v.length > 40) receber(v);
+          }, 60);
+        });
+      },
+    });
+  }
+
+  /** mostra o que veio e só troca depois do sim */
+  function confirmarTroca(pacote) {
+    const veio = Store.retrato(pacote.estado);
+    const fotos = Object.keys(pacote.fotos || {}).length;
+    UI.openSheet({
+      title: 'Encontrei esta cópia',
+      subtitle: pacote.quando ? Store.labelDate(String(pacote.quando).slice(0, 10)) : '',
+      body: `
+        <div class="stat-row">
+          <div class="stat"><div class="k">tarefas</div><div class="v">${veio.tarefas}</div></div>
+          <div class="stat"><div class="k">lançamentos</div><div class="v">${veio.lancamentos}</div></div>
+          <div class="stat"><div class="k">fotos</div><div class="v">${fotos}</div></div>
+        </div>
+        <div class="note">${veio.nomes.length
+          ? `Filho(a): <b>${veio.nomes.map((n) => UI.esc(n)).join(', ')}</b>. ${veio.categorias} categoria(s).`
+          : 'Sem filhos nesta cópia.'}</div>
+        <div class="note aviso mt8">
+          Tudo que está neste endereço agora vai ser <b>substituído</b> por isto.
+        </div>`,
+      actions: `
+        <button class="btn btn-ghost" data-cancel>Cancelar</button>
+        <button class="btn btn-primary" data-ok>Trazer para cá</button>`,
+      onMount(sheet) {
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-ok]').addEventListener('click', async () => {
+          const res = Store.substituirTudo(pacote.estado);
+          if (!res.ok) return UI.toast(res.error, 'bad');
+          if (pacote.fotos) await Photos.importarTodas(pacote.fotos);
+          UI.closeSheet();
+          Effects.burst('goal');
+          UI.toast('Pronto: seus dados voltaram.', 'ok');
+          // o app inteiro mudou de baixo: recomeça do zero na tela
+          setTimeout(() => window.location.reload(), 700);
+        });
+      },
+    });
+  }
+
   function openMenu(user) {
     UI.openSheet({
       title: 'Menu',
       subtitle: user.name,
       body: `
         <div class="list">
+          <button class="mini-row" data-m="mudanca">${Icons.svg('download')}<span class="grow bold small" style="text-align:left">Levar meus dados</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="aviso">${Icons.svg('bell')}<span class="grow bold small" style="text-align:left">Avisar quando ela enviar</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="theme">${Icons.svg(Store.theme() === 'dark' ? 'sun' : 'moon')}<span class="grow bold small" style="text-align:left">Trocar tema</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="photo">${Icons.svg('camera')}<span class="grow bold small" style="text-align:left">Minha foto de perfil</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
@@ -1484,6 +1641,7 @@ const ParentScreen = (() => {
           if (m === 'pass') return App.openChangePassword(user);
           if (m === 'photo') return App.openProfilePhoto(user);
           if (m === 'aviso') return openAviso(user);
+          if (m === 'mudanca') return openMudanca(user);
           if (m === 'reset') {
             const ok = await UI.confirm({
               title: 'Restaurar dados de exemplo?',
