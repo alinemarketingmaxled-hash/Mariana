@@ -7,6 +7,47 @@ const ParentScreen = (() => {
   let relTab = 'dinheiro';   // dentro do relatório: dinheiro ou tempo de uso
 
   /**
+   * A resposta que ainda não voltou. Quando o envio chegou por link (os
+   * dois celulares tem cada um os seus dados), validar aqui não muda
+   * nada no celular dela: a decisão precisa fazer o caminho de volta.
+   */
+  function respostaCard() {
+    const pendentes = Store.aguardandoResposta();
+    if (!pendentes.length) return '';
+    // uma linha por filha e por dia, que é como o pacote viaja
+    const grupos = {};
+    pendentes.forEach((e) => {
+      const k = e.childId + '|' + e.date;
+      (grupos[k] = grupos[k] || []).push(e);
+    });
+    return Object.keys(grupos).sort().reverse().map((k) => {
+      const [childId, d] = k.split('|');
+      const kid = Store.userById(childId);
+      if (!kid) return '';
+      const n = grupos[k].length;
+      const ok = grupos[k].filter((e) => e.status === 'approved').length;
+      return `
+        <div class="card resposta-volta mt16">
+          <div class="between">
+            <div>
+              <div class="small bold">Falta devolver para ${UI.esc(kid.name.split(' ')[0])}</div>
+              <div class="tiny muted">${Store.labelDate(d)} • ${n} decidida(s), ${ok} validada(s)</div>
+            </div>
+            <span class="chip">${Icons.svg('arrow')}</span>
+          </div>
+          <p class="tiny muted mt8">
+            O envio dela veio de outro celular. Enquanto a resposta não voltar,
+            no app dela as tarefas continuam esperando e não entram na conta.
+          </p>
+          <button class="btn btn-primary btn-block mt12"
+                  data-devolver="${childId}" data-dia="${d}">
+            Mandar a resposta ${Icons.svg('arrow')}
+          </button>
+        </div>`;
+    }).join('');
+  }
+
+  /**
    * O empurrãozinho para ligar o aviso. Fica na aba de validar, que é
    * onde ela vem quando quer saber o que a filha mandou, e some sozinho
    * assim que o número estiver posto.
@@ -52,6 +93,8 @@ const ParentScreen = (() => {
           <div class="hero-stat"><div class="k">filhos ativos</div><div class="v">${kids.length}</div></div>
         </div>
       </section>
+
+      ${respostaCard()}
 
       ${avisoNudge()}
 
@@ -1563,6 +1606,32 @@ const ParentScreen = (() => {
     }));
     root.querySelectorAll('[data-ligar-aviso]').forEach((b) => b.addEventListener('click', () => {
       openAviso(user);
+    }));
+    root.querySelectorAll('[data-devolver]').forEach((b) => b.addEventListener('click', () => {
+      const kid = Store.userById(b.getAttribute('data-devolver'));
+      const dia = b.getAttribute('data-dia');
+      if (!kid) return;
+      const pacote = Sync.pacoteResposta(kid, dia);
+      const endereco = Sync.link(pacote);
+      if (!endereco) return UI.toast('Não há nada para devolver.', 'bad');
+      const nome = kid.name.split(' ')[0];
+      const ok = (pacote.e || []).filter((l) => l.q).length;
+      const texto = [
+        `${nome}, vi o que você mandou de ${Store.labelDate(dia).toLowerCase()}.`,
+        ok === (pacote.e || []).length
+          ? `Validei todas as ${ok}!`
+          : `Validei ${ok} de ${(pacote.e || []).length}.`,
+        '',
+        'Toque aqui para receber no seu app:',
+        endereco,
+      ].join('\n');
+      // sem número: abre o WhatsApp e ela escolhe a conversa da filha.
+      // o número guardado é o de quem confirma, não o dela.
+      // e o link precisa abrir dentro do toque, senão o navegador bloqueia
+      window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
+      Store.marcarRespondido(kid.id, dia);
+      UI.toast('Resposta a caminho', 'ok');
+      App.render();
     }));
     root.querySelectorAll('[data-approve]').forEach((b) => b.addEventListener('click', () => {
       Store.review(b.getAttribute('data-approve'), 'approved', '', user.id);

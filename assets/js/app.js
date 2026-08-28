@@ -7,7 +7,7 @@ const App = (() => {
   /* O carimbo da versão. Aparece embaixo da tela de entrar, e serve para
      saber, olhando, se o aparelho já pegou o app novo ou ainda está com o
      velho guardado. Sobe de número a cada mudança publicada. */
-  const VERSAO = '23';
+  const VERSAO = '24';
   const DATA_VERSAO = '27/08';
 
   function applyTheme() {
@@ -114,9 +114,107 @@ const App = (() => {
     });
   }
 
+  /**
+   * Alguém tocou num link que veio do outro celular. Mostra o que
+   * chegou e pergunta antes de mexer em qualquer coisa: ninguém gosta
+   * de abrir um link e ver o app mudar sozinho.
+   */
+  function receberDoLink(pacote) {
+    if (pacote.t === 'envio') return receberEnvio(pacote);
+    if (pacote.t === 'resposta') return receberResposta(pacote);
+    return UI.toast('Não entendi esse link.', 'bad');
+  }
+
+  function receberEnvio(pacote) {
+    const nome = String((pacote.c && pacote.c.n) || 'Ela').split(' ')[0];
+    const itens = pacote.e || [];
+    const total = itens.reduce((t, l) => t + (l.k === 'penalty' ? -l.x : l.x), 0);
+    const comFoto = itens.reduce((t, l) => t + (l.f || 0), 0);
+    UI.openSheet({
+      title: `${nome} mandou para você confirmar`,
+      subtitle: Store.labelDate(pacote.d),
+      body: `
+        <div class="stat-row">
+          <div class="stat"><div class="k">tarefas</div><div class="v">${itens.length}</div></div>
+          <div class="stat"><div class="k">total</div><div class="v">${Store.money(total)}</div></div>
+        </div>
+        <div class="list mt12">
+          ${itens.map((l) => `
+            <div class="mini-row">
+              <span class="grow">
+                <span class="small bold block">${UI.esc(l.n)}</span>
+                <span class="tiny muted block">${UI.esc(l.c || '')}${l.r ? ` • ${UI.esc(l.r.l || 'leitura')}` : ''}</span>
+              </span>
+              <span class="small bold">${Store.money(l.k === 'penalty' ? -l.x : l.x)}</span>
+            </div>`).join('')}
+        </div>
+        ${comFoto ? `<div class="note">
+          ${comFoto === 1 ? 'Tem 1 foto' : `Tem ${comFoto} fotos`} que ficaram no celular
+          d${nome === 'Ela' ? 'ela' : 'a ' + UI.esc(nome)}: foto não cabe num link. O resumo e o
+          que ela escreveu vieram inteiros; as fotos ela mostra de perto.
+        </div>` : ''}`,
+      actions: `
+        <button class="btn btn-ghost" data-cancel>Agora não</button>
+        <button class="btn btn-primary" data-ok>Receber</button>`,
+      onMount(sheet) {
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-ok]').addEventListener('click', () => {
+          const res = Sync.aplicarEnvio(pacote);
+          UI.closeSheet();
+          if (!res.ok) return UI.toast(res.error, 'bad');
+          Effects.burst('approved');
+          UI.toast(res.novos
+            ? `Recebido: ${res.novos} para validar.`
+            : 'Isso já tinha chegado antes.', 'ok');
+          render();
+        });
+      },
+    });
+  }
+
+  function receberResposta(pacote) {
+    const aprovadas = (pacote.e || []).filter((l) => l.q).length;
+    const recusadas = (pacote.e || []).length - aprovadas;
+    UI.openSheet({
+      title: 'A resposta chegou!',
+      subtitle: Store.labelDate(pacote.d),
+      body: `
+        <div class="stat-row">
+          <div class="stat"><div class="k">validadas</div><div class="v">${aprovadas}</div></div>
+          <div class="stat"><div class="k">não passaram</div><div class="v">${recusadas}</div></div>
+        </div>
+        <div class="note">Depois de receber, o que foi validado entra na conta da sua mesada.</div>`,
+      actions: `
+        <button class="btn btn-ghost" data-cancel>Agora não</button>
+        <button class="btn btn-primary" data-ok>Receber</button>`,
+      onMount(sheet) {
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-ok]').addEventListener('click', () => {
+          const res = Sync.aplicarResposta(pacote);
+          UI.closeSheet();
+          if (!res.ok) return UI.toast(res.error, 'bad');
+          Effects.burst(res.aprovadas ? 'goal' : 'task');
+          UI.toast(res.aprovadas
+            ? `${res.aprovadas} tarefa(s) validada(s)! Já entrou na conta.`
+            : 'Resposta recebida.', 'ok');
+          render();
+        });
+      },
+    });
+  }
+
   function start() {
     applyTheme();
     render();
+    // um link vindo do outro celular chega pelo endereço
+    const pacote = Sync.pacoteDoEndereco();
+    if (pacote) setTimeout(() => receberDoLink(pacote), 300);
+    // com o app já aberto, tocar no link só troca o endereço e a página
+    // não recarrega: sem isto o envio passaria batido
+    window.addEventListener('hashchange', () => {
+      const vindo = Sync.pacoteDoEndereco();
+      if (vindo) receberDoLink(vindo);
+    });
     // permite instalar na tela inicial e abrir offline
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
       // Quando sai uma versão nova, quem guarda o app offline assume o
@@ -138,7 +236,7 @@ const App = (() => {
     });
   }
 
-  return { start, render, logout, toggleTheme, openChangePassword, openProfilePhoto, applyTheme, VERSAO, DATA_VERSAO };
+  return { start, render, logout, toggleTheme, openChangePassword, openProfilePhoto, applyTheme, receberDoLink, VERSAO, DATA_VERSAO };
 })();
 
 document.addEventListener('DOMContentLoaded', App.start);

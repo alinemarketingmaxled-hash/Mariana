@@ -1945,6 +1945,13 @@ const Pet = (() => {
         const escolha = opcoes[Math.floor(Math.random() * opcoes.length)];
 
         if (escolha === 'pergunta') {
+          // com uma folha aberta ele fica quieto: a pergunta surpresa
+          // abriria por cima e comeria a tela que ela está usando, seja o
+          // resultado do quiz ou a ficha de leitura que ela está escrevendo
+          if (UI.folhaAberta()) {
+            agendarBrincadeira();
+            return;
+          }
           setEstado('estudando');
           if (Quiz.surpresa(child)) {
             registrarInteracao();

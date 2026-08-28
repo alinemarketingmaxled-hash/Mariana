@@ -155,6 +155,18 @@ quantos filhos quiser, cada um com o próprio login e senha.
   Quando ele passa de fase o app abre uma tela mostrando **o antes e o depois lado a lado**, e
   na tela de atualizar tem a **linha do tempo das cinco fases**, com as que já passaram
   desenhadas e as que ainda vêm com cadeado.
+- **A ponte entre os dois celulares**: o app guarda tudo no proprio aparelho, sem servidor. Se a
+  filha usa o celular dela e a mae o dela, sao **duas copias separadas** do mesmo app: o que ela
+  marca nao existe no celular da mae. E como a tarefa so entra na conta **depois de validada**,
+  nada nunca contabilizaria. A ponte e um link:
+  1. Ela toca em **Enviar para validação** → a mensagem do WhatsApp sai com um **link** dentro.
+  2. A mae toca no link → o app abre, mostra o que chegou e pergunta antes de mexer em nada.
+  3. A mae valida → aparece o cartao **"falta devolver"**, com um link de volta.
+  4. Ela toca nesse link → as tarefas validadas **entram na conta** e o bichinho ganha os pontos.
+
+  > O que nao viaja: as **fotos**. Trinta fotos de paginas nao cabem num link e nao ha onde
+  > guarda-las no meio do caminho. O resumo, o livro, as paginas e o "grifou" atravessam
+  > inteiros; a tela da mae diz quantas fotos ficaram no celular dela, para ver de perto.
 - **Aviso para quem confirma**: quando ela toca em **Enviar para validação**, o recado sai na
   hora para o celular do responsável, com a lista do que foi mandado, o total e se tem leitura.
   O responsável põe o número dele uma vez em **Menu → Avisar quando ela enviar**, e escolhe se

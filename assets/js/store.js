@@ -1737,6 +1737,93 @@ const Store = (() => {
     };
   }
 
+  /* =========================================================
+     Receber o que veio do outro celular
+
+     Cada aparelho tem os próprios dados, e começou com ids sorteados
+     só dele. Então a filha que manda pode não existir aqui, e é
+     preciso achá-la pelo nome de usuário em vez do id.
+     ========================================================= */
+
+  /** acha a filha pelo nome de usuário; cria quando ela ainda não existe aqui */
+  function acharOuCriarFilho(dados) {
+    const usuario = String((dados && dados.u) || '').trim().toLowerCase();
+    if (!usuario) return null;
+    const achado = state.users.find(
+      (u) => u.role === 'child' && String(u.username || '').toLowerCase() === usuario);
+    if (achado) return achado;
+
+    const novo = {
+      id: uid('u'), role: 'child', name: String((dados && dados.n) || usuario).trim(),
+      username: usuario, pass: hash('1234'), color: 'g1', photo: '',
+      goalName: '', goalAmount: 0,
+      allowance: Number((dados && dados.a) || 0) || 0,
+      // veio de outro aparelho: fica marcada, para a tela poder contar isso
+      deOutroAparelho: true,
+    };
+    state.users.push(novo);
+    save();
+    return novo;
+  }
+
+  /**
+   * Guarda um lançamento que veio pronto do outro celular. O id vem de
+   * lá de propósito: é por ele que a resposta da mãe volta e encontra a
+   * tarefa certa no celular da filha.
+   */
+  function receberLancamento(entrada) {
+    const antigo = state.entries.find((e) => e.id === entrada.id);
+    if (antigo) {
+      // já tinha chegado: só atualiza o que ela pode ter mexido depois,
+      // e nunca mexe no que a mãe já decidiu
+      if (antigo.status === 'pending') {
+        antigo.note = entrada.note || antigo.note;
+        antigo.reading = entrada.reading || antigo.reading;
+        antigo.fotosLa = entrada.fotosLa || antigo.fotosLa;
+        save();
+      }
+      return { ok: true, novo: false, entry: antigo };
+    }
+    entrada.veioDeLink = true;
+    state.entries.push(entrada);
+    save();
+    return { ok: true, novo: true, entry: entrada };
+  }
+
+  /** aplica no celular da filha a decisão que a mãe tomou lá */
+  function receberDecisao(entryId, status, recado) {
+    const e = state.entries.find((x) => x.id === entryId);
+    if (!e) return { ok: false, error: 'Este lançamento não existe mais aqui.' };
+    const antes = e.status;
+    e.status = status === 'approved' ? 'approved' : 'rejected';
+    e.reviewNote = String(recado || '').slice(0, 400);
+    e.reviewedAt = new Date().toISOString();
+    // o bichinho ganha os pontos da validação, igual quando é no mesmo aparelho
+    if (e.status === 'approved' && antes !== 'approved') petAddXp(e.childId, 5);
+    save();
+    return { ok: true, entry: e };
+  }
+
+  /** o que chegou por link, já foi decidido, e a resposta ainda não voltou */
+  const aguardandoResposta = (childId, date) =>
+    state.entries.filter((e) => e.veioDeLink && !e.respondido
+      && (e.status === 'approved' || e.status === 'rejected')
+      && (!childId || e.childId === childId) && (!date || e.date === date));
+
+  /** marca que a resposta daquele dia já foi devolvida */
+  function marcarRespondido(childId, date) {
+    let n = 0;
+    state.entries.forEach((e) => {
+      if (e.childId === childId && e.date === date && e.veioDeLink && !e.respondido
+        && (e.status === 'approved' || e.status === 'rejected')) {
+        e.respondido = true;
+        n++;
+      }
+    });
+    if (n) save();
+    return n;
+  }
+
   /* ---------- aviso para a mãe quando a filha manda para confirmar ----------
      O app não tem servidor, então nada sai daqui sozinho para outro
      celular. O que dá para fazer é o celular dela abrir o WhatsApp (ou o
@@ -1875,6 +1962,7 @@ const Store = (() => {
     // lembrete diário
     reminderOf, setReminder,
     avisoOf, setAviso, avisoPronto, numeroLimpo,
+    acharOuCriarFilho, receberLancamento, receberDecisao, aguardandoResposta, marcarRespondido,
     // tema e regras
     setTheme, theme, setPhotoRequired, photoRequired, entryIsDaily, entryNeedsPhoto, missingPhotos,
     // registro de leitura

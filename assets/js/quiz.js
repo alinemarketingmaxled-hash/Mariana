@@ -406,6 +406,8 @@ const Quiz = (() => {
   function surpresa(child) {
     const cards = Store.allCards(child.id);
     if (cards.length < 2) return false;
+    // nunca por cima de uma tela aberta: quem chamou que tente de novo depois
+    if (UI.folhaAberta()) return false;
     const c = cards[Math.floor(Math.random() * cards.length)];
     const pet = Store.petOf(child.id);
     const alternativas = opcoes(cards, c.a);

@@ -1953,3 +1953,8 @@ details summary{cursor:pointer;padding:6px 0}
   background:var(--accent-soft);color:var(--accent)
 }
 .aviso-nudge-ico svg{width:20px;height:20px}
+
+/* ---------- a resposta que ainda precisa voltar ---------- */
+.resposta-volta{border:1px solid var(--accent)}
+.resposta-volta .chip{background:var(--accent-soft);color:var(--accent)}
+.resposta-volta .chip svg{width:14px;height:14px}

@@ -224,7 +224,16 @@ const Notify = (() => {
     ];
     if (leu) linhas.push('Tem leitura com resumo e fotos das páginas.');
     if (st.required && !st.complete) linhas.push(`Ainda faltam ${st.required - st.filled} tarefa(s) do dia.`);
-    linhas.push('', 'Abra o app para validar.');
+
+    // o link leva o envio junto: os dois celulares tem cada um os seus
+    // dados, entao sem isto a mae recebe o recado mas nao as tarefas
+    const pacote = Sync.pacoteEnvio(child, date);
+    const endereco = Sync.link(pacote);
+    if (endereco && !Sync.linkGrande(endereco)) {
+      linhas.push('', 'Toque aqui para receber e validar:', endereco);
+    } else {
+      linhas.push('', 'Abra o app para validar.');
+    }
 
     return {
       titulo: `${nome} mandou para você confirmar`,
