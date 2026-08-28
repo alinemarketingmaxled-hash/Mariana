@@ -2160,6 +2160,30 @@ const Store = (() => {
     return { ok: true, entry: nova, atrasada, valor };
   }
 
+  /**
+   * Guarda uma lição que veio do outro celular. A lição já entregue de
+   * um lado manda no outro: entrega é fato consumado, não se desfaz.
+   */
+  function receberLicao(vinda) {
+    const antiga = licoes().find((l) => l.id === vinda.id);
+    if (!antiga) {
+      licoes().push(Object.assign({ feitaEm: '', entryId: '' }, vinda));
+      save();
+      return { ok: true, nova: true };
+    }
+    if (!antiga.feitaEm && vinda.feitaEm) {
+      antiga.feitaEm = vinda.feitaEm;
+      antiga.entryId = vinda.entryId || antiga.entryId;
+    }
+    if (!antiga.feitaEm) {
+      antiga.materia = vinda.materia || antiga.materia;
+      antiga.oque = vinda.oque || antiga.oque;
+      antiga.entrega = vinda.entrega || antiga.entrega;
+    }
+    save();
+    return { ok: true, nova: false };
+  }
+
   /** as lições de um filho, as abertas primeiro e pela entrega mais próxima */
   function licoesOf(childId, incluirFeitas) {
     return licoes()
@@ -2289,7 +2313,7 @@ const Store = (() => {
     materias, setMaterias, lembrarMateria, MATERIAS_PADRAO, AVALIACOES,
     // lição de casa
     regraLicao, setRegraLicao, saveLicao, removeLicao, entregarLicao, licoesOf,
-    situacaoLicao, licaoStatus,
+    situacaoLicao, licaoStatus, receberLicao,
     acharOuCriarFilho, receberLancamento, receberDecisao, aguardandoResposta, marcarRespondido,
     substituirTudo, retrato,
     // tema e regras

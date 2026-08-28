@@ -5,6 +5,7 @@ const ParentScreen = (() => {
   let tab = 'validar';
   let childFilter = 'all';
   let relTab = 'dinheiro';   // dentro do relatório: dinheiro ou tempo de uso
+  let escolaTab = 'licao';   // dentro da escola: lição de casa ou notas
 
   /**
    * A resposta que ainda não voltou. Quando o envio chegou por link (os
@@ -1882,8 +1883,237 @@ const ParentScreen = (() => {
   }
 
   /* ---------- render ---------- */
+  /* ---------- aba escola do responsável ---------- */
+  /** o filho em foco na aba escola: o do filtro, ou o primeiro */
+  function filhoDaEscola() {
+    const kids = Store.children();
+    if (!kids.length) return null;
+    return kids.find((k) => k.id === childFilter) || kids[0];
+  }
+
+  function licaoRowPai(l) {
+    const st = Store.situacaoLicao(l);
+    const chip = st === 'no-prazo' ? '<span class="chip lime">entregue no prazo</span>'
+      : st === 'atrasada' ? '<span class="chip">entregue atrasada</span>'
+        : st === 'vencida' ? '<span class="chip alerta">passou do prazo</span>'
+          : l.entrega === Store.today() ? '<span class="chip alerta">é para hoje</span>'
+            : `<span class="chip">${UI.esc(Store.labelDate(l.entrega))}</span>`;
+    return `
+      <div class="card licao-row ${l.feitaEm ? 'feita' : ''}">
+        <div class="between">
+          <div class="grow">
+            <div class="small bold">${UI.esc(l.materia)}</div>
+            <div class="tiny muted">${UI.esc(l.oque)}</div>
+          </div>
+          ${chip}
+        </div>
+        ${l.feitaEm ? '' : `
+          <div class="row mt12" style="gap:8px">
+            <button class="btn btn-ghost btn-sm" data-pai-licao-editar="${l.id}">${Icons.svg('pencil')} Mudar</button>
+            <button class="btn btn-ghost btn-sm" data-pai-licao-apagar="${l.id}">${Icons.svg('trash')} Apagar</button>
+          </div>`}
+      </div>`;
+  }
+
+  function notaRowPai(e) {
+    const n = e.nota;
+    const sinal = e.kind === 'penalty' ? -e.value : e.value;
+    return `
+      <div class="card nota-row faixa-${UI.esc(n.faixa || '')}">
+        <div class="between">
+          <div class="grow">
+            <div class="small bold">${UI.esc(n.materia)}${n.avaliacao ? ` • ${UI.esc(n.avaliacao)}` : ''}</div>
+            <div class="tiny muted">${UI.esc(Store.labelDate(e.date))} • ${UI.esc(Store.FAIXA_LABEL[n.faixa] || '')}</div>
+          </div>
+          <div class="nota-valor">
+            <div class="nota-numero">${String(n.nota).replace('.', ',')}</div>
+            <div class="tiny ${sinal < 0 ? 'ruim' : 'bom'}">${sinal ? Store.money(sinal) : '—'}</div>
+          </div>
+        </div>
+        ${UI.statusChip(e.status)}
+      </div>`;
+  }
+
+  function escolaView() {
+    const kids = Store.children();
+    const kid = filhoDaEscola();
+    if (!kid) return UI.empty('backpack', 'Cadastre um filho para acompanhar a escola.');
+
+    const st = Store.licaoStatus(kid.id);
+    const lista = Store.licoesOf(kid.id, true);
+    const abertas = lista.filter((l) => !l.feitaEm);
+    const feitas = lista.filter((l) => l.feitaEm).slice(0, 8);
+    const notas = Store.notasOf(kid.id);
+    const media = Store.mediaNotas(kid.id, Store.monthOf(Store.today()));
+    const r = Store.regraNotas();
+    const rl = Store.regraLicao();
+
+    const filtro = kids.length > 1 ? `
+      <div class="seg-mini mt16" role="group" aria-label="Filtrar por filho">
+        ${kids.map((k) => `
+          <button data-kid-filter="${k.id}" aria-pressed="${k.id === kid.id}">${UI.esc(k.name.split(' ')[0])}</button>`).join('')}
+      </div>` : '';
+
+    return `
+      <section class="hero">
+        <div class="hero-top">
+          <div class="hero-ico">${Icons.svg('backpack')}</div>
+          <div class="grow">
+            <div class="label">Escola de ${UI.esc(kid.name.split(' ')[0])}</div>
+            <div class="value">${media === null ? '—' : String(media).replace('.', ',')}<small style="margin-left:6px">média do mês</small></div>
+          </div>
+        </div>
+        <div class="hero-stats mt16">
+          <div class="hero-stat"><div class="k">lição aberta</div><div class="v">${st.abertas}</div></div>
+          <div class="hero-stat"><div class="k">passou do prazo</div><div class="v">${st.vencidas}</div></div>
+          <div class="hero-stat"><div class="k">notas no mês</div><div class="v">${Store.notasOf(kid.id, Store.monthOf(Store.today())).length}</div></div>
+        </div>
+      </section>
+
+      ${filtro}
+
+      <div class="seg-mini mt16" role="group" aria-label="O que ver">
+        <button data-escola-tab="licao" aria-pressed="${escolaTab === 'licao'}">Lição de casa</button>
+        <button data-escola-tab="notas" aria-pressed="${escolaTab === 'notas'}">Notas</button>
+      </div>
+
+      ${escolaTab === 'licao' ? `
+        <div class="row mt12" style="gap:8px">
+          <button class="btn btn-primary grow" data-pai-nova-licao>${Icons.svg('plus')} Anotar lição</button>
+          <button class="btn btn-ghost" data-abrir-regra-licao>${Icons.svg('coins')} Valores</button>
+        </div>
+        <div class="note mt12">
+          Entregar no prazo vale <b>${Store.money(rl.valor)}</b>; atrasada, ${Store.money(rl.atraso)}.
+          ${rl.ativo ? '' : '<b>Está desligado agora: a lição não vale dinheiro.</b>'}
+        </div>
+        ${abertas.length ? `<div class="list mt12">${abertas.map(licaoRowPai).join('')}</div>`
+          : UI.empty('backpack', 'Nenhuma lição aberta.')}
+        ${feitas.length ? `<h4 class="mt16">Já entregues</h4>
+          <div class="list mt8">${feitas.map(licaoRowPai).join('')}</div>` : ''}`
+      : `
+        <div class="row mt12" style="gap:8px">
+          <button class="btn btn-primary grow" data-pai-nova-nota>${Icons.svg('star')} Lançar nota</button>
+          <button class="btn btn-ghost" data-abrir-regra-notas>${Icons.svg('coins')} Combinado</button>
+        </div>
+        <div class="note mt12">
+          ${String(r.otima.de).replace('.', ',')} ou mais vale ${Store.money(r.otima.valor)};
+          de ${String(r.boa.de).replace('.', ',')}, ${Store.money(r.boa.valor)};
+          de ${String(r.ok.de).replace('.', ',')}, ${Store.money(r.ok.valor)};
+          abaixo disso desconta ${Store.money(Math.abs(r.ruim.valor))}.
+          ${r.ativo ? '' : '<b>Está desligado agora: as notas não valem dinheiro.</b>'}
+        </div>
+        ${notas.length ? `<div class="list mt12">${notas.map(notaRowPai).join('')}</div>`
+          : UI.empty('star', 'Nenhuma nota registrada ainda.')}`}`;
+  }
+
+  /** a mãe também anota a lição, e para qual filho */
+  function openLicaoFormPai(kid, id) {
+    const l = id ? Store.licoesOf(kid.id, true).find((x) => x.id === id) : null;
+    UI.openSheet({
+      title: l ? 'Mudar a lição' : 'Anotar uma lição',
+      subtitle: kid.name,
+      body: `
+        <form id="pai-licao-form">
+          ${UI.field('Matéria', UI.listaPronta('materia', Store.materias(), l ? l.materia : '', 'outra matéria'))}
+          ${UI.field('O que foi passado', `
+            <textarea name="oque" rows="3" placeholder="Página 42, exercícios 1 a 8">${l ? UI.esc(l.oque) : ''}</textarea>`)}
+          ${UI.field('Entregar em', UI.input('entrega', {
+            type: 'date', value: l ? l.entrega : Store.addDays(Store.today(), 1),
+          }))}
+        </form>
+        <p class="tiny muted mt8">
+          Ela vê esta lição no app dela assim que a próxima resposta sua chegar lá.
+        </p>`,
+      actions: `
+        <button class="btn btn-ghost" data-cancel>Cancelar</button>
+        <button class="btn btn-primary" data-save>${l ? 'Salvar' : 'Anotar'}</button>`,
+      onMount(sheet) {
+        UI.bindListasProntas(sheet);
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-save]').addEventListener('click', () => {
+          const dados = UI.formData(sheet.querySelector('#pai-licao-form'));
+          const res = Store.saveLicao(Object.assign({ childId: kid.id, id: l ? l.id : '' }, dados));
+          if (!res.ok) return UI.toast(res.error, 'bad');
+          UI.closeSheet();
+          UI.toast(l ? 'Lição atualizada' : 'Lição anotada', 'ok');
+          App.render();
+        });
+      },
+    });
+  }
+
+  /** a mãe lança a nota que veio no boletim, já validada */
+  function openNotaFormPai(kid, user) {
+    const r = Store.regraNotas();
+    let picker = null;
+    UI.openSheet({
+      title: 'Lançar uma nota',
+      subtitle: kid.name,
+      body: `
+        <form id="pai-nota-form">
+          ${UI.field('Matéria', UI.listaPronta('materia', Store.materias(), '', 'outra matéria'))}
+          <div class="dois-campos">
+            ${UI.field(`Nota (0 a ${String(r.maxima).replace('.', ',')})`, UI.input('nota', {
+              type: 'number', attrs: `min="0" max="${r.maxima}" step="0.1" inputmode="decimal"`,
+            }))}
+            ${UI.field('Data', UI.input('data', { type: 'date', value: Store.today() }))}
+          </div>
+          ${UI.field('Qual avaliação', UI.listaPronta('avaliacao', Store.AVALIACOES, '', 'outra'))}
+          ${UI.photoField('Foto do boletim', [], 4)}
+          <div class="note" data-previa>Escreva a nota para eu mostrar quanto vale.</div>
+          <div class="mini-row mt12">
+            <div class="grow">
+              <div class="small bold">Já validar</div>
+              <div class="tiny muted">a nota veio do boletim, não precisa conferir depois</div>
+            </div>
+            <button type="button" class="switch" data-switch="valida" aria-pressed="true"
+                    aria-label="Já validar"></button>
+          </div>
+        </form>`,
+      actions: `
+        <button class="btn btn-ghost" data-cancel>Cancelar</button>
+        <button class="btn btn-primary" data-save>Lançar</button>`,
+      onMount(sheet) {
+        picker = UI.bindPhotos(sheet);
+        UI.bindListasProntas(sheet);
+        UI.bindSwitches(sheet);
+        const previa = sheet.querySelector('[data-previa]');
+        const campo = sheet.querySelector('input[name=nota]');
+        const atualizar = () => {
+          if (campo.value === '') {
+            previa.className = 'note';
+            previa.textContent = 'Escreva a nota para eu mostrar quanto vale.';
+            return;
+          }
+          const conta = Store.valorDaNota(campo.value);
+          previa.className = `note ${conta.valor < 0 ? 'aviso' : ''}`;
+          previa.innerHTML = conta.valor === 0
+            ? `<b>${UI.esc(Store.FAIXA_LABEL[conta.faixa] || '')}</b>: não ganha nem perde nada.`
+            : conta.valor > 0
+              ? `<b>${UI.esc(Store.FAIXA_LABEL[conta.faixa] || '')}</b>: ganha ${Store.money(conta.valor)} a mais.`
+              : `<b>${UI.esc(Store.FAIXA_LABEL[conta.faixa] || '')}</b>: desconta ${Store.money(Math.abs(conta.valor))}.`;
+        };
+        campo.addEventListener('input', atualizar);
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-save]').addEventListener('click', () => {
+          const dados = UI.formData(sheet.querySelector('#pai-nota-form'));
+          const res = Store.registrarNota(kid.id, dados, picker.ids());
+          if (!res.ok) return UI.toast(res.error, 'bad');
+          picker.commit();
+          if (dados.valida) Store.review(res.entry.id, 'approved', '', user.id);
+          UI.closeSheet();
+          Effects.burst(res.valor < 0 ? 'task' : 'approved');
+          UI.toast('Nota lançada', 'ok');
+          App.render();
+        });
+      },
+      onClose() { if (picker) picker.discard(); },
+    });
+  }
+
   const PAGES = {
     validar: { title: 'Validar', subtitle: 'Confira o que os filhos marcaram e aprove' },
+    escola: { title: 'Escola', subtitle: 'Lição de casa e as notas das provas' },
     filhos: { title: 'Filhos', subtitle: 'Acessos, metas, pagamentos e ajustes' },
     agenda: { title: 'Agenda', subtitle: 'Provas, trabalhos e eventos da família' },
     categorias: { title: 'Ações da mesada', subtitle: 'Categorias, valores e descontos' },
@@ -1895,9 +2125,13 @@ const ParentScreen = (() => {
     const page = (tab === 'relatorio' && relTab === 'tempo' ? PAGES.relatorioTempo : PAGES[tab]) || PAGES.validar;
     const pend = Store.pendingEntries().length + Store.pendingDiary().length;
     const proximos = Store.upcomingEvents(null).filter((e) => !e.done).length;
+    // o contador mostra o que já passou do prazo: é o que ela precisa ver
+    const licaoVencida = Store.children()
+      .reduce((t, k) => t + Store.licaoStatus(k.id).vencidas, 0);
     const agendaChild = childFilter === 'all' ? null : childFilter;
 
     const main = tab === 'validar' ? validarView()
+      : tab === 'escola' ? escolaView()
       : tab === 'filhos' ? filhosView()
       : tab === 'agenda' ? agendaView(user, agendaChild)
       : tab === 'categorias' ? categoriasView()
@@ -1926,6 +2160,7 @@ const ParentScreen = (() => {
       fab: tab === 'agenda' ? { icon: 'plus', label: 'Novo compromisso' } : { icon: 'plus', label: 'Ações rápidas' },
       nav: [
         { id: 'validar', label: 'Validar', icon: 'check', count: pend },
+        { id: 'escola', label: 'Escola', icon: 'backpack', count: licaoVencida },
         { id: 'filhos', label: 'Filhos', icon: 'users' },
         { id: 'agenda', label: 'Agenda', icon: 'calendar', count: proximos },
         { id: 'categorias', label: 'Ações', icon: 'folder' },
@@ -1957,6 +2192,38 @@ const ParentScreen = (() => {
     }));
     root.querySelectorAll('[data-ligar-aviso]').forEach((b) => b.addEventListener('click', () => {
       openAviso(user);
+    }));
+
+    root.querySelectorAll('[data-escola-tab]').forEach((b) => b.addEventListener('click', () => {
+      escolaTab = b.getAttribute('data-escola-tab'); rerender();
+    }));
+    root.querySelectorAll('[data-abrir-regra-notas]').forEach((b) =>
+      b.addEventListener('click', () => openNotas(user)));
+    root.querySelectorAll('[data-abrir-regra-licao]').forEach((b) =>
+      b.addEventListener('click', () => openLicao(user)));
+    root.querySelectorAll('[data-pai-nova-licao]').forEach((b) => b.addEventListener('click', () => {
+      const kid = filhoDaEscola();
+      if (kid) openLicaoFormPai(kid, null);
+    }));
+    root.querySelectorAll('[data-pai-licao-editar]').forEach((b) => b.addEventListener('click', () => {
+      const kid = filhoDaEscola();
+      if (kid) openLicaoFormPai(kid, b.getAttribute('data-pai-licao-editar'));
+    }));
+    root.querySelectorAll('[data-pai-licao-apagar]').forEach((b) => b.addEventListener('click', async () => {
+      const ok = await UI.confirm({
+        title: 'Apagar esta lição?',
+        text: 'Ela some da lista dos dois lados na próxima troca.',
+        okLabel: 'Apagar', danger: true,
+      });
+      if (!ok) return;
+      const res = Store.removeLicao(b.getAttribute('data-pai-licao-apagar'));
+      if (!res.ok) return UI.toast(res.error, 'bad');
+      UI.toast('Lição apagada');
+      rerender();
+    }));
+    root.querySelectorAll('[data-pai-nova-nota]').forEach((b) => b.addEventListener('click', () => {
+      const kid = filhoDaEscola();
+      if (kid) openNotaFormPai(kid, user);
     }));
     root.querySelectorAll('[data-devolver]').forEach((b) => b.addEventListener('click', () => {
       const kid = Store.userById(b.getAttribute('data-devolver'));

@@ -57,14 +57,20 @@ const Sync = (() => {
    * cada tarefa com o que ela escreveu. As chaves são curtas de
    * propósito: cada letra a menos é link mais curto.
    */
+  /** as lições ainda abertas, para a lista existir dos dois lados */
+  const licoesDoPacote = (child) => Store.licoesOf(child.id, false)
+    .map((l) => ({ i: l.id, m: l.materia, o: l.oque, e: l.entrega }));
+
   function pacoteEnvio(child, date) {
     const lista = Store.entriesOf(child.id, date).filter((e) => e.status === 'pending');
-    if (!lista.length) return null;
+    const abertas = licoesDoPacote(child);
+    if (!lista.length && !abertas.length) return null;
     return {
       v: VERSAO,
       t: 'envio',
       d: date,
       c: { u: child.username, n: child.name, a: Store.allowanceOf(child.id) || 0 },
+      h: abertas,
       e: lista.map((e) => {
         const linha = {
           i: e.id, s: e.itemId, n: e.name, x: e.value, k: e.kind,
@@ -103,12 +109,14 @@ const Sync = (() => {
   function pacoteResposta(child, date) {
     const lista = Store.entriesOf(child.id, date)
       .filter((e) => e.status === 'approved' || e.status === 'rejected');
-    if (!lista.length) return null;
+    if (!lista.length && !Store.licoesOf(child.id, false).length) return null;
     return {
       v: VERSAO,
       t: 'resposta',
       d: date,
       c: { u: child.username, n: child.name },
+      // a lição que a mãe anotou também precisa chegar nela
+      h: licoesDoPacote(child),
       e: lista.map((e) => {
         const linha = { i: e.id, q: e.status === 'approved' ? 1 : 0 };
         if (e.reviewNote) linha.m = e.reviewNote;
@@ -170,12 +178,31 @@ const Sync = (() => {
       if (res.novo) novos++; else repetidos++;
     });
 
-    return { ok: true, child: kid, novos, repetidos, total: (pacote.e || []).length, date: pacote.d };
+    const licoes = guardarLicoes(kid.id, pacote.h);
+
+    return {
+      ok: true, child: kid, novos, repetidos, licoes,
+      total: (pacote.e || []).length, date: pacote.d,
+    };
+  }
+
+  /** guarda as lições que vieram, sempre ligadas a quem é daqui */
+  function guardarLicoes(childId, vindas) {
+    let novas = 0;
+    (vindas || []).forEach((l) => {
+      const res = Store.receberLicao({
+        id: l.i, childId, materia: l.m, oque: l.o, entrega: l.e,
+        criadaEm: l.e,
+      });
+      if (res.nova) novas++;
+    });
+    return novas;
   }
 
   /** Põe no app da filha as decisões que a mãe tomou. */
   function aplicarResposta(pacote) {
     if (!pacote || pacote.t !== 'resposta') return { ok: false, error: 'Este link não é uma resposta.' };
+    const kid = Store.acharOuCriarFilho(pacote.c);
     let aprovadas = 0;
     let recusadas = 0;
     let perdidas = 0;
@@ -185,7 +212,8 @@ const Sync = (() => {
       else if (l.q) aprovadas++;
       else recusadas++;
     });
-    return { ok: true, aprovadas, recusadas, perdidas, date: pacote.d };
+    const licoes = kid ? guardarLicoes(kid.id, pacote.h) : 0;
+    return { ok: true, aprovadas, recusadas, perdidas, licoes, date: pacote.d };
   }
 
   /* ---------- o link que chegou ---------- */

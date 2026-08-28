@@ -165,6 +165,11 @@ quantos filhos quiser, cada um com o próprio login e senha.
   registra a nota com a materia, a avaliacao e a **foto da prova**; o app calcula o valor pela
   regra e mostra na hora quanto aquela nota vale. A nota vira um lancamento comum: fica esperando
   validacao, aparece no extrato e viaja no link para o outro celular.
+- **A aba Escola nos dois lados**: a mae tem a mesma aba, por filho, com as duas listas. Dela a
+  mae **lanca a nota do boletim** (com a opcao de ja entrar validada, porque veio da escola e nao
+  precisa conferir depois) e **anota a licao** que ficou sabendo. As licoes abertas atravessam a
+  ponte **nos dois sentidos**: o que a filha anota chega na mae no envio, e o que a mae anota
+  chega na filha na resposta.
 - **Licao de casa** (aba **Escola**): ela anota o que a professora passou e **para quando**. A
   lista mostra o que e' para hoje e o que ja passou do prazo. Quando ela marca "ja fiz", pede a
   **foto do caderno** e vira um lancamento para validar. Entregar **no prazo** vale mais do que
