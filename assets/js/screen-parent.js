@@ -1463,6 +1463,151 @@ const ParentScreen = (() => {
   }
 
   /**
+   * O combinado das notas da escola: acima de tal nota ganha um extra,
+   * abaixo desconta. Quem decide os números é ela.
+   */
+  function openNotas(user) {
+    const r = Store.regraNotas();
+    UI.openSheet({
+      title: 'Notas da escola',
+      subtitle: 'quanto vale cada nota',
+      size: 'larga',
+      body: `
+        <form id="notas-form">
+          <div class="mini-row">
+            <div class="grow">
+              <div class="small bold">Usar as notas na mesada</div>
+              <div class="tiny muted">desligado, as notas ainda são registradas, mas não valem dinheiro</div>
+            </div>
+            <button type="button" class="switch" data-switch="ativo"
+                    aria-pressed="${!!r.ativo}" aria-label="Usar as notas na mesada"></button>
+          </div>
+
+          ${UI.field('Nota máxima da escola', UI.input('maxima', {
+            type: 'number', value: r.maxima, attrs: 'min="1" max="100" step="0.5"',
+          }))}
+
+          <h4 class="mt16">O combinado</h4>
+          <div class="dois-campos">
+            ${UI.field('Nota ótima, a partir de', UI.input('otimaDe', {
+              type: 'number', value: r.otima.de, attrs: 'min="0" step="0.1"',
+            }))}
+            ${UI.field('ganha (R$)', UI.input('otimaValor', {
+              type: 'number', value: r.otima.valor, attrs: 'min="0" step="0.5"',
+            }))}
+          </div>
+          <div class="dois-campos">
+            ${UI.field('Nota boa, a partir de', UI.input('boaDe', {
+              type: 'number', value: r.boa.de, attrs: 'min="0" step="0.1"',
+            }))}
+            ${UI.field('ganha (R$)', UI.input('boaValor', {
+              type: 'number', value: r.boa.valor, attrs: 'min="0" step="0.5"',
+            }))}
+          </div>
+          <div class="dois-campos">
+            ${UI.field('Passou, a partir de', UI.input('okDe', {
+              type: 'number', value: r.ok.de, attrs: 'min="0" step="0.1"',
+            }))}
+            ${UI.field('ganha (R$)', UI.input('okValor', {
+              type: 'number', value: r.ok.valor, attrs: 'min="0" step="0.5"',
+            }))}
+          </div>
+          ${UI.field('Abaixo disso, desconta (R$)', UI.input('ruimValor', {
+            type: 'number', value: Math.abs(r.ruim.valor), attrs: 'min="0" step="0.5"',
+          }))}
+        </form>
+
+        <div class="note" data-exemplo></div>
+        <p class="tiny muted mt8">
+          A nota registrada vira um lançamento igual aos outros: fica esperando a sua
+          validação, aparece no extrato e viaja no link para o outro celular.
+        </p>`,
+      actions: `
+        <button class="btn btn-ghost" data-cancel>Cancelar</button>
+        <button class="btn btn-primary" data-ok>Salvar</button>`,
+      onMount(sheet) {
+        UI.bindSwitches(sheet);
+        const exemplo = sheet.querySelector('[data-exemplo]');
+        const lido = () => {
+          const d = UI.formData(sheet.querySelector('#notas-form'));
+          d.ruimValor = -Math.abs(Number(d.ruimValor) || 0);
+          return d;
+        };
+        const mostrar = () => {
+          const d = lido();
+          const linha = (n, v) => `<div class="between"><span>Tirou <b>${n}</b></span><b>${
+            v > 0 ? '+' : ''}${Store.money(v)}</b></div>`;
+          const faixa = (nota) => {
+            const num = Number(nota);
+            if (num >= Number(d.otimaDe)) return Number(d.otimaValor);
+            if (num >= Number(d.boaDe)) return Number(d.boaValor);
+            if (num >= Number(d.okDe)) return Number(d.okValor);
+            return Number(d.ruimValor);
+          };
+          const max = Number(d.maxima) || 10;
+          const amostras = [max, Number(d.boaDe), Number(d.okDe), Math.max(0, Number(d.okDe) - 2)];
+          exemplo.innerHTML = amostras
+            .filter((n, i, arr) => Number.isFinite(n) && arr.indexOf(n) === i)
+            .map((n) => linha(String(n).replace('.', ','), faixa(n))).join('');
+        };
+        sheet.querySelectorAll('#notas-form input').forEach((i) => i.addEventListener('input', mostrar));
+        mostrar();
+
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-ok]').addEventListener('click', () => {
+          const nova = Store.setRegraNotas(lido());
+          UI.closeSheet();
+          UI.toast(nova.ativo ? 'Combinado das notas salvo' : 'Notas não valem dinheiro agora', 'ok');
+          App.render();
+        });
+      },
+    });
+  }
+
+  /** quanto vale entregar a lição de casa, no prazo e atrasada */
+  function openLicao(user) {
+    const r = Store.regraLicao();
+    UI.openSheet({
+      title: 'Lição de casa',
+      subtitle: 'quanto vale entregar',
+      body: `
+        <form id="licao-regra-form">
+          <div class="mini-row">
+            <div class="grow">
+              <div class="small bold">Usar a lição na mesada</div>
+              <div class="tiny muted">desligado, a lição continua na lista, mas não vale dinheiro</div>
+            </div>
+            <button type="button" class="switch" data-switch="ativo"
+                    aria-pressed="${!!r.ativo}" aria-label="Usar a lição na mesada"></button>
+          </div>
+          ${UI.field('Entregue no prazo, ganha (R$)', UI.input('valor', {
+            type: 'number', value: r.valor, attrs: 'min="0" step="0.5"',
+          }))}
+          ${UI.field('Entregue atrasada, ganha (R$)', UI.input('atraso', {
+            type: 'number', value: r.atraso, attrs: 'min="0" step="0.5"',
+          }))}
+        </form>
+        <div class="note">
+          Ela anota a lição que a professora passou, com a data de entrega. Quando marca
+          "já fiz", vira um lançamento para você validar, com a foto do caderno quando ela mandar.
+        </div>`,
+      actions: `
+        <button class="btn btn-ghost" data-cancel>Cancelar</button>
+        <button class="btn btn-primary" data-ok>Salvar</button>`,
+      onMount(sheet) {
+        UI.bindSwitches(sheet);
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-ok]').addEventListener('click', () => {
+          Store.setRegraLicao(UI.formData(sheet.querySelector('#licao-regra-form')));
+          UI.closeSheet();
+          UI.toast('Combinado da lição salvo', 'ok');
+          App.render();
+        });
+      },
+    });
+  }
+
+  /**
    * Levar tudo para outro endereço ou outro aparelho.
    *
    * O app guarda os dados no navegador, e o navegador separa por
@@ -1624,6 +1769,8 @@ const ParentScreen = (() => {
       subtitle: user.name,
       body: `
         <div class="list">
+          <button class="mini-row" data-m="notas">${Icons.svg('star')}<span class="grow bold small" style="text-align:left">Notas da escola</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
+          <button class="mini-row" data-m="licao">${Icons.svg('backpack')}<span class="grow bold small" style="text-align:left">Lição de casa</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="mudanca">${Icons.svg('download')}<span class="grow bold small" style="text-align:left">Levar meus dados</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="aviso">${Icons.svg('bell')}<span class="grow bold small" style="text-align:left">Avisar quando ela enviar</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
           <button class="mini-row" data-m="theme">${Icons.svg(Store.theme() === 'dark' ? 'sun' : 'moon')}<span class="grow bold small" style="text-align:left">Trocar tema</span>${Icons.svg('chevron', 'ico-sm dim')}</button>
@@ -1642,6 +1789,8 @@ const ParentScreen = (() => {
           if (m === 'photo') return App.openProfilePhoto(user);
           if (m === 'aviso') return openAviso(user);
           if (m === 'mudanca') return openMudanca(user);
+          if (m === 'notas') return openNotas(user);
+          if (m === 'licao') return openLicao(user);
           if (m === 'reset') {
             const ok = await UI.confirm({
               title: 'Restaurar dados de exemplo?',

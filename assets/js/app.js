@@ -7,7 +7,7 @@ const App = (() => {
   /* O carimbo da versão. Aparece embaixo da tela de entrar, e serve para
      saber, olhando, se o aparelho já pegou o app novo ou ainda está com o
      velho guardado. Sobe de número a cada mudança publicada. */
-  const VERSAO = '25';
+  const VERSAO = '26';
   const DATA_VERSAO = '27/08';
 
   function applyTheme() {

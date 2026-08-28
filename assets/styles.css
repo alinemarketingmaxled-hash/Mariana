@@ -1969,3 +1969,15 @@ details summary{cursor:pointer;padding:6px 0}
 .sheet-body textarea[data-colar]{resize:vertical;min-height:70px;font-family:ui-monospace,monospace}
 .sheet-body textarea[data-colar]:focus,
 .sheet-body input[type=file][data-arquivo]:focus{outline:none;border-color:var(--accent)}
+
+/* ---------- escola: lição de casa e notas ---------- */
+.licao-row.feita{opacity:.62}
+.licao-row .chip.alerta{background:var(--danger-soft,rgba(255,95,95,.16));color:var(--danger,#e5484d)}
+.nota-row{display:block}
+.nota-valor{text-align:right;flex:0 0 auto}
+.nota-numero{font-size:26px;font-weight:800;line-height:1}
+.nota-row .bom{color:var(--ok,#2e9e6b);font-weight:700}
+.nota-row .ruim{color:var(--danger,#e5484d);font-weight:700}
+.nota-row.faixa-otima{border-left:4px solid var(--lime)}
+.nota-row.faixa-boa{border-left:4px solid var(--accent)}
+.nota-row.faixa-ruim{border-left:4px solid var(--danger,#e5484d)}

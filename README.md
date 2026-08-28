@@ -155,6 +155,15 @@ quantos filhos quiser, cada um com o próprio login e senha.
   Quando ele passa de fase o app abre uma tela mostrando **o antes e o depois lado a lado**, e
   na tela de atualizar tem a **linha do tempo das cinco fases**, com as que já passaram
   desenhadas e as que ainda vêm com cadeado.
+- **Notas da escola**: o combinado e' da mae (Menu -> Notas da escola): a partir de tal nota ganha
+  um extra, a partir de tal outra ganha menos, e abaixo do combinado **desconta**. A filha
+  registra a nota com a materia, a avaliacao e a **foto da prova**; o app calcula o valor pela
+  regra e mostra na hora quanto aquela nota vale. A nota vira um lancamento comum: fica esperando
+  validacao, aparece no extrato e viaja no link para o outro celular.
+- **Licao de casa** (aba **Escola**): ela anota o que a professora passou e **para quando**. A
+  lista mostra o que e' para hoje e o que ja passou do prazo. Quando ela marca "ja fiz", pede a
+  **foto do caderno** e vira um lancamento para validar. Entregar **no prazo** vale mais do que
+  entregar **atrasada** - os dois valores quem define e' a mae (Menu -> Licao de casa).
 - **Levar meus dados** (Menu do responsável): o app guarda tudo **no navegador**, e o navegador
   separa por **endereço**. Se o endereço do app mudar, ele abre zerado — **nada foi apagado**,
   ficou no endereço antigo. Esta tela tira uma cópia completa de um lado (personalização,

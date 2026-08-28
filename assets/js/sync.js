@@ -74,6 +74,18 @@ const Sync = (() => {
         if (e.note) linha.b = e.note;
         if (e.daily) linha.y = 1;
         if (e.leitura) linha.z = 1;
+        if (e.nota) {
+          linha.q = {
+            m: e.nota.materia, a: e.nota.avaliacao || '', n: e.nota.nota,
+            x: e.nota.maxima, f: e.nota.faixa || '',
+          };
+        }
+        if (e.licao) {
+          linha.w = {
+            m: e.licao.materia, o: e.licao.oque, e: e.licao.entrega,
+            a: e.licao.atrasada ? 1 : 0,
+          };
+        }
         if (e.reading) {
           linha.r = {
             l: e.reading.livro || '', a: e.reading.paginaDe || 0, b: e.reading.paginaAte || 0,
@@ -137,6 +149,17 @@ const Sync = (() => {
         status: 'pending', reviewNote: '', reviewedBy: null, reviewedAt: null,
         createdAt: new Date().toISOString(),
       };
+      if (l.q) {
+        entrada.nota = {
+          materia: l.q.m, avaliacao: l.q.a || '', nota: l.q.n,
+          maxima: l.q.x, faixa: l.q.f || '',
+        };
+      }
+      if (l.w) {
+        entrada.licao = {
+          materia: l.w.m, oque: l.w.o, entrega: l.w.e, atrasada: !!l.w.a,
+        };
+      }
       if (l.r) {
         entrada.reading = {
           livro: l.r.l || '', paginaDe: l.r.a || 0, paginaAte: l.r.b || 0,

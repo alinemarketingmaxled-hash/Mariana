@@ -3,6 +3,7 @@
    ========================================================= */
 const ChildScreen = (() => {
   let tab = 'home';
+  let escolaTab = 'licao';
   let date = Store.today();
   let filter = 'all';
   let diaryFilter = 'all';
@@ -1118,8 +1119,245 @@ const ChildScreen = (() => {
   }
 
   /* ---------- render ---------- */
+  /* ---------- aba escola: lição de casa e notas ---------- */
+  /** que jeito a lição está: para hoje, atrasada, entregue */
+  function licaoChip(l) {
+    const st = Store.situacaoLicao(l);
+    if (st === 'no-prazo') return '<span class="chip lime">entregue no prazo</span>';
+    if (st === 'atrasada') return '<span class="chip">entregue atrasada</span>';
+    if (st === 'vencida') return '<span class="chip alerta">passou do prazo</span>';
+    if (l.entrega === Store.today()) return '<span class="chip alerta">é para hoje</span>';
+    return `<span class="chip">${UI.esc(Store.labelDate(l.entrega))}</span>`;
+  }
+
+  function licaoRow(l) {
+    const feita = !!l.feitaEm;
+    return `
+      <div class="card licao-row ${feita ? 'feita' : ''}">
+        <div class="between">
+          <div class="grow">
+            <div class="small bold">${UI.esc(l.materia)}</div>
+            <div class="tiny muted">${UI.esc(l.oque)}</div>
+          </div>
+          ${licaoChip(l)}
+        </div>
+        ${feita ? '' : `
+          <div class="row mt12" style="gap:8px">
+            <button class="btn btn-ghost btn-sm" data-licao-editar="${l.id}">${Icons.svg('pencil')} Mudar</button>
+            <button class="btn btn-ghost btn-sm" data-licao-apagar="${l.id}">${Icons.svg('trash')} Apagar</button>
+            <button class="btn btn-primary btn-sm grow" data-licao-fiz="${l.id}">${Icons.svg('check')} Já fiz</button>
+          </div>`}
+      </div>`;
+  }
+
+  function notaRow(e) {
+    const n = e.nota;
+    const sinal = e.kind === 'penalty' ? -e.value : e.value;
+    return `
+      <div class="card nota-row faixa-${UI.esc(n.faixa || '')}">
+        <div class="between">
+          <div class="grow">
+            <div class="small bold">${UI.esc(n.materia)}${n.avaliacao ? ` • ${UI.esc(n.avaliacao)}` : ''}</div>
+            <div class="tiny muted">${UI.esc(Store.labelDate(e.date))} • ${UI.esc(Store.FAIXA_LABEL[n.faixa] || '')}</div>
+          </div>
+          <div class="nota-valor">
+            <div class="nota-numero">${String(n.nota).replace('.', ',')}</div>
+            <div class="tiny ${sinal < 0 ? 'ruim' : 'bom'}">${sinal ? Store.money(sinal) : '—'}</div>
+          </div>
+        </div>
+        ${UI.statusChip(e.status)}
+      </div>`;
+  }
+
+  function escolaView(user) {
+    const st = Store.licaoStatus(user.id);
+    const lista = Store.licoesOf(user.id, true);
+    const abertas = lista.filter((l) => !l.feitaEm);
+    const feitas = lista.filter((l) => l.feitaEm).slice(0, 6);
+    const r = Store.regraNotas();
+    const notas = Store.notasOf(user.id).slice(0, 8);
+    const media = Store.mediaNotas(user.id, Store.monthOf(Store.today()));
+    const rl = Store.regraLicao();
+
+    return `
+      <section class="hero">
+        <div class="hero-top">
+          <div class="hero-ico">${Icons.svg('backpack')}</div>
+          <div class="grow">
+            <div class="label">Lição de casa</div>
+            <div class="value">${st.abertas}<small style="margin-left:6px">${st.abertas === 1 ? 'aberta' : 'abertas'}</small></div>
+          </div>
+        </div>
+        <div class="hero-stats mt16">
+          <div class="hero-stat"><div class="k">é para hoje</div><div class="v">${st.hoje}</div></div>
+          <div class="hero-stat"><div class="k">passou do prazo</div><div class="v">${st.vencidas}</div></div>
+          <div class="hero-stat"><div class="k">média do mês</div><div class="v">${media === null ? '—' : String(media).replace('.', ',')}</div></div>
+        </div>
+      </section>
+
+      <div class="seg-mini mt16" role="group" aria-label="O que ver">
+        <button data-escola-tab="licao" aria-pressed="${escolaTab === 'licao'}">Lição de casa</button>
+        <button data-escola-tab="notas" aria-pressed="${escolaTab === 'notas'}">Notas</button>
+      </div>
+
+      ${escolaTab === 'licao' ? `
+        ${rl.ativo ? `<div class="note mt12">
+          Entregar no prazo vale <b>${Store.money(rl.valor)}</b>.
+          Entregar atrasada vale ${Store.money(rl.atraso)}.
+        </div>` : ''}
+        ${abertas.length ? `<div class="list mt12">${abertas.map(licaoRow).join('')}</div>`
+          : UI.empty('backpack', 'Nenhuma lição anotada. Toque no + quando a professora passar uma.')}
+        ${feitas.length ? `
+          <h4 class="mt16">Já entregues</h4>
+          <div class="list mt8">${feitas.map(licaoRow).join('')}</div>` : ''}`
+      : `
+        ${r.ativo ? `<div class="note mt12">
+          O combinado: <b>${String(r.otima.de).replace('.', ',')} ou mais</b> vale ${Store.money(r.otima.valor)},
+          de <b>${String(r.boa.de).replace('.', ',')}</b> vale ${Store.money(r.boa.valor)},
+          de <b>${String(r.ok.de).replace('.', ',')}</b> vale ${Store.money(r.ok.valor)},
+          e abaixo disso desconta ${Store.money(Math.abs(r.ruim.valor))}.
+        </div>` : ''}
+        <button class="btn btn-primary btn-block mt12" data-nova-nota>${Icons.svg('star')} Registrar uma nota</button>
+        ${notas.length ? `<div class="list mt12">${notas.map(notaRow).join('')}</div>`
+          : UI.empty('star', 'Nenhuma nota registrada ainda.')}`}`;
+  }
+
+  /** anotar uma lição que a professora passou */
+  function openLicaoForm(user, id) {
+    const l = id ? Store.licoesOf(user.id, true).find((x) => x.id === id) : null;
+    UI.openSheet({
+      title: l ? 'Mudar a lição' : 'Anotar uma lição',
+      subtitle: l ? UI.esc(l.materia) : 'o que a professora passou',
+      body: `
+        <form id="licao-form">
+          ${UI.field('Matéria', UI.input('materia', { value: l ? l.materia : '', placeholder: 'Matemática' }))}
+          ${UI.field('O que foi passado', `
+            <textarea name="oque" rows="3" placeholder="Página 42, exercícios 1 a 8">${l ? UI.esc(l.oque) : ''}</textarea>`)}
+          ${UI.field('Entregar em', UI.input('entrega', {
+            type: 'date', value: l ? l.entrega : Store.addDays(Store.today(), 1),
+          }))}
+        </form>`,
+      actions: `
+        <button class="btn btn-ghost" data-cancel>Cancelar</button>
+        <button class="btn btn-primary" data-save>${l ? 'Salvar' : 'Anotar'}</button>`,
+      onMount(sheet) {
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-save]').addEventListener('click', () => {
+          const dados = UI.formData(sheet.querySelector('#licao-form'));
+          const res = Store.saveLicao(Object.assign({ childId: user.id, id: l ? l.id : '' }, dados));
+          if (!res.ok) return UI.toast(res.error, 'bad');
+          UI.closeSheet();
+          UI.toast(l ? 'Lição atualizada' : 'Lição anotada', 'ok');
+          App.render();
+        });
+      },
+    });
+  }
+
+  /** ela fez a lição: pede a foto do caderno e manda para validação */
+  function openLicaoFeita(user, id) {
+    const l = Store.licoesOf(user.id, true).find((x) => x.id === id);
+    if (!l) return;
+    const r = Store.regraLicao();
+    const atrasada = Store.today() > l.entrega;
+    let picker = null;
+    UI.openSheet({
+      title: 'Já fiz esta lição',
+      subtitle: `${l.materia} • ${l.oque}`,
+      body: `
+        <form id="licao-feita-form">
+          ${UI.photoField('Foto do caderno (ajuda muito na validação)', [], 4)}
+        </form>
+        <div class="note ${atrasada ? 'aviso' : ''}">
+          ${atrasada
+            ? `Esta lição era para ${UI.esc(Store.labelDate(l.entrega))}. Entregue atrasada, vale ${Store.money(r.atraso)}.`
+            : `Entregue no prazo: vale ${Store.money(r.valor)}.`}
+        </div>
+        <p class="tiny muted mt8">Vai para o responsável validar, como as outras tarefas.</p>`,
+      actions: `
+        <button class="btn btn-ghost" data-cancel>Ainda não</button>
+        <button class="btn btn-primary" data-save>Marcar como feita</button>`,
+      onMount(sheet) {
+        picker = UI.bindPhotos(sheet);
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-save]').addEventListener('click', () => {
+          const res = Store.entregarLicao(l.id, picker.ids());
+          if (!res.ok) return UI.toast(res.error, 'bad');
+          picker.commit();
+          UI.closeSheet();
+          Effects.burst(res.atrasada ? 'task' : 'goal');
+          UI.toast(res.atrasada ? 'Marcada. Da próxima, capricha no prazo!' : 'Boa! No prazo.', 'ok');
+          App.render();
+        });
+      },
+      onClose() { if (picker) picker.discard(); },
+    });
+  }
+
+  /** registrar a nota de uma prova */
+  function openNotaForm(user) {
+    const r = Store.regraNotas();
+    let picker = null;
+    UI.openSheet({
+      title: 'Registrar uma nota',
+      subtitle: 'a nota de uma prova ou trabalho',
+      body: `
+        <form id="nota-form">
+          ${UI.field('Matéria', UI.input('materia', { placeholder: 'Matemática' }))}
+          <div class="dois-campos">
+            ${UI.field(`Nota (0 a ${String(r.maxima).replace('.', ',')})`, UI.input('nota', {
+              type: 'number', attrs: `min="0" max="${r.maxima}" step="0.1" inputmode="decimal"`,
+            }))}
+            ${UI.field('Data', UI.input('data', { type: 'date', value: Store.today() }))}
+          </div>
+          ${UI.field('Qual avaliação (opcional)', UI.input('avaliacao', { placeholder: '2º bimestre, prova de frações' }))}
+          ${UI.photoField('Foto da prova ou do boletim', [], 4)}
+        </form>
+        <div class="note" data-previa>Escreva a nota para eu mostrar quanto vale.</div>`,
+      actions: `
+        <button class="btn btn-ghost" data-cancel>Cancelar</button>
+        <button class="btn btn-primary" data-save>Registrar</button>`,
+      onMount(sheet) {
+        picker = UI.bindPhotos(sheet);
+        const previa = sheet.querySelector('[data-previa]');
+        const campo = sheet.querySelector('input[name=nota]');
+        const atualizar = () => {
+          const v = campo.value;
+          if (v === '') {
+            previa.className = 'note';
+            previa.textContent = 'Escreva a nota para eu mostrar quanto vale.';
+            return;
+          }
+          const conta = Store.valorDaNota(v);
+          previa.className = `note ${conta.valor < 0 ? 'aviso' : ''}`;
+          previa.innerHTML = conta.valor === 0
+            ? `<b>${UI.esc(Store.FAIXA_LABEL[conta.faixa] || '')}</b>: não ganha nem perde nada.`
+            : conta.valor > 0
+              ? `<b>${UI.esc(Store.FAIXA_LABEL[conta.faixa] || '')}</b>: ganha ${Store.money(conta.valor)} a mais.`
+              : `<b>${UI.esc(Store.FAIXA_LABEL[conta.faixa] || '')}</b>: desconta ${Store.money(Math.abs(conta.valor))}.`;
+        };
+        campo.addEventListener('input', atualizar);
+        sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
+        sheet.querySelector('[data-save]').addEventListener('click', () => {
+          const dados = UI.formData(sheet.querySelector('#nota-form'));
+          const res = Store.registrarNota(user.id, dados, picker.ids());
+          if (!res.ok) return UI.toast(res.error, 'bad');
+          picker.commit();
+          UI.closeSheet();
+          Effects.burst(res.valor < 0 ? 'task' : 'goal');
+          UI.toast(res.valor > 0 ? `Nota registrada: ${Store.money(res.valor)} a mais!`
+            : res.valor < 0 ? 'Nota registrada. Na próxima a gente melhora.'
+              : 'Nota registrada.', res.valor < 0 ? '' : 'ok');
+          App.render();
+        });
+      },
+      onClose() { if (picker) picker.discard(); },
+    });
+  }
+
   const PAGES = {
     home: { title: 'Hoje', subtitle: 'Marque o que você fez e envie para validação' },
+    escola: { title: 'Escola', subtitle: 'Lição de casa e as notas das provas' },
     diario: { title: 'Diário', subtitle: 'Livros, lições e atividades do dia' },
     agenda: { title: 'Agenda', subtitle: 'Provas, trabalhos e eventos' },
     jogos: { title: 'Jogos e estudo', subtitle: 'Brinque com o bichinho e treine as matérias da escola' },
@@ -1130,7 +1368,7 @@ const ChildScreen = (() => {
 
   /** cada aba é uma área de uso diferente no relógio */
   const AREA_DA_ABA = {
-    home: 'tarefas', diario: 'diario', jogos: 'jogos',
+    home: 'tarefas', diario: 'diario', jogos: 'jogos', escola: 'tarefas',
     agenda: 'agenda', extrato: 'carteira', perfil: 'carteira',
   };
 
@@ -1139,8 +1377,10 @@ const ChildScreen = (() => {
     const page = (tab === 'extrato' && moneyTab === 'painel' ? PAGES.extratoPainel : PAGES[tab]) || PAGES.home;
     const pending = Store.pendingEntries(user.id).length;
     const proximos = Store.upcomingEvents(user.id).filter((e) => !e.done).length;
+    const licaoAberta = Store.licaoStatus(user.id).abertas;
 
     const main = tab === 'home' ? homeView(user)
+      : tab === 'escola' ? escolaView(user)
       : tab === 'diario' ? diarioView(user)
       : tab === 'agenda' ? Agenda.view(user, user.id, false)
       : tab === 'jogos' ? Games.view(user)
@@ -1153,7 +1393,9 @@ const ChildScreen = (() => {
       : `${tab === 'home' ? mesadaPanel(user) : ''}${metaPanel(user)}${Agenda.upcoming(user.id, false)}` +
         `${tab === 'home' ? resumoPanel(user) : ''}${Pet.panel(user)}`;
 
-    const actions = tab === 'agenda'
+    const actions = tab === 'escola'
+      ? `<button class="btn btn-primary btn-sm" data-nova-licao>${Icons.svg('plus')} Lição</button>`
+      : tab === 'agenda'
       ? `<button class="btn btn-primary btn-sm" data-new-event>${Icons.svg('plus')} Compromisso</button>`
       : tab === 'diario'
         ? `<button class="btn btn-primary btn-sm" data-diary-new>${Icons.svg('plus')} Registro</button>`
@@ -1170,13 +1412,15 @@ const ChildScreen = (() => {
       actions,
       main,
       aside,
-      fab: tab === 'diario' ? { icon: 'plus', label: 'Novo registro' }
+      fab: tab === 'escola' ? { icon: 'plus', label: 'Anotar lição' }
+        : tab === 'diario' ? { icon: 'plus', label: 'Novo registro' }
         : tab === 'agenda' ? { icon: 'plus', label: 'Novo compromisso' }
         : tab === 'jogos' ? { icon: 'ball', label: 'Jogar agora' }
         : tab === 'extrato' ? { icon: 'coins', label: 'Registrar gasto' }
         : { icon: 'check', label: 'Resumo do dia' },
       nav: [
         { id: 'home', label: 'Hoje', icon: 'home' },
+        { id: 'escola', label: 'Escola', icon: 'backpack', count: licaoAberta },
         { id: 'diario', label: 'Diário', icon: 'book' },
         { id: 'jogos', label: 'Jogos', icon: 'ball' },
         { id: 'agenda', label: 'Agenda', icon: 'calendar', count: proximos },
@@ -1190,6 +1434,7 @@ const ChildScreen = (() => {
       onTab(id) { tab = id; rerender(); },
       onMenu() { openMenu(user); },
       onFab() {
+        if (tab === 'escola') return openLicaoForm(user, null);
         if (tab === 'diario') return openDiaryForm(user, null);
         if (tab === 'agenda') return Agenda.openForm(user, null, { date: Agenda.selectedDate(), childId: user.id });
         if (tab === 'jogos') {
@@ -1208,6 +1453,31 @@ const ChildScreen = (() => {
       moneyTab = b.getAttribute('data-money-tab');
       rerender();
     }));
+
+    root.querySelectorAll('[data-escola-tab]').forEach((b) => b.addEventListener('click', () => {
+      escolaTab = b.getAttribute('data-escola-tab');
+      rerender();
+    }));
+    root.querySelectorAll('[data-nova-licao]').forEach((b) =>
+      b.addEventListener('click', () => openLicaoForm(user, null)));
+    root.querySelectorAll('[data-licao-editar]').forEach((b) =>
+      b.addEventListener('click', () => openLicaoForm(user, b.getAttribute('data-licao-editar'))));
+    root.querySelectorAll('[data-licao-fiz]').forEach((b) =>
+      b.addEventListener('click', () => openLicaoFeita(user, b.getAttribute('data-licao-fiz'))));
+    root.querySelectorAll('[data-licao-apagar]').forEach((b) => b.addEventListener('click', async () => {
+      const ok = await UI.confirm({
+        title: 'Apagar esta lição?',
+        text: 'Ela some da sua lista. Se a professora passou mesmo, é melhor deixar.',
+        okLabel: 'Apagar', danger: true,
+      });
+      if (!ok) return;
+      const res = Store.removeLicao(b.getAttribute('data-licao-apagar'));
+      if (!res.ok) return UI.toast(res.error, 'bad');
+      UI.toast('Lição apagada');
+      rerender();
+    }));
+    root.querySelectorAll('[data-nova-nota]').forEach((b) =>
+      b.addEventListener('click', () => openNotaForm(user)));
 
     root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
       tab = b.getAttribute('data-go');

@@ -134,6 +134,7 @@ const Store = (() => {
       usage: [],
       quizLog: [],
       daily: [],
+      licoes: [],
     };
   }
 
@@ -209,6 +210,7 @@ const Store = (() => {
           if (!Array.isArray(st.usage)) st.usage = [];
           if (!Array.isArray(st.quizLog)) st.quizLog = [];
           if (!Array.isArray(st.daily)) st.daily = [];
+          if (!Array.isArray(st.licoes)) st.licoes = [];
           ajustarPlano(st);
           return st;
         }
@@ -243,6 +245,7 @@ const Store = (() => {
     if (!Array.isArray(state.usage)) state.usage = [];
     if (!Array.isArray(state.quizLog)) state.quizLog = [];
     if (!Array.isArray(state.daily)) state.daily = [];
+    if (!Array.isArray(state.licoes)) state.licoes = [];
     ajustarPlano(state);
     save();
     return { ok: true };
@@ -1892,6 +1895,248 @@ const Store = (() => {
     return !!(a.on && a.numero && a.numero.length >= 12);
   };
 
+  /* =========================================================
+     Notas da escola
+
+     A regra é da mãe: acima de tal nota ganha um extra, abaixo de tal
+     nota desconta. Uma nota registrada vira um lançamento comum, igual
+     a uma tarefa: fica esperando validação, aparece no extrato, viaja
+     no link para o outro celular. Assim não existe uma segunda
+     contabilidade correndo por fora.
+     ========================================================= */
+  const NOTAS_PADRAO = {
+    ativo: true,
+    maxima: 10,
+    otima: { de: 9, valor: 15 },
+    boa: { de: 8, valor: 8 },
+    ok: { de: 7, valor: 0 },
+    ruim: { valor: -8 },
+  };
+
+  const regraNotas = () => {
+    const r = Object.assign({}, NOTAS_PADRAO, state.notas || {});
+    ['otima', 'boa', 'ok'].forEach((k) => { r[k] = Object.assign({}, NOTAS_PADRAO[k], r[k]); });
+    r.ruim = Object.assign({}, NOTAS_PADRAO.ruim, r.ruim);
+    return r;
+  };
+
+  const numero = (v, padrao) => {
+    const n = Number(String(v).replace(',', '.'));
+    return Number.isFinite(n) ? n : padrao;
+  };
+
+  /** guarda a regra; as faixas ficam sempre em ordem decrescente */
+  function setRegraNotas(dados) {
+    const atual = regraNotas();
+    const d = dados || {};
+    const faixa = (k) => ({
+      de: Math.max(0, numero(d[k + 'De'], atual[k].de)),
+      valor: numero(d[k + 'Valor'], atual[k].valor),
+    });
+    const nova = {
+      ativo: d.ativo === undefined ? atual.ativo : !!d.ativo,
+      maxima: Math.max(1, numero(d.maxima, atual.maxima)),
+      otima: faixa('otima'),
+      boa: faixa('boa'),
+      ok: faixa('ok'),
+      ruim: { valor: numero(d.ruimValor, atual.ruim.valor) },
+    };
+    // uma faixa nunca pode começar abaixo da de baixo, senão nada cai nela
+    if (nova.boa.de >= nova.otima.de) nova.boa.de = Math.max(0, nova.otima.de - 1);
+    if (nova.ok.de >= nova.boa.de) nova.ok.de = Math.max(0, nova.boa.de - 1);
+    state.notas = nova;
+    save();
+    return nova;
+  }
+
+  /** quanto vale uma nota, pela regra de casa */
+  function valorDaNota(nota) {
+    const r = regraNotas();
+    const n = numero(nota, -1);
+    if (n < 0) return { valor: 0, faixa: null };
+    if (n >= r.otima.de) return { valor: r.otima.valor, faixa: 'otima' };
+    if (n >= r.boa.de) return { valor: r.boa.valor, faixa: 'boa' };
+    if (n >= r.ok.de) return { valor: r.ok.valor, faixa: 'ok' };
+    return { valor: r.ruim.valor, faixa: 'ruim' };
+  }
+
+  const FAIXA_LABEL = {
+    otima: 'Nota ótima', boa: 'Nota boa', ok: 'Passou', ruim: 'Abaixo do combinado',
+  };
+
+  /**
+   * Registra uma nota. Vira um lançamento pendente, com o valor já
+   * calculado pela regra. Nota que não vale dinheiro entra do mesmo
+   * jeito, com valor zero: a mãe precisa ver todas, não só as que pagam.
+   */
+  function registrarNota(childId, dados, fotos) {
+    const materia = String((dados && dados.materia) || '').trim();
+    if (!materia) return { ok: false, error: 'Diga de qual matéria é a nota.' };
+    const r = regraNotas();
+    const nota = numero(dados.nota, -1);
+    if (nota < 0 || nota > r.maxima)
+      return { ok: false, error: `A nota precisa estar entre 0 e ${r.maxima}.` };
+    const data = dados.data || today();
+    const conta = valorDaNota(nota);
+    const avaliacao = String(dados.avaliacao || '').trim();
+
+    const nova = {
+      id: uid('e'), childId, date: data, itemId: 'nota',
+      name: `${materia}: ${String(nota).replace('.', ',')}${avaliacao ? ` (${avaliacao})` : ''}`,
+      value: Math.abs(conta.valor),
+      kind: conta.valor < 0 ? 'penalty' : 'earn',
+      catName: 'Notas da escola', icon: 'star', grad: 'g2',
+      daily: false, leitura: false,
+      nota: { materia, avaliacao, nota, maxima: r.maxima, faixa: conta.faixa },
+      note: avaliacao, photos: (fotos || []).filter(Boolean).slice(0, 4),
+      status: 'pending', reviewNote: '', reviewedBy: null, reviewedAt: null,
+      createdAt: new Date().toISOString(),
+    };
+    state.entries.push(nova);
+    if (conta.valor > 0) petAddXp(childId, 4);
+    save();
+    return { ok: true, entry: nova, valor: conta.valor, faixa: conta.faixa };
+  }
+
+  /** as notas já registradas, da mais nova para a mais velha */
+  const notasOf = (childId, mes) =>
+    state.entries
+      .filter((e) => e.nota && (!childId || e.childId === childId)
+        && (!mes || monthOf(e.date) === mes))
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+  /** média das notas do mês, para a tela mostrar como ela está indo */
+  function mediaNotas(childId, mes) {
+    const lista = notasOf(childId, mes);
+    if (!lista.length) return null;
+    const soma = lista.reduce((t, e) => t + e.nota.nota, 0);
+    return Math.round((soma / lista.length) * 10) / 10;
+  }
+
+  /* =========================================================
+     Lição de casa
+
+     Diferente de uma tarefa do dia: a lição tem prazo. O que importa é
+     o que foi passado, para quando, e se foi feita a tempo. Fazer no
+     prazo vale uma coisa; fazer atrasada vale outra, que a mãe decide.
+     ========================================================= */
+  const LICAO_PADRAO = { ativo: true, valor: 3, atraso: 1, esquecida: -2 };
+
+  const regraLicao = () => Object.assign({}, LICAO_PADRAO, state.licaoRegra || {});
+
+  function setRegraLicao(dados) {
+    const atual = regraLicao();
+    const d = dados || {};
+    state.licaoRegra = {
+      ativo: d.ativo === undefined ? atual.ativo : !!d.ativo,
+      valor: Math.max(0, numero(d.valor, atual.valor)),
+      atraso: Math.max(0, numero(d.atraso, atual.atraso)),
+      esquecida: Math.min(0, numero(d.esquecida, atual.esquecida)),
+    };
+    save();
+    return state.licaoRegra;
+  }
+
+  const licoes = () => (Array.isArray(state.licoes) ? state.licoes : (state.licoes = []));
+
+  /** anota uma lição que foi passada */
+  function saveLicao(dados) {
+    const d = dados || {};
+    const materia = String(d.materia || '').trim();
+    const oque = String(d.oque || '').trim();
+    if (!materia) return { ok: false, error: 'Diga de qual matéria é a lição.' };
+    if (!oque) return { ok: false, error: 'Escreva o que foi passado.' };
+    if (!d.entrega) return { ok: false, error: 'Diga para quando é a entrega.' };
+
+    if (d.id) {
+      const l = licoes().find((x) => x.id === d.id);
+      if (!l) return { ok: false, error: 'Lição não encontrada.' };
+      if (l.feitaEm) return { ok: false, error: 'Essa lição já foi entregue.' };
+      Object.assign(l, { materia, oque, entrega: d.entrega });
+      save();
+      return { ok: true, licao: l };
+    }
+
+    const nova = {
+      id: uid('l'), childId: d.childId, materia, oque,
+      entrega: d.entrega, criadaEm: today(),
+      feitaEm: '', entryId: '',
+    };
+    licoes().push(nova);
+    save();
+    return { ok: true, licao: nova };
+  }
+
+  function removeLicao(id) {
+    const l = licoes().find((x) => x.id === id);
+    if (!l) return { ok: false, error: 'Lição não encontrada.' };
+    if (l.feitaEm) return { ok: false, error: 'Já entregue: não dá para apagar.' };
+    state.licoes = licoes().filter((x) => x.id !== id);
+    save();
+    return { ok: true };
+  }
+
+  /** no prazo, atrasada, ou ainda por fazer */
+  function situacaoLicao(l) {
+    if (l.feitaEm) return l.feitaEm <= l.entrega ? 'no-prazo' : 'atrasada';
+    return today() > l.entrega ? 'vencida' : 'aberta';
+  }
+
+  /**
+   * Ela entregou a lição. Vira um lançamento pendente, com o valor do
+   * prazo ou o do atraso, e com a foto do caderno quando houver.
+   */
+  function entregarLicao(id, fotos) {
+    const l = licoes().find((x) => x.id === id);
+    if (!l) return { ok: false, error: 'Lição não encontrada.' };
+    if (l.feitaEm) return { ok: false, error: 'Essa lição já foi entregue.' };
+    const r = regraLicao();
+    const hoje = today();
+    const atrasada = hoje > l.entrega;
+    const valor = atrasada ? r.atraso : r.valor;
+
+    const nova = {
+      id: uid('e'), childId: l.childId, date: hoje, itemId: 'licao',
+      name: `Lição de ${l.materia}${atrasada ? ' (entregue atrasada)' : ''}`,
+      value: Math.abs(valor), kind: valor < 0 ? 'penalty' : 'earn',
+      catName: 'Lição de casa', icon: 'pencil', grad: 'g1',
+      daily: false, leitura: false,
+      licao: { id: l.id, materia: l.materia, oque: l.oque, entrega: l.entrega, atrasada },
+      note: l.oque, photos: (fotos || []).filter(Boolean).slice(0, 4),
+      status: 'pending', reviewNote: '', reviewedBy: null, reviewedAt: null,
+      createdAt: new Date().toISOString(),
+    };
+    state.entries.push(nova);
+    l.feitaEm = hoje;
+    l.entryId = nova.id;
+    petAddXp(l.childId, atrasada ? 2 : 4);
+    save();
+    return { ok: true, entry: nova, atrasada, valor };
+  }
+
+  /** as lições de um filho, as abertas primeiro e pela entrega mais próxima */
+  function licoesOf(childId, incluirFeitas) {
+    return licoes()
+      .filter((l) => (!childId || l.childId === childId) && (incluirFeitas || !l.feitaEm))
+      .sort((a, b) => {
+        if (!!a.feitaEm !== !!b.feitaEm) return a.feitaEm ? 1 : -1;
+        return a.entrega.localeCompare(b.entrega);
+      });
+  }
+
+  /** o resumo que a tela mostra no topo */
+  function licaoStatus(childId) {
+    const lista = licoesOf(childId, true);
+    const abertas = lista.filter((l) => !l.feitaEm);
+    return {
+      total: lista.length,
+      abertas: abertas.length,
+      hoje: abertas.filter((l) => l.entrega === today()).length,
+      vencidas: abertas.filter((l) => l.entrega < today()).length,
+      feitas: lista.filter((l) => l.feitaEm).length,
+    };
+  }
+
   /* ---------- lembrete diário no celular do filho ---------- */
   const LEMBRETE_PADRAO = { on: false, hora: '19:00', ultimo: '' };
 
@@ -1993,6 +2238,11 @@ const Store = (() => {
     // lembrete diário
     reminderOf, setReminder,
     avisoOf, setAviso, avisoPronto, numeroLimpo,
+    // notas da escola
+    regraNotas, setRegraNotas, valorDaNota, registrarNota, notasOf, mediaNotas, FAIXA_LABEL,
+    // lição de casa
+    regraLicao, setRegraLicao, saveLicao, removeLicao, entregarLicao, licoesOf,
+    situacaoLicao, licaoStatus,
     acharOuCriarFilho, receberLancamento, receberDecisao, aguardandoResposta, marcarRespondido,
     substituirTudo, retrato,
     // tema e regras
