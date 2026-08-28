@@ -1,0 +1,47 @@
+# Publica o app no GitHub Pages a cada envio.
+#
+# O endereco fica sempre o mesmo e se atualiza sozinho: nao precisa de
+# painel, de botao de republicar nem de limite de deploy. Para desligar,
+# basta apagar este arquivo.
+name: Publicar o app
+
+on:
+  push:
+    branches: [claude/allowance-monitoring-app-5ofgid]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.publicacao.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # so o que o app precisa para rodar: nada de README nem de scripts
+      - name: Montar o site
+        run: |
+          mkdir -p _site
+          cp -r index.html manifest.json sw.js assets _site/
+          ls -la _site
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: publicacao
+        uses: actions/deploy-pages@v4
