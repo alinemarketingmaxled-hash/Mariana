@@ -35,13 +35,30 @@ jobs:
           cp -r index.html manifest.json sw.js assets _site/
           ls -la _site
 
-      - uses: actions/configure-pages@v5
+      # ligar o Pages pela primeira vez e um direito que so a dona do
+      # repositorio tem: aqui ele so tenta, e se ainda nao estiver ligado
+      # avisa o que fazer em vez de falhar e mandar e-mail de erro
+      - id: pages
+        uses: actions/configure-pages@v5
+        continue-on-error: true
         with:
           enablement: true
 
+      - name: Falta ligar o Pages
+        if: steps.pages.outcome != 'success'
+        run: |
+          echo "O GitHub Pages ainda nao esta ligado neste repositorio."
+          echo
+          echo "Ligue uma vez so, em:"
+          echo "  Settings > Pages > Build and deployment > Source: GitHub Actions"
+          echo
+          echo "Depois disso todo envio publica sozinho, sempre no mesmo endereco."
+
       - uses: actions/upload-pages-artifact@v3
+        if: steps.pages.outcome == 'success'
         with:
           path: _site
 
       - id: publicacao
+        if: steps.pages.outcome == 'success'
         uses: actions/deploy-pages@v4
