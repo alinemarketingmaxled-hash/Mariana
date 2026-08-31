@@ -89,7 +89,7 @@ const Store = (() => {
         },
         {
           id: uid('c'), name: 'Estudos', icon: 'pencil', grad: 'g1', peso: 3, items: [
-            { id: uid('s'), name: 'Fazer a lição de casa', value: 3, kind: 'earn', daily: true, vezesMes: 30 },
+            { id: uid('s'), name: 'Fazer a lição de casa', value: 3, kind: 'earn', daily: true, vezesMes: 30, licao: true },
             { id: uid('s'), name: 'Estudar 30 minutos', value: 2, kind: 'earn', daily: true, vezesMes: 30 },
             { id: uid('s'), name: 'Revisar para a prova', value: 2, kind: 'earn', daily: false, vezesMes: 6, esforco: 2 },
           ],
@@ -1749,23 +1749,40 @@ const Store = (() => {
    * Como está a mesada do mês: o combinado, o que já foi validado, o que
    * ainda espera validação e o quanto falta para fechar.
    */
+  /**
+   * Como está o mês. O valor mensal é conquistado com as obrigações; as
+   * notas da escola ficam de fora dessa conta, porque são prêmio por
+   * cima, não parte do combinado. Elas entram no bolso do mesmo jeito,
+   * mas na linha do extra.
+   */
   function mesadaStatus(childId, mes) {
     const alvo = mes || monthOf(today());
     const mesada = allowanceOf(childId);
     let validado = 0;
     let esperando = 0;
     let descontos = 0;
+    let extra = 0;
+    let extraDesconto = 0;
+    let extraEsperando = 0;
     state.entries.filter((e) => e.childId === childId && monthOf(e.date) === alvo).forEach((e) => {
       if (e.status === 'approved') {
-        if (e.kind === 'penalty') descontos += e.value;
+        if (e.extra) {
+          if (e.kind === 'penalty') extraDesconto += e.value;
+          else extra += e.value;
+        } else if (e.kind === 'penalty') descontos += e.value;
         else validado += e.value;
-      } else if (e.status === 'pending') {
-        if (e.kind !== 'penalty') esperando += e.value;
+      } else if (e.status === 'pending' && e.kind !== 'penalty') {
+        if (e.extra) extraEsperando += e.value;
+        else esperando += e.value;
       }
     });
     const liquido = Math.max(0, validado - descontos);
+    const extraLiquido = Math.round((extra - extraDesconto) * 100) / 100;
     return {
       mes: alvo, mesada, validado, esperando, descontos, liquido,
+      extra, extraDesconto, extraEsperando, extraLiquido,
+      // o que ela leva no fim: o combinado conquistado mais o extra
+      total: Math.round((liquido + extraLiquido) * 100) / 100,
       falta: Math.max(0, Math.round((mesada - liquido) * 100) / 100),
       pct: mesada > 0 ? Math.min(100, Math.round((liquido / mesada) * 100)) : 0,
     };
@@ -2032,6 +2049,8 @@ const Store = (() => {
       catName: 'Notas da escola', icon: 'star', grad: 'g2',
       daily: false, leitura: false,
       nota: { materia, avaliacao, nota, maxima: r.maxima, faixa: conta.faixa },
+      // nota é prêmio por fora: não entra na conta do valor mensal
+      extra: true,
       note: avaliacao, photos: (fotos || []).filter(Boolean).slice(0, 4),
       status: 'pending', reviewNote: '', reviewedBy: null, reviewedAt: null,
       createdAt: new Date().toISOString(),
@@ -2065,21 +2084,60 @@ const Store = (() => {
      o que foi passado, para quando, e se foi feita a tempo. Fazer no
      prazo vale uma coisa; fazer atrasada vale outra, que a mãe decide.
      ========================================================= */
-  const LICAO_PADRAO = { ativo: true, valor: 3, atraso: 1, esquecida: -2 };
+  /* A lição não tem valor próprio: ela é uma das obrigações, e quem
+     define quanto vale é o mesmo planejador que reparte o valor mensal
+     entre todos os atos. Aqui só se decide quanto vale entregar
+     atrasado, como uma fatia do valor cheio. */
+  const LICAO_PADRAO = { ativo: true, atrasoPct: 40 };
 
-  const regraLicao = () => Object.assign({}, LICAO_PADRAO, state.licaoRegra || {});
+  const regraLicao = () => {
+    const guardada = state.licaoRegra || {};
+    const r = Object.assign({}, LICAO_PADRAO, guardada);
+    // versões antigas guardavam valores em reais; vira porcentagem
+    if (guardada.atrasoPct === undefined && guardada.valor) {
+      r.atrasoPct = Math.max(0, Math.min(100,
+        Math.round((numero(guardada.atraso, 0) / numero(guardada.valor, 1)) * 100)));
+    }
+    return { ativo: !!r.ativo, atrasoPct: Math.max(0, Math.min(100, numero(r.atrasoPct, 40))) };
+  };
 
   function setRegraLicao(dados) {
     const atual = regraLicao();
     const d = dados || {};
     state.licaoRegra = {
       ativo: d.ativo === undefined ? atual.ativo : !!d.ativo,
-      valor: Math.max(0, numero(d.valor, atual.valor)),
-      atraso: Math.max(0, numero(d.atraso, atual.atraso)),
-      esquecida: Math.min(0, numero(d.esquecida, atual.esquecida)),
+      atrasoPct: Math.max(0, Math.min(100, numero(d.atrasoPct, atual.atrasoPct))),
     };
     save();
     return state.licaoRegra;
+  }
+
+  /**
+   * A ação da mesada que representa a lição de casa. É por ela que o
+   * planejador já calculou o preço, então entregar a lição vale o mesmo
+   * que qualquer outra obrigação daquele tamanho.
+   */
+  function itemDaLicao() {
+    let achado = null;
+    state.categories.forEach((c) => c.items.forEach((it) => {
+      if (achado) return;
+      if (it.licao || /li[çc][ãa]o de casa/i.test(it.name)) achado = { cat: c, item: it };
+    }));
+    return achado;
+  }
+
+  /** quanto vale entregar a lição, no prazo e atrasada */
+  function valorDaLicao() {
+    const r = regraLicao();
+    const alvo = itemDaLicao();
+    const cheio = alvo ? Math.abs(Number(alvo.item.value) || 0) : 0;
+    return {
+      cheio,
+      atrasado: Math.round(cheio * (r.atrasoPct / 100) * 100) / 100,
+      ativo: r.ativo,
+      atrasoPct: r.atrasoPct,
+      item: alvo,
+    };
   }
 
   const licoes = () => (Array.isArray(state.licoes) ? state.licoes : (state.licoes = []));
@@ -2136,16 +2194,23 @@ const Store = (() => {
     const l = licoes().find((x) => x.id === id);
     if (!l) return { ok: false, error: 'Lição não encontrada.' };
     if (l.feitaEm) return { ok: false, error: 'Essa lição já foi entregue.' };
-    const r = regraLicao();
+    const conta = valorDaLicao();
     const hoje = today();
     const atrasada = hoje > l.entrega;
-    const valor = atrasada ? r.atraso : r.valor;
+    const valor = conta.ativo ? (atrasada ? conta.atrasado : conta.cheio) : 0;
+    const alvo = conta.item;
 
     const nova = {
-      id: uid('e'), childId: l.childId, date: hoje, itemId: 'licao',
+      id: uid('e'), childId: l.childId, date: hoje,
+      // aponta para a ação de verdade: assim ela conta como a obrigação
+      // que é, e não como um lançamento solto por fora do combinado
+      itemId: alvo ? alvo.item.id : 'licao',
+      catId: alvo ? alvo.cat.id : '',
       name: `Lição de ${l.materia}${atrasada ? ' (entregue atrasada)' : ''}`,
-      value: Math.abs(valor), kind: valor < 0 ? 'penalty' : 'earn',
-      catName: 'Lição de casa', icon: 'pencil', grad: 'g1',
+      value: Math.abs(valor), kind: 'earn',
+      catName: alvo ? alvo.cat.name : 'Lição de casa',
+      icon: alvo ? alvo.cat.icon : 'pencil',
+      grad: alvo ? alvo.cat.grad : 'g1',
       daily: false, leitura: false,
       licao: { id: l.id, materia: l.materia, oque: l.oque, entrega: l.entrega, atrasada },
       note: l.oque, photos: (fotos || []).filter(Boolean).slice(0, 4),
@@ -2312,7 +2377,7 @@ const Store = (() => {
     regraNotas, setRegraNotas, valorDaNota, registrarNota, notasOf, mediaNotas, FAIXA_LABEL,
     materias, setMaterias, lembrarMateria, MATERIAS_PADRAO, AVALIACOES,
     // lição de casa
-    regraLicao, setRegraLicao, saveLicao, removeLicao, entregarLicao, licoesOf,
+    regraLicao, setRegraLicao, valorDaLicao, itemDaLicao, saveLicao, removeLicao, entregarLicao, licoesOf,
     situacaoLicao, licaoStatus, receberLicao,
     acharOuCriarFilho, receberLancamento, receberDecisao, aguardandoResposta, marcarRespondido,
     substituirTudo, retrato,

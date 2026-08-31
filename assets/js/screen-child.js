@@ -1103,6 +1103,22 @@ const ChildScreen = (() => {
         ${m.falta > 0 ? ` Faltam ${Store.money(m.falta)} para fechar.` : ' Mesada fechada!'}
       </p>
       ${m.esperando > 0 ? `<p class="tiny muted mt8">${Store.money(m.esperando)} esperando a validação.</p>` : ''}
+      ${m.extraLiquido || m.extraEsperando ? `
+        <div class="extra-linha mt12">
+          <div class="between">
+            <span class="small bold">${Icons.svg('star', 'ico-sm')} Extra das notas</span>
+            <span class="bold small ${m.extraLiquido < 0 ? 'ruim' : 'bom'}">
+              ${m.extraLiquido > 0 ? '+' : ''}${Store.money(m.extraLiquido)}</span>
+          </div>
+          <p class="tiny muted mt8">
+            Vem por cima do combinado, não conta para fechar o mês.
+            ${m.extraEsperando > 0 ? `${Store.money(m.extraEsperando)} esperando a validação.` : ''}
+          </p>
+        </div>
+        <div class="between mt12">
+          <span class="bold small">No fim do mês</span>
+          <span class="bold small">${Store.money(m.total)}</span>
+        </div>` : ''}
       ${leitura > 0 ? `<p class="tiny muted mt8">A leitura sozinha vale ${Store.money(leitura)} no mês: é a parte que mais rende.</p>` : ''}`);
   }
 
@@ -1202,8 +1218,8 @@ const ChildScreen = (() => {
 
       ${escolaTab === 'licao' ? `
         ${rl.ativo ? `<div class="note mt12">
-          Entregar no prazo vale <b>${Store.money(rl.valor)}</b>.
-          Entregar atrasada vale ${Store.money(rl.atraso)}.
+          Entregar no prazo vale <b>${Store.money(Store.valorDaLicao().cheio)}</b>.
+          Entregar atrasada vale ${Store.money(Store.valorDaLicao().atrasado)}.
         </div>` : ''}
         ${abertas.length ? `<div class="list mt12">${abertas.map(licaoRow).join('')}</div>`
           : UI.empty('backpack', 'Nenhuma lição anotada. Toque no + quando a professora passar uma.')}
@@ -1245,6 +1261,10 @@ const ChildScreen = (() => {
         sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
         sheet.querySelector('[data-save]').addEventListener('click', () => {
           const dados = UI.formData(sheet.querySelector('#licao-form'));
+          if (!dados.materia) {
+            UI.apontarLista(sheet, 'materia');
+            return UI.toast('Escolha a matéria ali em cima.', 'bad');
+          }
           const res = Store.saveLicao(Object.assign({ childId: user.id, id: l ? l.id : '' }, dados));
           if (!res.ok) return UI.toast(res.error, 'bad');
           UI.closeSheet();
@@ -1259,7 +1279,7 @@ const ChildScreen = (() => {
   function openLicaoFeita(user, id) {
     const l = Store.licoesOf(user.id, true).find((x) => x.id === id);
     if (!l) return;
-    const r = Store.regraLicao();
+    const conta = Store.valorDaLicao();
     const atrasada = Store.today() > l.entrega;
     let picker = null;
     UI.openSheet({
@@ -1271,8 +1291,8 @@ const ChildScreen = (() => {
         </form>
         <div class="note ${atrasada ? 'aviso' : ''}">
           ${atrasada
-            ? `Esta lição era para ${UI.esc(Store.labelDate(l.entrega))}. Entregue atrasada, vale ${Store.money(r.atraso)}.`
-            : `Entregue no prazo: vale ${Store.money(r.valor)}.`}
+            ? `Esta lição era para ${UI.esc(Store.labelDate(l.entrega))}. Entregue atrasada, vale ${Store.money(conta.atrasado)}.`
+            : `Entregue no prazo: vale ${Store.money(conta.cheio)}.`}
         </div>
         <p class="tiny muted mt8">Vai para o responsável validar, como as outras tarefas.</p>`,
       actions: `
@@ -1342,6 +1362,10 @@ const ChildScreen = (() => {
         sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
         sheet.querySelector('[data-save]').addEventListener('click', () => {
           const dados = UI.formData(sheet.querySelector('#nota-form'));
+          if (!dados.materia) {
+            UI.apontarLista(sheet, 'materia');
+            return UI.toast('Escolha a matéria ali em cima.', 'bad');
+          }
           const res = Store.registrarNota(user.id, dados, picker.ids());
           if (!res.ok) return UI.toast(res.error, 'bad');
           picker.commit();

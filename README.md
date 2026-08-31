@@ -160,6 +160,13 @@ quantos filhos quiser, cada um com o próprio login e senha.
   (1o a 4o bimestre, prova, trabalho, recuperacao, simulado). A materia que faltar e escrita
   uma vez e **entra sozinha na lista**, e o responsavel edita a lista em Menu -> Notas da escola,
   porque cada escola tem as suas.
+- **O valor mensal e o extra**: o pai ou a mae poe o **valor mensal** e marca quais sao as
+  **obrigacoes diarias**; o app **reparte esse valor entre todos os atos** e fecha o mes no
+  numero combinado (a leitura fica com a maior fatia). A **licao de casa e uma das obrigacoes**,
+  entao ela vale o que o planejador calculou para ela - a mae so decide quanto vale entregar
+  **atrasada**, como uma fatia do valor cheio. Ja as **notas da escola sao extra**: vem **por
+  cima** do valor mensal e **nao contam** para fechar o mes. A tela mostra as duas linhas
+  separadas e o total do fim do mes.
 - **Notas da escola**: o combinado e' da mae (Menu -> Notas da escola): a partir de tal nota ganha
   um extra, a partir de tal outra ganha menos, e abaixo do combinado **desconta**. A filha
   registra a nota com a materia, a avaliacao e a **foto da prova**; o app calcula o valor pela

@@ -2001,3 +2001,15 @@ details summary{cursor:pointer;padding:6px 0}
 .materias-edit .pronta-chip{display:inline-flex;align-items:center;gap:5px}
 .materias-edit .pronta-chip svg{width:12px;height:12px;opacity:.55}
 .materias-edit .pronta-chip:hover svg{opacity:1}
+.pronta.falta .pronta-chips{
+  outline:2px solid var(--danger,#e5484d);outline-offset:6px;border-radius:12px
+}
+
+/* ---------- o extra que vem por cima do combinado ---------- */
+.extra-linha{
+  padding:10px 12px;border-radius:14px;background:var(--surface-2);
+  border-left:4px solid var(--lime)
+}
+.extra-linha .bom{color:var(--ok,#2e9e6b)}
+.extra-linha .ruim{color:var(--danger,#e5484d)}
+.extra-linha svg{width:13px;height:13px;vertical-align:-2px}

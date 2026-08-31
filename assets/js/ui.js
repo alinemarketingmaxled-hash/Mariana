@@ -299,18 +299,38 @@ const UI = (() => {
         alvo.value = b.getAttribute('data-valor');
         livre.hidden = true;
         livre.value = '';
+        caixa.classList.remove('falta');
       }));
 
       const botaoOutra = caixa.querySelector('[data-outra]');
       if (botaoOutra) botaoOutra.addEventListener('click', () => {
+        // abrir o campo livre não pode apagar o que ela já tinha escolhido:
+        // quem toca aqui por engano perderia a escolha sem perceber
+        if (!livre.value && alvo.value) livre.value = alvo.value;
         marcar(botaoOutra);
         livre.hidden = false;
         alvo.value = livre.value.trim();
+        caixa.classList.remove('falta');
         livre.focus();
       });
 
-      livre.addEventListener('input', () => { alvo.value = livre.value.trim(); });
+      livre.addEventListener('input', () => {
+        alvo.value = livre.value.trim();
+        if (alvo.value) caixa.classList.remove('falta');
+      });
     });
+  }
+
+  /**
+   * Aponta a lista que ficou sem escolha: sem isto o recado de erro fala
+   * de um campo que ela não sabe onde está.
+   */
+  function apontarLista(scope, name) {
+    const caixa = scope.querySelector(`[data-pronta="${name}"]`);
+    if (!caixa) return false;
+    caixa.classList.add('falta');
+    caixa.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    return true;
   }
 
   const field = (label, inner) => `
@@ -587,7 +607,7 @@ const UI = (() => {
     iconPicker, gradPicker, bindPickers, bindSwitches,
     photoField, bindPhotos, photoStrip, bindPhotoViewers, avatar, catVisual, entryVisual,
     shell, bindShell, panel, aoFechar, folhaAberta,
-    field, input, empty, statusChip, formData, listaPronta, bindListasProntas,
+    field, input, empty, statusChip, formData, listaPronta, bindListasProntas, apontarLista,
     GRADS,
   };
 })();

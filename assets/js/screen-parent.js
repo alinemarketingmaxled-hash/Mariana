@@ -1609,13 +1609,21 @@ const ParentScreen = (() => {
     });
   }
 
-  /** quanto vale entregar a lição de casa, no prazo e atrasada */
+  /** a lição é uma das obrigações: aqui só se decide o atraso */
   function openLicao(user) {
     const r = Store.regraLicao();
+    const conta = Store.valorDaLicao();
     UI.openSheet({
       title: 'Lição de casa',
-      subtitle: 'quanto vale entregar',
+      subtitle: 'entregar no prazo e entregar atrasada',
       body: `
+        <div class="note">
+          A lição é <b>uma das obrigações</b>, então quem define quanto ela vale é o
+          <b>valor mensal</b> que você combinou: o app reparte esse valor entre todos os
+          atos. Hoje entregar a lição vale <b>${Store.money(conta.cheio)}</b>.
+          ${conta.item ? '' : '<b>Falta ter uma ação de lição de casa nas ações da mesada.</b>'}
+        </div>
+
         <form id="licao-regra-form">
           <div class="mini-row">
             <div class="grow">
@@ -1625,22 +1633,28 @@ const ParentScreen = (() => {
             <button type="button" class="switch" data-switch="ativo"
                     aria-pressed="${!!r.ativo}" aria-label="Usar a lição na mesada"></button>
           </div>
-          ${UI.field('Entregue no prazo, ganha (R$)', UI.input('valor', {
-            type: 'number', value: r.valor, attrs: 'min="0" step="0.5"',
-          }))}
-          ${UI.field('Entregue atrasada, ganha (R$)', UI.input('atraso', {
-            type: 'number', value: r.atraso, attrs: 'min="0" step="0.5"',
+          ${UI.field('Entregue atrasada, vale quanto do valor cheio (%)', UI.input('atrasoPct', {
+            type: 'number', value: r.atrasoPct, attrs: 'min="0" max="100" step="5"',
           }))}
         </form>
-        <div class="note">
+        <div class="note" data-conta-atraso>
+          Atrasada hoje vale ${Store.money(conta.atrasado)}.
+        </div>
+        <p class="tiny muted mt8">
           Ela anota a lição que a professora passou, com a data de entrega. Quando marca
           "já fiz", vira um lançamento para você validar, com a foto do caderno quando ela mandar.
-        </div>`,
+        </p>`,
       actions: `
         <button class="btn btn-ghost" data-cancel>Cancelar</button>
         <button class="btn btn-primary" data-ok>Salvar</button>`,
       onMount(sheet) {
         UI.bindSwitches(sheet);
+        const linha = sheet.querySelector('[data-conta-atraso]');
+        const campo = sheet.querySelector('input[name=atrasoPct]');
+        campo.addEventListener('input', () => {
+          const pct = Math.max(0, Math.min(100, Number(campo.value) || 0));
+          linha.textContent = `Atrasada hoje vale ${Store.money(conta.cheio * (pct / 100))}.`;
+        });
         sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
         sheet.querySelector('[data-ok]').addEventListener('click', () => {
           Store.setRegraLicao(UI.formData(sheet.querySelector('#licao-regra-form')));
@@ -1983,7 +1997,9 @@ const ParentScreen = (() => {
           <button class="btn btn-ghost" data-abrir-regra-licao>${Icons.svg('coins')} Valores</button>
         </div>
         <div class="note mt12">
-          Entregar no prazo vale <b>${Store.money(rl.valor)}</b>; atrasada, ${Store.money(rl.atraso)}.
+          Entregar no prazo vale <b>${Store.money(Store.valorDaLicao().cheio)}</b>;
+          atrasada, ${Store.money(Store.valorDaLicao().atrasado)}.
+          Esse valor vem do <b>valor mensal</b> repartido entre as obrigações.
           ${rl.ativo ? '' : '<b>Está desligado agora: a lição não vale dinheiro.</b>'}
         </div>
         ${abertas.length ? `<div class="list mt12">${abertas.map(licaoRowPai).join('')}</div>`
@@ -2032,6 +2048,10 @@ const ParentScreen = (() => {
         sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
         sheet.querySelector('[data-save]').addEventListener('click', () => {
           const dados = UI.formData(sheet.querySelector('#pai-licao-form'));
+          if (!dados.materia) {
+            UI.apontarLista(sheet, 'materia');
+            return UI.toast('Escolha a matéria ali em cima.', 'bad');
+          }
           const res = Store.saveLicao(Object.assign({ childId: kid.id, id: l ? l.id : '' }, dados));
           if (!res.ok) return UI.toast(res.error, 'bad');
           UI.closeSheet();
@@ -2097,6 +2117,10 @@ const ParentScreen = (() => {
         sheet.querySelector('[data-cancel]').addEventListener('click', UI.closeSheet);
         sheet.querySelector('[data-save]').addEventListener('click', () => {
           const dados = UI.formData(sheet.querySelector('#pai-nota-form'));
+          if (!dados.materia) {
+            UI.apontarLista(sheet, 'materia');
+            return UI.toast('Escolha a matéria ali em cima.', 'bad');
+          }
           const res = Store.registrarNota(kid.id, dados, picker.ids());
           if (!res.ok) return UI.toast(res.error, 'bad');
           picker.commit();
