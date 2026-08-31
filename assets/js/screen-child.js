@@ -990,6 +990,10 @@ const ChildScreen = (() => {
   function openDaySummary(user) {
     const list = Store.entriesOf(user.id, date);
     const st = Store.dayStatus(user.id, date);
+    // o envio leva tudo que já está pronto, de qualquer dia
+    const prontas = Store.prontasParaEnviar(user.id);
+    const outrosDias = prontas.filter((e) => e.date !== date).length;
+    const presas = Store.seguradas(user.id);
     UI.openSheet({
       title: `Resumo de ${Store.labelDate(date).toLowerCase()}`,
       subtitle: `${list.length} ${list.length === 1 ? 'lançamento' : 'lançamentos'} • ${Store.money(st.value)}`,
@@ -1008,27 +1012,46 @@ const ChildScreen = (() => {
           : st.required && !st.complete
             ? `<div class="note">Ainda faltam ${st.required - st.filled} tarefa(s) do dia. Elas contam para a sua mesada.</div>`
             : '<div class="note">Tudo que era obrigatório do dia está preenchido.</div>'}
+        ${outrosDias ? `<div class="note">
+          Tem ${outrosDias} ${outrosDias === 1 ? 'coisa' : 'coisas'} de <b>outros dias</b> ainda
+          esperando validação. Ao enviar, tudo vai junto.
+        </div>` : ''}
+        ${presas.length ? `<div class="note aviso">
+          ${presas.length === 1 ? 'Uma tarefa fica' : `${presas.length} tarefas ficam`} para depois:
+          ${presas.length === 1 ? 'falta' : 'faltam'} a foto ou a ficha de leitura.
+          O resto vai agora.
+        </div>` : ''}
         ${list.length ? `<div class="list">${list.map(entryRow).join('')}</div>` : UI.empty('pencil', 'Nada marcado neste dia.')}`,
-      actions: `<button class="btn btn-primary btn-block" data-ok ${st.semFoto ? 'disabled' : ''}>
-        ${st.semFoto ? (st.semFoto === 1 ? 'Falta 1 foto' : `Faltam ${st.semFoto} fotos`) : 'Enviar para validação'}</button>`,
+      actions: `<button class="btn btn-primary btn-block" data-ok ${prontas.length ? '' : 'disabled'}>
+        ${prontas.length
+          ? (prontas.length === 1 ? 'Enviar para validação' : `Enviar as ${prontas.length} para validação`)
+          : presas.length ? 'Falta a foto para poder enviar' : 'Nada para enviar'}</button>`,
       onMount(sheet) {
         sheet.querySelectorAll('[data-note]').forEach((b) => b.addEventListener('click', () => {
           UI.closeSheet();
           openNote(b.getAttribute('data-note'));
         }));
         sheet.querySelector('[data-ok]').addEventListener('click', () => {
-          if (!list.length) {
+          if (!prontas.length) {
             UI.closeSheet();
-            return UI.toast('Marque alguma tarefa primeiro.');
+            return UI.toast(presas.length
+              ? 'Mande a foto que falta e envie de novo.'
+              : 'Marque alguma tarefa primeiro.');
           }
-          const aviso = Notify.avisarResponsavel(user, date);
+          // sem data: vai tudo que está esperando, de todos os dias
+          const aviso = Notify.avisarResponsavel(user);
           UI.closeSheet();
           Effects.burst(st.complete ? 'goal' : 'task');
           // o link tem que abrir no próprio toque dela, senão o navegador
           // entende como janela indesejada e bloqueia
           if (aviso.ok) {
             window.open(aviso.link, '_blank', 'noopener');
-            UI.toast('Enviado. O aviso já foi para quem confirma.', 'ok');
+            UI.toast(aviso.recado.dias > 1
+              ? `Enviado: ${aviso.recado.quantos} de ${aviso.recado.dias} dias.`
+              : 'Enviado. O aviso já foi para quem confirma.', 'ok');
+            if (presas.length) {
+              setTimeout(() => UI.toast(`${presas.length} ficou para depois: falta a foto.`), 2600);
+            }
             return;
           }
           if (aviso.motivo === 'sem-numero') {

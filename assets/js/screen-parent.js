@@ -15,24 +15,26 @@ const ParentScreen = (() => {
   function respostaCard() {
     const pendentes = Store.aguardandoResposta();
     if (!pendentes.length) return '';
-    // uma linha por filha e por dia, que é como o pacote viaja
+    // uma linha por filha: a resposta volta inteira, de todos os dias de
+    // uma vez, senão ela teria que mandar um link por dia
     const grupos = {};
-    pendentes.forEach((e) => {
-      const k = e.childId + '|' + e.date;
-      (grupos[k] = grupos[k] || []).push(e);
-    });
-    return Object.keys(grupos).sort().reverse().map((k) => {
-      const [childId, d] = k.split('|');
+    pendentes.forEach((e) => { (grupos[e.childId] = grupos[e.childId] || []).push(e); });
+    return Object.keys(grupos).map((childId) => {
       const kid = Store.userById(childId);
       if (!kid) return '';
-      const n = grupos[k].length;
-      const ok = grupos[k].filter((e) => e.status === 'approved').length;
+      const lista = grupos[childId];
+      const ok = lista.filter((e) => e.status === 'approved').length;
+      const dias = [];
+      lista.forEach((e) => { if (dias.indexOf(e.date) === -1) dias.push(e.date); });
       return `
         <div class="card resposta-volta mt16">
           <div class="between">
             <div>
               <div class="small bold">Falta devolver para ${UI.esc(kid.name.split(' ')[0])}</div>
-              <div class="tiny muted">${Store.labelDate(d)} • ${n} decidida(s), ${ok} validada(s)</div>
+              <div class="tiny muted">
+                ${dias.length > 1 ? `${dias.length} dias` : Store.labelDate(dias[0])}
+                • ${lista.length} decidida(s), ${ok} validada(s)
+              </div>
             </div>
             <span class="chip">${Icons.svg('arrow')}</span>
           </div>
@@ -40,8 +42,7 @@ const ParentScreen = (() => {
             O envio dela veio de outro celular. Enquanto a resposta não voltar,
             no app dela as tarefas continuam esperando e não entram na conta.
           </p>
-          <button class="btn btn-primary btn-block mt12"
-                  data-devolver="${childId}" data-dia="${d}">
+          <button class="btn btn-primary btn-block mt12" data-devolver="${childId}">
             Mandar a resposta ${Icons.svg('arrow')}
           </button>
         </div>`;
@@ -2251,17 +2252,17 @@ const ParentScreen = (() => {
     }));
     root.querySelectorAll('[data-devolver]').forEach((b) => b.addEventListener('click', () => {
       const kid = Store.userById(b.getAttribute('data-devolver'));
-      const dia = b.getAttribute('data-dia');
       if (!kid) return;
-      const pacote = Sync.pacoteResposta(kid, dia);
+      // sem data: a resposta volta inteira, de todos os dias
+      const pacote = Sync.pacoteResposta(kid);
       const endereco = Sync.link(pacote);
       if (!endereco) return UI.toast('Não há nada para devolver.', 'bad');
       const nome = kid.name.split(' ')[0];
       const ok = (pacote.e || []).filter((l) => l.q).length;
       const texto = [
-        `${nome}, vi o que você mandou de ${Store.labelDate(dia).toLowerCase()}.`,
+        `${nome}, vi o que você mandou.`,
         ok === (pacote.e || []).length
-          ? `Validei todas as ${ok}!`
+          ? `Validei ${ok === 1 ? 'a única' : `todas as ${ok}`}!`
           : `Validei ${ok} de ${(pacote.e || []).length}.`,
         '',
         'Toque aqui para receber no seu app:',
@@ -2271,7 +2272,7 @@ const ParentScreen = (() => {
       // o número guardado é o de quem confirma, não o dela.
       // e o link precisa abrir dentro do toque, senão o navegador bloqueia
       window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
-      Store.marcarRespondido(kid.id, dia);
+      Store.marcarRespondido(kid.id);
       UI.toast('Resposta a caminho', 'ok');
       App.render();
     }));

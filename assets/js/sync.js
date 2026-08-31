@@ -61,14 +61,21 @@ const Sync = (() => {
   const licoesDoPacote = (child) => Store.licoesOf(child.id, false)
     .map((l) => ({ i: l.id, m: l.materia, o: l.oque, e: l.entrega }));
 
+  /**
+   * Vai tudo que está esperando validação, de todos os dias. Mandar só o
+   * dia aberto na tela deixava para trás o que ela fez ontem e
+   * anteontem, e aquilo nunca chegava na mãe.
+   */
   function pacoteEnvio(child, date) {
-    const lista = Store.entriesOf(child.id, date).filter((e) => e.status === 'pending');
+    const lista = date
+      ? Store.entriesOf(child.id, date).filter((e) => e.status === 'pending')
+      : Store.prontasParaEnviar(child.id);
     const abertas = licoesDoPacote(child);
     if (!lista.length && !abertas.length) return null;
     return {
       v: VERSAO,
       t: 'envio',
-      d: date,
+      d: date || Store.today(),
       c: { u: child.username, n: child.name, a: Store.allowanceOf(child.id) || 0 },
       h: abertas,
       e: lista.map((e) => {
@@ -77,6 +84,9 @@ const Sync = (() => {
           c: e.catName || '', g: e.grad || '', o: e.icon || '',
           f: (e.photos || []).length,
         };
+        // cada lançamento leva o seu próprio dia: o pacote não é mais de um dia só
+        if (e.date !== (date || Store.today())) linha.t = e.date;
+        if (e.extra) linha.j = 1;
         if (e.note) linha.b = e.note;
         if (e.daily) linha.y = 1;
         if (e.leitura) linha.z = 1;
@@ -107,13 +117,15 @@ const Sync = (() => {
   /* ---------- o pacote que a mãe devolve ---------- */
   /** só as decisões: o que foi aprovado, o que não, e o recado de cada uma */
   function pacoteResposta(child, date) {
-    const lista = Store.entriesOf(child.id, date)
-      .filter((e) => e.status === 'approved' || e.status === 'rejected');
+    const lista = date
+      ? Store.entriesOf(child.id, date)
+        .filter((e) => e.status === 'approved' || e.status === 'rejected')
+      : Store.aguardandoResposta(child.id);
     if (!lista.length && !Store.licoesOf(child.id, false).length) return null;
     return {
       v: VERSAO,
       t: 'resposta',
-      d: date,
+      d: date || Store.today(),
       c: { u: child.username, n: child.name },
       // a lição que a mãe anotou também precisa chegar nela
       h: licoesDoPacote(child),
@@ -149,11 +161,11 @@ const Sync = (() => {
     let repetidos = 0;
     (pacote.e || []).forEach((l) => {
       const entrada = {
-        id: l.i, childId: kid.id, date: pacote.d, itemId: l.s,
+        id: l.i, childId: kid.id, date: l.t || pacote.d, itemId: l.s,
         name: l.n, value: l.x, kind: l.k,
         catName: l.c, grad: l.g, icon: l.o,
         daily: !!l.y, leitura: !!l.z,
-        note: l.b || '', photos: [], fotosLa: l.f || 0,
+        note: l.b || '', photos: [], fotosLa: l.f || 0, extra: !!l.j,
         status: 'pending', reviewNote: '', reviewedBy: null, reviewedAt: null,
         createdAt: new Date().toISOString(),
       };

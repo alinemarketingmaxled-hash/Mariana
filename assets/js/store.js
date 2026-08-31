@@ -683,6 +683,32 @@ const Store = (() => {
     return ids.length;
   }
 
+  /** tudo que está esperando validação, de qualquer dia, do mais novo ao mais velho */
+  const pendentesDeTodosOsDias = (childId) => state.entries
+    .filter((e) => e.status === 'pending' && (!childId || e.childId === childId))
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  /** os dias distintos que têm alguma coisa esperando */
+  const diasPendentes = (childId) => {
+    const vistos = [];
+    pendentesDeTodosOsDias(childId).forEach((e) => {
+      if (vistos.indexOf(e.date) === -1) vistos.push(e.date);
+    });
+    return vistos;
+  };
+
+  /**
+   * O que já pode ser enviado: fica de fora o que está incompleto (sem a
+   * foto do dia, ou com a ficha de leitura pela metade). Uma foto que
+   * falta hoje não pode segurar o que ela fez a semana inteira.
+   */
+  const prontasParaEnviar = (childId) => pendentesDeTodosOsDias(childId)
+    .filter((e) => !entryNeedsPhoto(e) && !entryReadingPending(e));
+
+  /** o que está esperando mas ainda não pode ir, e por quê */
+  const seguradas = (childId) => pendentesDeTodosOsDias(childId)
+    .filter((e) => entryNeedsPhoto(e) || entryReadingPending(e));
+
   const pendingEntries = (childId) =>
     state.entries
       .filter((e) => e.status === 'pending' && (!childId || e.childId === childId))
@@ -1861,11 +1887,11 @@ const Store = (() => {
       && (e.status === 'approved' || e.status === 'rejected')
       && (!childId || e.childId === childId) && (!date || e.date === date));
 
-  /** marca que a resposta daquele dia já foi devolvida */
+  /** marca que a resposta já foi devolvida; sem data, marca todos os dias */
   function marcarRespondido(childId, date) {
     let n = 0;
     state.entries.forEach((e) => {
-      if (e.childId === childId && e.date === date && e.veioDeLink && !e.respondido
+      if (e.childId === childId && (!date || e.date === date) && e.veioDeLink && !e.respondido
         && (e.status === 'approved' || e.status === 'rejected')) {
         e.respondido = true;
         n++;
@@ -2348,7 +2374,8 @@ const Store = (() => {
     categories, categoryById, saveCategory, removeCategory, saveItem, removeItem,
     // lançamentos
     entriesOf, entryFor, toggleEntry, setEntryNote, review, reviewMany,
-    pendingEntries, historyOf, dayStatus, signed, adjustEntry, addManualEntry, removeEntry,
+    pendingEntries, pendentesDeTodosOsDias, diasPendentes, prontasParaEnviar, seguradas,
+    historyOf, dayStatus, signed, adjustEntry, addManualEntry, removeEntry,
     // diário
     saveDiary, removeDiary, diaryOf, diaryById, pendingDiary, reviewDiary, diaryKind, DIARY_KINDS,
     // bichinho

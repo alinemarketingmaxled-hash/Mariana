@@ -207,23 +207,38 @@ const Notify = (() => {
 
   /** o texto do recado, montado com o que foi mandado de verdade */
   function recadoEnvio(child, date) {
-    const lista = Store.entriesOf(child.id, date).filter((e) => e.status === 'pending');
-    const st = Store.dayStatus(child.id, date);
+    // vai tudo que está esperando, de todos os dias: o que ela fez ontem
+    // e anteontem também precisa chegar
+    const lista = date
+      ? Store.entriesOf(child.id, date).filter((e) => e.status === 'pending')
+      : Store.prontasParaEnviar(child.id);
+    const hoje = Store.today();
+    const st = Store.dayStatus(child.id, hoje);
     const nome = String(child.name || '').split(' ')[0];
-    const dia = Store.labelDate(date).toLowerCase();
+    const dias = [];
+    lista.forEach((e) => { if (dias.indexOf(e.date) === -1) dias.push(e.date); });
+    const quando = dias.length > 1
+      ? `${dias.length} dias`
+      : Store.labelDate(dias[0] || hoje).toLowerCase();
     const quanto = Store.money(lista.reduce((t, e) => t + Store.signed(e), 0));
 
-    const itens = lista.map((e) => `\u2022 ${e.name}`).join('\n');
+    // com mais de um dia, agrupa por dia para ela ver o que é de quando
+    const itens = dias.length > 1
+      ? dias.map((d) => [`${Store.labelDate(d)}:`]
+        .concat(lista.filter((e) => e.date === d).map((e) => `  \u2022 ${e.name}`))
+        .join('\n')).join('\n')
+      : lista.map((e) => `\u2022 ${e.name}`).join('\n');
+
     const leu = lista.some((e) => Store.entryIsReading(e));
     const linhas = [
-      `${nome} mandou ${lista.length} ${lista.length === 1 ? 'tarefa' : 'tarefas'} para você confirmar (${dia}):`,
+      `${nome} mandou ${lista.length} ${lista.length === 1 ? 'tarefa' : 'tarefas'} para você confirmar (${quando}):`,
       '',
       itens,
       '',
       `Total: ${quanto}`,
     ];
     if (leu) linhas.push('Tem leitura com resumo e fotos das páginas.');
-    if (st.required && !st.complete) linhas.push(`Ainda faltam ${st.required - st.filled} tarefa(s) do dia.`);
+    if (st.required && !st.complete) linhas.push(`Ainda faltam ${st.required - st.filled} tarefa(s) de hoje.`);
 
     // o link leva o envio junto: os dois celulares tem cada um os seus
     // dados, entao sem isto a mae recebe o recado mas nao as tarefas
@@ -237,7 +252,8 @@ const Notify = (() => {
 
     return {
       titulo: `${nome} mandou para você confirmar`,
-      curto: `${lista.length} ${lista.length === 1 ? 'tarefa' : 'tarefas'} esperando validação • ${quanto}`,
+      curto: `${lista.length} ${lista.length === 1 ? 'tarefa' : 'tarefas'} de ${quando} • ${quanto}`,
+      dias: dias.length,
       texto: linhas.join('\n'),
       quantos: lista.length,
     };
@@ -284,6 +300,7 @@ const Notify = (() => {
    */
   function avisarResponsavel(child, date) {
     const r = recadoEnvio(child, date);
+    r.quantos = r.quantos || 0;
     if (!r.quantos) return { ok: false, motivo: 'vazio', recado: r };
     avisoLocal(r);
     const a = Store.avisoOf();

@@ -190,9 +190,9 @@ quantos filhos quiser, cada um com o próprio login e senha.
   filha usa o celular dela e a mae o dela, sao **duas copias separadas** do mesmo app: o que ela
   marca nao existe no celular da mae. E como a tarefa so entra na conta **depois de validada**,
   nada nunca contabilizaria. A ponte e um link:
-  1. Ela toca em **Enviar para validação** → a mensagem do WhatsApp sai com um **link** dentro.
+  1. Ela toca em **Enviar para validação** → vai **tudo que está esperando, de todos os dias**, num link só dentro da mensagem do WhatsApp. O que estiver **incompleto** (sem a foto do dia, ou com a ficha de leitura pela metade) fica para depois, e a tela diz quantas ficaram: uma foto que falta hoje não segura o que ela fez a semana inteira.
   2. A mae toca no link → o app abre, mostra o que chegou e pergunta antes de mexer em nada.
-  3. A mae valida → aparece o cartao **"falta devolver"**, com um link de volta.
+  3. A mãe valida → aparece **um** cartão "falta devolver", com a resposta de **todos os dias** num link só.
   4. Ela toca nesse link → as tarefas validadas **entram na conta** e o bichinho ganha os pontos.
 
   > O que nao viaja: as **fotos**. Trinta fotos de paginas nao cabem num link e nao ha onde
